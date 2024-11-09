@@ -1,0 +1,8 @@
+# Compiled Coq files
+target/*
+
+# Coq caches
+.*.cache
+
+# CoqProject files
+_CoqProject
