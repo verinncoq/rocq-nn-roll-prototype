@@ -34,7 +34,9 @@ VERINNCOQ_FILES = [
     (".", "pwaf_operations", False),
     (".", "neuron_functions", False),
     (".", "neural_networks", False),
-    (".", "NNDH", False)
+    (".", "NNDH", False),
+    (".", "fourier_motzkin", False),
+    (".", "NNDH_to_fme", False)
 ]
 
 VERINNCOQ_COQ_PROJECT_FILE = "-R " + VERINNCOQ_ROOT.replace(os.sep, "/") + "/target Verinncoq"

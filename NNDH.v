@@ -1,5 +1,7 @@
 Require Import Coquelicot.Coquelicot.
 From Verinncoq Require Import piecewise_affine.
+From Verinncoq Require Import pwaf_operations.
+From Verinncoq Require Import neuron_functions.
 From Verinncoq Require Import neural_networks.
 From Verinncoq Require Import matrix_extensions.
 From Verinncoq Require Import real_subsets.
@@ -13,258 +15,377 @@ Import MatrixNotations.
 Open Scope colvec_scope.
 Open Scope matrix_scope.
 
+Section NeuralNetworkDefinedHyperproperties.
+
 Context {RSOPM : RealSubsetOPM}.
 Open Scope RSOPM_scope.
 
-(** NNDH *)
+(** Neural network hyperproperty *)
 
-Inductive NNDH {w: nat} (W : ConvexPolyhedron (RSOPM:=RSOPM) w) (in_dim out_dim : nat):=
-  | Hyperproperty (netIn : colvec (RSOPM:=RSOPM) w -> list (colvec (RSOPM:=RSOPM) in_dim))
-      (netSat : list (colvec (RSOPM:=RSOPM) in_dim) -> list (colvec (RSOPM:=RSOPM) out_dim) -> RS (RSOPM:=RSOPM)).
+Inductive NNHyperproperty {nn_in_dim nn_out_dim : nat} :=
+  | NNDH 
+      (r w : nat)
+      (W : ConvexPolyhedron (RSOPM:=RSOPM) w)
+      (netIn : TPWAF (RSOPM:=RSOPM) (in_dim:=w) (out_dim:=r * nn_in_dim))
+      (netSat : TPWAF (RSOPM:=RSOPM) 
+        (in_dim:=(r * nn_in_dim) + (r * nn_out_dim)) (out_dim:=1)).
 
-(** Helpers *)
+(** Semantics over a neural network *)
 
-Definition my_max (a b : RS) : RS :=
-  if RSle (RSOPM:=RSOPM) a b then b else a.
+Definition toRS (c: colvec 1): T RSOPM := coeff_colvec 0 c 0.
 
-Definition my_min (a b : RS) : RS :=
-  if RSle (RSOPM:=RSOPM) a b then a else b.
-
-Definition first {n: nat} (l : list (colvec (RSOPM:=RSOPM) n)) : (colvec (RSOPM:=RSOPM) n) :=
-  match l with
-  | [] => (null_vector n)
-  | x :: _ => x
+Fixpoint eval_nn_multiple {r} {nn_in_dim nn_out_dim: nat}
+  (nn: TPWANNSequential (output_dim:=nn_out_dim))
+  (inputs: colvec (r * nn_in_dim))
+  : colvec (RSOPM:=RSOPM) (r * nn_out_dim) :=
+  match r with
+  | 0 => null_vector (0 * nn_out_dim)
+  | S n => 
+    let input := mk_colvec nn_in_dim (fun i => coeff_colvec RSzero inputs i) in
+    let next  := mk_colvec (n * nn_in_dim) (fun i => coeff_colvec RSzero inputs (i + nn_in_dim)) in
+      (colvec_concat (nn_eval nn input) (eval_nn_multiple nn next))
   end.
 
-Definition second {n: nat} (l : list (colvec (RSOPM:=RSOPM) n)) : (colvec (RSOPM:=RSOPM) n) :=
-  match l with
-  | [] => (null_vector n)
-  | [_] => (null_vector n)
-  | _ :: y :: _ => y
+Definition nn_satisfies_nndh {nn_in_dim nn_out_dim: nat} 
+  (nn: TPWANNSequential (input_dim:=nn_in_dim) (output_dim:=nn_out_dim)) 
+  (nndh: NNHyperproperty) 
+  : Prop 
+  :=
+  match nndh with 
+  | NNDH r w W netIn netSat =>
+    forall (x: colvec (RSOPM:=RSOPM) w), in_convex_polyhedron x W -> 
+      let input_set := tpwaf_eval netIn x in 
+      let output_set := eval_nn_multiple nn input_set in
+        toRS (tpwaf_eval netSat (colvec_concat input_set output_set)) <= 0 = true
   end.
 
-Fixpoint colvec_to_list_helper {n: nat} (v: colvec n) (counter: nat): list (T RSOPM) :=
-match counter with
-| 0%nat => [coeff_colvec 0 v 0]
-| S n => coeff_colvec 0 v counter :: colvec_to_list_helper v n
-end.
+(** Semantics over a PWAF *)
 
-Definition colvec_to_list {n: nat} (v: colvec n): list (T RSOPM) :=
-match n with
-| 0%nat => nil
-| S k => colvec_to_list_helper v k
-end.
+Lemma repeat_concat_helper {m n}:
+    PWAF (RSOPM:=RSOPM) (in_dim:= 0) (out_dim:=0) -> 
+    PWAF (RSOPM:=RSOPM) (in_dim := 0 * m) (out_dim:=0 * n).
+Proof.
+  intros H; apply H.
+Defined.
 
-Fixpoint check_list_rltb_zero (lst : list (T RSOPM)) : (T RSOPM) :=
-  match lst with
-  | nil => RSone
-  | x :: xs => if RSle (RSOPM:=RSOPM) x (- RSone) then (- RSone) else check_list_rltb_zero xs
+Fixpoint repeat_concat {pwaf_in_dim pwaf_out_dim: nat}
+  (times: nat) 
+  (pwaf: PWAF (in_dim:=pwaf_in_dim) (out_dim:=pwaf_out_dim))
+  : PWAF (in_dim:=times * pwaf_in_dim) (out_dim:=times * pwaf_out_dim) :=
+  match times with
+  | 0 => repeat_concat_helper ZeroDimPWAF
+  | S n => (pwaf_concat pwaf (repeat_concat n pwaf))
   end.
 
-Definition abs (x1 x2 : RS) : RS :=
-  if RSle (RSOPM:=RSOPM) x1 x2 then RSplus (RSOPM:=RSOPM) x2 (RSopp (RSOPM:=RSOPM) x1) 
-    else RSplus (RSOPM:=RSOPM) x1 (RSopp (RSOPM:=RSOPM) x2).
+Definition nndh_full_pwaf_helper {pwaf_in_dim pwaf_out_dim r w: nat}
+  (netIn: PWAF (in_dim:=w)) 
+  (netSat: PWAF (out_dim:=1))
+  (pwaf: PWAF (RSOPM:=RSOPM) (in_dim:=pwaf_in_dim) (out_dim:=pwaf_out_dim))
+  : PWAF
+  :=
+  pwaf_compose netSat (pwaf_concat netIn
+    (pwaf_compose (repeat_concat r pwaf) netIn)).
 
-
-Fixpoint max_abs_diff (l1 l2 : list RS) : RS :=
-  match l1, l2 with
-  | nil, _ => 0
-  | _, nil => 0
-  | x1 :: xs1, x2 :: xs2 => 
-      let diff := abs x1 x2 in
-      my_max diff (max_abs_diff xs1 xs2)
+Definition pwaf_satisfies_nndh {pwaf_in_dim pwaf_out_dim: nat}
+  (pwaf: PWAF (in_dim:=pwaf_in_dim) (out_dim:=pwaf_out_dim))
+  (nndh: NNHyperproperty)
+  : Prop 
+  :=
+  match nndh with
+  | NNDH r w W netIn netSat =>
+    forall (x: colvec (RSOPM:=RSOPM) w), in_convex_polyhedron x W ->
+      let full_pwaf := 
+        pwaf_compose netSat
+          (pwaf_concat netIn
+            (pwaf_compose (repeat_concat r pwaf) netIn)) in
+      match pwaf_eval full_pwaf (colvec_concat x x) with
+      | Some r => toRS r <= 0 = true
+      | None => True
+      end
   end.
 
+End NeuralNetworkDefinedHyperproperties.
 
-Definition Minus_colvec {n:nat} (x y : colvec (RSOPM:=RSOPM) n) : colvec (RSOPM:=RSOPM) n :=
-  Mplus (G:=RSOPM) x (scalar_mult (RSopp (RSOPM:=RSOPM) 1) y).
+Section NNHyperpropertySemanticsRelationships.
 
+Context {RSOPM : RealSubsetOPM}.
+Open Scope RSOPM_scope.
 
+(** Relationship between hyperproperties on NNs and PWAFs *)
 
-(** Global Monotonicity *)
+Lemma pwaf_tpwaf_compose {in_dim hidden_dim out_dim: nat}:
+  forall
+    (f: TPWAF (RSOPM:=RSOPM) (in_dim:=hidden_dim) (out_dim:=out_dim))
+    (g: TPWAF (in_dim:=in_dim) (out_dim:=hidden_dim)),
+      pwaf_compose f g = tpwaf_compose f g.
+Proof.
+  intros f g; unfold tpwaf_compose, TPWAF2PWAF; reflexivity.
+Qed.
 
-Definition netIn_Monotonicity {w : nat} (u: colvec (RSOPM:=RSOPM) w) : list (colvec (RSOPM:=RSOPM) (w/2)) := 
-  let w1 := mk_colvec (w/2) (fun i => coeff_colvec 0 u i) in
-  let w2 := mk_colvec (w/2) (fun j => coeff_colvec 0 u (j + (w/2))) in
-  let w1' := mk_colvec (w/2) (fun k => my_max (coeff_colvec 0 w1 k) (coeff_colvec 0 w2 k)) in
-  let w2' := mk_colvec (w/2)  (fun l => my_min (coeff_colvec 0 w1 l) (coeff_colvec 0 w2 l)) in
-  [w1'] ++ [w2'].
+Lemma pwaf_tpwaf_concat {in_dim1 in_dim2 out_dim1 out_dim2: nat}:
+  forall
+    (f: TPWAF (RSOPM:=RSOPM) (in_dim:=in_dim1) (out_dim:=out_dim1))
+    (g: TPWAF (in_dim:=in_dim2) (out_dim:=out_dim2)),
+      pwaf_concat f g = tpwaf_concat f g.
+Proof.
+  intros f g; unfold tpwaf_concat, TPWAF2PWAF; reflexivity.
+Qed.
 
-Definition netSat_Monotonicity {in_dim out_dim : nat} (input: list (colvec (RSOPM:=RSOPM) in_dim)) (output: list (colvec (RSOPM:=RSOPM) out_dim)) : RS :=
-  check_list_rltb_zero (colvec_to_list (Minus_colvec (first output) (second output))).
+Lemma repeat_concat_total_helper:
+  forall m n, 
+    TPWAF (RSOPM:=RSOPM) (in_dim:= 0) (out_dim:=0) -> 
+    TPWAF (RSOPM:=RSOPM) (in_dim := 0 * m) (out_dim:=0 * n).
+Proof.
+  intros m n H. do 2 unfold Nat.mul. apply H.
+Defined.
 
+Fixpoint repeat_concat_total {pwaf_in_dim pwaf_out_dim: nat}
+  (times: nat) 
+  (pwaf: TPWAF (in_dim:=pwaf_in_dim) (out_dim:=pwaf_out_dim))
+  : TPWAF (in_dim:=times * pwaf_in_dim) (out_dim:=times * pwaf_out_dim) :=
+  match times with
+  | 0 => repeat_concat_total_helper _ _ ZeroDimTPWAF
+  | S n => (tpwaf_concat pwaf (repeat_concat_total n pwaf))
+  end.
 
-Definition GlobalMonotonicity {w : nat} (W: ConvexPolyhedron (RSOPM:=RSOPM) w) (out_dim : nat): NNDH W (w/2) out_dim := 
-  Hyperproperty  W (w/2) out_dim  netIn_Monotonicity netSat_Monotonicity.
+Lemma repeat_concat_total_correct {pwaf_in_dim pwaf_out_dim: nat}:
+  forall times (tpwaf: TPWAF (in_dim:=pwaf_in_dim) (out_dim:=pwaf_out_dim)),
+    repeat_concat times tpwaf = repeat_concat_total times tpwaf.
+Proof.
+  intros times tpwaf; induction times.
+  * unfold repeat_concat, repeat_concat_total; reflexivity.
+  * unfold repeat_concat, repeat_concat_total.
+    fold (repeat_concat times tpwaf); fold (repeat_concat_total times tpwaf).
+    rewrite IHtimes.
+    unfold tpwaf_concat, TPWAF2PWAF; reflexivity.
+Qed.
 
+Lemma tpwaf_eval_is_value {in_dim out_dim}:
+  forall (f: TPWAF (RSOPM:=RSOPM) (in_dim:=in_dim) (out_dim:=out_dim)) x fx, 
+  is_pwaf_value f x fx <-> tpwaf_eval f x = fx.
+Proof.
+  intros f x fx.
+  split; intro H.
+  * pose proof (tpwaf_eval_correct _ _ f x) as Hc.
+    apply pwaf_eval_correct in Hc.
+    apply pwaf_eval_correct in H.
+    rewrite H in Hc.
+    symmetry in Hc.
+    injection Hc; easy.
+  * rewrite <- H.
+    apply tpwaf_eval_correct.
+Qed.
 
+Lemma tpwaf_eval_concat {in_dim1 in_dim2 out_dim1 out_dim2}:
+  forall 
+    (tpwaf1: TPWAF (RSOPM:=RSOPM) (in_dim:=in_dim1) (out_dim:=out_dim1)) 
+    (tpwaf2: TPWAF (in_dim:=in_dim2) (out_dim:=out_dim2)) x1 x2,
+    tpwaf_eval (tpwaf_concat tpwaf1 tpwaf2) (colvec_concat x1 x2) =
+      colvec_concat (tpwaf_eval tpwaf1 x1) (tpwaf_eval tpwaf2 x2).
+Proof.
+  intros tpwaf1 tpwaf2 x1 x2.
+  apply tpwaf_eval_is_value.
+  apply tpwaf_concat_correct; apply tpwaf_eval_correct.
+Qed.
 
-(** Verify NNDH *)
+Lemma tpwaf_eval_compose {in_dim hid_dim out_dim}:
+  forall 
+    (x: colvec in_dim) 
+    (f: TPWAF (in_dim:=hid_dim) (out_dim:=out_dim))
+    (g: TPWAF (in_dim:=in_dim) (out_dim:=hid_dim)),
+      tpwaf_eval (tpwaf_compose (RSOPM:=RSOPM) f g) x = 
+      tpwaf_eval f (tpwaf_eval g x).
+Proof.
+  intros x f g.
+  apply tpwaf_eval_is_value. 
+  unfold tpwaf_compose.
+  apply (pwaf_compose_correct _ _ _ _ _ (tpwaf_eval g x)). 
+  apply tpwaf_eval_correct.
+  apply tpwaf_eval_correct.
+Qed.
 
-Fixpoint apply_ae {in_dim out_dim : nat} (ae : AffineElement (RSOPM:=RSOPM) in_dim out_dim) 
-  (inputs : list (colvec (RSOPM:=RSOPM) in_dim)) 
-    : list (colvec (RSOPM:=RSOPM) out_dim) :=
-    let output_set : list (colvec (RSOPM:=RSOPM) out_dim) := [] in
-    let none : list (colvec (RSOPM:=RSOPM) out_dim) := [] in
-    match inputs with 
-      | [] => output_set
-      | x :: xs => match affine_element_eval ae x with
-                      | Some aex => [aex] ++ (apply_ae ae xs) ++ output_set 
-                      | None => none
-                   end
+Lemma repeat_concat_total_is_eval_multiple_nn {in_dim out_dim}:
+  forall
+    (nn: TPWANNSequential (RSOPM:=RSOPM) (input_dim:=in_dim) (output_dim:=out_dim))
+    nn_aed r x,
+    nn_aed = aed nn ->
+    tpwaf_eval (repeat_concat_total r nn_aed) x = eval_nn_multiple nn x.
+Proof.
+  intros nn nn_aed r x Haed.
+  induction r.
+  * unfold repeat_concat_total, repeat_concat_total_helper, eval_nn_multiple.
+    unfold Nat.mul. 
+    apply unique_colvec_0.
+  * unfold repeat_concat_total; fold (repeat_concat_total r nn_aed).
+    unfold eval_nn_multiple; fold (eval_nn_multiple nn (mk_colvec (r * in_dim) (fun i : nat => coeff_colvec 0 x (i + in_dim)))).
+    rewrite <- tpwaf_eval_is_value.
+    pose proof (colvec_split in_dim (r * in_dim) x) as Hsplit.
+    destruct Hsplit as [x1 [x2 [Hx1 [Hx2 Hxdef]]]].
+    rewrite Hxdef at 1.
+    apply tpwaf_concat_correct.
+    - rewrite Hx1.
+      apply (aed_correct _ _ _ _ nn nn_aed); last reflexivity.
+      apply Haed.
+    - specialize (IHr (mk_colvec (r * in_dim) (fun i : nat => coeff_colvec 0 x (i + in_dim)))).
+      rewrite Hx2.
+      apply tpwaf_eval_is_value in IHr.
+      apply IHr.
+Qed.
+
+Theorem aed_preserves_satisfiability {in_dim out_dim: nat}:
+  forall 
+    (nn: TPWANNSequential (RSOPM:=RSOPM) (input_dim:=in_dim) (output_dim:=out_dim)) 
+    nndh nn_aed,
+    nn_aed = aed nn ->
+    (nn_satisfies_nndh nn nndh <-> pwaf_satisfies_nndh nn_aed nndh).
+Proof.
+  intros nn nndh nn_aed Haed.
+  destruct nndh as [r w W netIn netSat].
+  unfold pwaf_satisfies_nndh, nn_satisfies_nndh.
+  rewrite repeat_concat_total_correct.
+  rewrite pwaf_tpwaf_compose.
+  rewrite pwaf_tpwaf_concat.
+  rewrite pwaf_tpwaf_compose.
+  split; intros H x HxIn; specialize (H x HxIn).
+  * destruct (pwaf_eval _ _) eqn:Heval; try (exact I).
+    rewrite <- H; do 2 f_equal.
+    symmetry; apply is_pwaf_value_tpwaf_eval.
+    apply pwaf_eval_correct in Heval.
+    apply tpwaf_compose_reverse_value in Heval.
+    destruct Heval as [Heval1 Heval2].
+    rewrite tpwaf_eval_concat in Heval2.
+    rewrite tpwaf_eval_compose in Heval2.
+    rewrite (repeat_concat_total_is_eval_multiple_nn nn) in Heval2.
+    apply Heval2. apply Haed.
+  * destruct (pwaf_eval _ _) eqn:Heval.
+    - rewrite <- H; do 2 f_equal.
+      apply is_pwaf_value_tpwaf_eval.
+      apply pwaf_eval_correct in Heval.
+      apply tpwaf_compose_reverse_value in Heval.
+      destruct Heval as [Heval1 Heval2].
+      rewrite tpwaf_eval_concat in Heval2.
+      rewrite tpwaf_eval_compose in Heval2.
+      rewrite (repeat_concat_total_is_eval_multiple_nn nn) in Heval2.
+      apply Heval2. apply Haed.
+    - apply tpwaf_pwaf_eval_never_none in Heval; contradiction.
+Qed.  
+
+End NNHyperpropertySemanticsRelationships.
+
+Section NNHyperpropertyComponentSplit.
+
+Context {RSOPM : RealSubsetOPM}.
+Open Scope RSOPM_scope.
+
+(** Verification of a hypeproperty over individual affine elements *)
+
+Definition satisfaction_over_element {w: nat}
+  (affine_el: AffineElement (RSOPM:=RSOPM) (w + w) 1)
+  (W: ConvexPolyhedron w)
+  : Prop
+  := 
+  forall x, in_convex_polyhedron x W ->
+    match affine_element_eval affine_el (colvec_concat x x) with
+    | Some r => toRS r <= 0 = true
+    | None => True
     end.
 
-Definition RSle_prop (x: RS (RSOPM:=RSOPM)) (y : RS (RSOPM:=RSOPM)) : Prop :=
-  x <= y = true.
-
-
-Fixpoint nndh_verify_aed {in_dim out_dim w : nat}  {W : ConvexPolyhedron (RSOPM:=RSOPM) w} (pwaf: list (AffineElement in_dim out_dim)) (nndh: NNDH W in_dim out_dim) :=
-  match pwaf with
-  | [] => match nndh with
-                | Hyperproperty netIn netSat => 
-                    forall (x: colvec (RSOPM:=RSOPM) w), in_convex_polyhedron x W -> 
-                      let input_set : list (colvec (RSOPM:=RSOPM) in_dim) := netIn x in 
-                        RSle_prop  0 (netSat input_set [])
-              end
-  | ae :: aes => match nndh with
-                | Hyperproperty netIn netSat => 
-                    forall (x: colvec (RSOPM:=RSOPM) w), in_convex_polyhedron x W -> 
-                      let input_set : list (colvec (RSOPM:=RSOPM) in_dim) := netIn x in 
-                      let output_set : list (colvec (RSOPM:=RSOPM) out_dim) := apply_ae ae input_set in
-                        RSle_prop  0 (netSat input_set output_set)
-              end
-               /\ (nndh_verify_aed aes nndh)
-  end. 
-
-
-
-Fixpoint apply_nn_eval {in_dim out_dim: nat}
-(nn: TPWANNSequential (input_dim:=in_dim) (output_dim:=out_dim)) 
-(inputs : list (colvec (RSOPM:=RSOPM) in_dim)) 
-: list (colvec (RSOPM:=RSOPM) out_dim) :=
-  let output_set : list (colvec (RSOPM:=RSOPM) out_dim) := [] in  
-  match inputs with
-    | [] => output_set
-    | x :: xs => [nn_eval nn x] ++ (apply_nn_eval nn xs) ++ output_set
-  end. 
-
-
-
-Definition nndh_verify_nn {in_dim out_dim w: nat} {W : ConvexPolyhedron (RSOPM:=RSOPM) w} 
-(nn: TPWANNSequential) (nndh: NNDH W in_dim out_dim) : Prop :=
-  match nndh with 
-  | Hyperproperty netIn netSat =>
-    forall (x: colvec (RSOPM:=RSOPM) w), in_convex_polyhedron x W -> 
-      let input_set : list (colvec (RSOPM:=RSOPM) in_dim) := netIn x in 
-      let output_set : list (colvec (RSOPM:=RSOPM) out_dim) := apply_nn_eval nn input_set in
-        RSle_prop  0 (netSat input_set output_set)
+Definition nndh_pwaf_element_split {pwaf_in_dim pwaf_out_dim: nat}
+  (pwaf: PWAF (in_dim:=pwaf_in_dim) (out_dim:=pwaf_out_dim))
+  (nndh: NNHyperproperty)
+  : Prop 
+  :=
+  match nndh with
+  | NNDH r w W netIn netSat =>
+      let full_pwaf := 
+        pwaf_compose netSat
+          (pwaf_concat netIn
+            (pwaf_compose (repeat_concat r pwaf) netIn)) in
+      forall body_el, In body_el (body full_pwaf) ->
+        satisfaction_over_element body_el W
   end.
 
-Fixpoint apply_tpwaf_eval {in_dim out_dim: nat}
-(tpwaf: TPWAF (RSOPM:=RSOPM) (in_dim := in_dim) (out_dim := out_dim)) 
-(inputs : list (colvec (RSOPM:=RSOPM) in_dim)) 
-: list (colvec (RSOPM:=RSOPM) out_dim) :=
-  let output_set : list (colvec (RSOPM:=RSOPM) out_dim) := [] in  
-  match inputs with
-    | [] => output_set
-    | x :: xs => [tpwaf_eval tpwaf x] ++ (apply_tpwaf_eval tpwaf xs) ++ output_set
-  end. 
-
-Definition nndh_verify_pwaf {in_dim out_dim w: nat} {W : ConvexPolyhedron (RSOPM:=RSOPM) w} 
-  (tpwaf: TPWAF (RSOPM:=RSOPM) (in_dim := in_dim) (out_dim := out_dim)) (nndh: NNDH W in_dim out_dim) : Prop :=
-   match nndh with 
-  | Hyperproperty netIn netSat =>
-    forall (x: colvec (RSOPM:=RSOPM) w), in_convex_polyhedron x W -> 
-      let input_set : list (colvec (RSOPM:=RSOPM) in_dim) := netIn x in 
-      let output_set : list (colvec (RSOPM:=RSOPM) out_dim) := apply_tpwaf_eval tpwaf input_set in
-        RSle_prop  0 (netSat input_set output_set)
-  end.
-    
-Theorem apply_tpwaf_eval_correct :
-  forall in_dim out_dim (nn : TPWANNSequential (input_dim:=in_dim) (output_dim:=out_dim)) tpwaf (inputs : list (colvec (RSOPM:=RSOPM) in_dim)),
-    tpwaf = aed nn -> apply_tpwaf_eval tpwaf inputs = apply_nn_eval nn inputs.
-
+Theorem pwaf_satisfiability_elements_split {in_dim out_dim}:
+  forall nndh (pwaf: PWAF (RSOPM:=RSOPM) (in_dim:=in_dim) (out_dim:=out_dim)),
+    pwaf_satisfies_nndh pwaf nndh <-> nndh_pwaf_element_split pwaf nndh.
 Proof.
-  intros in_dim out_dim nn tpwaf inputs Htpwaf.
-  induction inputs.
-    + simpl.
-      reflexivity.
-    + simpl.
-      rewrite IHinputs.
-      rewrite app_nil_r.
-      f_equal.
-      pose proof (tpwaf_eval_correct _ _ tpwaf a) as H1.
-      pose proof (aed_correct _ _ a (tpwaf_eval tpwaf a) nn tpwaf) as H2.
-      apply H2 in H1.
-      symmetry. exact H1.
-      apply Htpwaf.
+  intros nndh pwaf.
+  destruct nndh as [r w W netIn netSat].
+  unfold nndh_pwaf_element_split, pwaf_satisfies_nndh.
+  split; intro H.
+  * intros body_el Hbody_el.
+    unfold satisfaction_over_element.
+    intros x Hx.
+    specialize (H x Hx).
+    pose proof ((prop (pwaf_compose netSat
+                  (pwaf_concat netIn
+                    (pwaf_compose (repeat_concat r pwaf) netIn))))) as Huni.
+    destruct (pwaf_eval _ _) eqn:Heval.
+    - apply pwaf_eval_correct in Heval.
+      unfold is_pwaf_value in Heval.
+      destruct Heval as [eval_body_el [Heval_body_el Hel_val]].
+      unfold pwaf_univalence, ForallPairs in Huni.
+      specialize (Huni body_el eval_body_el Hbody_el Heval_body_el
+                  (colvec_concat x x)).
+      remember (affine_element_eval body_el _) as body_el_val.
+      destruct body_el_val as [val|]; last (exact I).
+      symmetry in Heqbody_el_val. 
+      apply affine_element_eval_correct in Heqbody_el_val.
+      assert (Hdomains: 
+                in_affine_element_domain body_el (colvec_concat x x) /\
+                in_affine_element_domain eval_body_el (colvec_concat x x)). {
+                  split.
+                  * unfold is_affine_element_value in Heqbody_el_val.
+                    destruct Heqbody_el_val as [Hdom _].
+                    apply Hdom.
+                  * unfold is_affine_element_value in Hel_val.
+                    destruct Hel_val as [Hdom _].
+                    apply Hdom.
+                }
+      specialize (Huni Hdomains).
+      apply affine_element_eval_correct in Hel_val.
+      rewrite Hel_val in Huni.
+      inversion Huni.
+      apply H.
+    - remember (affine_element_eval body_el _) as body_el_val.
+      destruct body_el_val as [val|]; last (exact I).
+      assert (Hcontra: is_pwaf_value 
+                        (pwaf_compose netSat 
+                          (pwaf_concat netIn 
+                            (pwaf_compose (repeat_concat r pwaf) netIn)))
+                        (colvec_concat x x) val). {
+                          unfold is_pwaf_value.
+                          exists body_el.
+                          split.
+                          * apply Hbody_el.
+                          * apply affine_element_eval_correct.
+                            rewrite Heqbody_el_val; reflexivity.
+                        }
+      apply pwaf_eval_correct in Hcontra.
+      rewrite Hcontra in Heval.
+      inversion Heval.
+  * intros x Hx.
+    destruct (pwaf_eval _ _) eqn:Heval; last (exact I).
+    apply pwaf_eval_correct in Heval.
+    unfold is_pwaf_value in Heval.
+    destruct Heval as [body_el [Hbody_el Hval]].
+    specialize (H body_el Hbody_el).
+    unfold satisfaction_over_element in H.
+    specialize (H x Hx).
+    apply affine_element_eval_correct in Hval.
+    rewrite Hval in H.
+    apply H.
 Qed.
 
-Theorem nndh_nn_pwaf :
-   forall in_dim out_dim (nn : TPWANNSequential (input_dim:=in_dim) (output_dim:=out_dim)) w (W: ConvexPolyhedron (RSOPM:=RSOPM) w) nndh tpwaf, 
-    tpwaf = aed nn ->
-    nndh_verify_pwaf (W:=W) (in_dim:=in_dim) (out_dim:=out_dim) (w:=w) tpwaf nndh <-> nndh_verify_nn nn nndh.
+End NNHyperpropertyComponentSplit.
 
-Proof.
-  intros in_dim out_dim nn w W nndh tpwaf Htpwaf.
-  split.
-    + unfold nndh_verify_pwaf.
-      destruct nndh.
-      unfold nndh_verify_nn.
-      intros H1 x.
-      specialize (H1 x).
-      intros HxinW.
-      specialize (H1 HxinW).
-      pose proof (apply_tpwaf_eval_correct in_dim out_dim nn tpwaf (netIn x)) as Hcorrect.
-      rewrite Htpwaf in Hcorrect.
-      specialize (Hcorrect eq_refl).
-      rewrite Htpwaf in H1.
-      rewrite Hcorrect in H1.
-      exact H1.
-    + unfold nndh_verify_nn.
-      destruct nndh.
-      unfold nndh_verify_pwaf.
-      intros H1 x.
-      specialize (H1 x).
-      intros HxinW.
-      specialize (H1 HxinW).
-      pose proof (apply_tpwaf_eval_correct in_dim out_dim nn tpwaf (netIn x)) as Hcorrect.
-      rewrite Htpwaf in Hcorrect.
-      specialize (Hcorrect eq_refl).
-      rewrite Htpwaf.
-      rewrite <- Hcorrect in H1.
-      exact H1.
-Qed.
+Section NNHyperpropertyExamples.
 
-Theorem nndh_pwaf_aed :
-   forall in_dim out_dim w (W: ConvexPolyhedron (RSOPM:=RSOPM) w) nndh (tpwaf: TPWAF (RSOPM:=RSOPM) (in_dim := in_dim) (out_dim := out_dim)) aed, 
-    aed = body tpwaf ->
-    nndh_verify_aed (W:=W) (in_dim:=in_dim) (out_dim:=out_dim) (w:=w) aed nndh -> nndh_verify_pwaf tpwaf nndh.
+(** Global Monotonicity *)
+(** TODO: remake the example and equate it with plain Coq version*)
 
-Proof.
-  intros in_dim out_dim w W nndh tpwaf aed Haed .
-  unfold nndh_verify_pwaf.
-  destruct nndh as [netIn netSat].
-  induction aed as [|hd tl IHaed].
-    + simpl.
-      intros H.
-      intros x HxinW.
-      specialize (H x HxinW).
-      induction (netIn x) as [|x' input_tl IHinput].
-        - simpl.
-          exact H.
-        - admit.
-    + intros H.
-      simpl in H.
-      intros x HxinW.
-Admitted.
+End NNHyperpropertyExamples.
 
-Theorem nndh_verification :
-  forall in_dim out_dim (nn : TPWANNSequential (input_dim:=in_dim) (output_dim:=out_dim)) w (W: ConvexPolyhedron (RSOPM:=RSOPM) w) nndh nn_pwaf aed_body, 
-    nn_pwaf = aed nn ->
-    aed_body = body nn_pwaf ->
-    nndh_verify_aed (W:=W) (in_dim:=in_dim) (out_dim:=out_dim) (w:=w) aed_body nndh -> nndh_verify_nn nn nndh.
-Admitted.
 
 
 
