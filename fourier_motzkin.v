@@ -447,16 +447,129 @@ match l with
     end
 end. 
 
+(*MJ: changed previous_min to previous_max for clarity*)
 Fixpoint RSOPM_list_max (l: list (T RSOPM)): option (T RSOPM) :=
 match l with
 | nil => None
 | head :: tail => 
     match RSOPM_list_max tail with
     | None => Some head
-    | Some previous_min => 
-        if head <= previous_min then Some previous_min else Some head
+    | Some previous_max => 
+        if head <= previous_max then Some previous_max else Some head
     end
 end. 
+
+
+
+Definition bool_to_Prop (b : bool) : Prop :=
+  match b with
+  | true => True
+  | false => False
+  end.
+
+Lemma Some_eq_Some: forall x y : nat, Some x = Some y -> x = y.
+Proof.
+  intros x y H. (* Introduce the variables and hypothesis *)
+  injection H. (* Use injection to derive x = y from Some x = Some y *)
+  intros Hxy. (* Introduce the resulting hypothesis *)
+  assumption. (* Conclude the goal using the derived hypothesis *)
+Qed.
+
+(* following lemma just says if you add element to list, 
+the maximum stays the same or is the new element*)
+Lemma RSOPM_list_max_monotonic_helper :
+  forall (head : T RSOPM) (tail : list (T RSOPM)),
+    match (RSOPM_list_max tail) with 
+    | None => True 
+    | Some previous_max => 
+      match RSOPM_list_max (head :: tail) with
+      | None => False
+      | Some new_max => new_max = previous_max \/ new_max = head
+      end 
+    end.
+Proof.
+intros head tail.
+destruct (RSOPM_list_max tail) as [previous_max |] eqn: Htail.
+destruct (RSOPM_list_max (head :: tail)) as [new_max |] eqn: Hheadtail.
+unfold RSOPM_list_max in Hheadtail.
+* destruct ((fix RSOPM_list_max (l : list (T RSOPM)) : option (T RSOPM) :=
+            match l with
+              | [] => None
+              | head :: tail =>
+              match RSOPM_list_max tail with
+                | Some previous_max =>
+                  if head <= previous_max
+                  then Some previous_max
+                  else Some head
+                | None => Some head
+              end
+            end) tail) eqn:Hmaxtail.
+rewrite <- Hmaxtail in Hheadtail.
+destruct (head <= t) eqn:Hcompare.
+destruct tail as [| head' tail'] eqn:Htail2.
+- unfold RSOPM_list_max in Htail.
+  rewrite Htail in Hheadtail.
+  injection Hheadtail.
+  intro H. left. symmetry. exact H.
+- unfold RSOPM_list_max in Htail.
+  fold RSOPM_list_max in Htail.
+  fold RSOPM_list_max in Hmaxtail.
+  fold RSOPM_list_max in Hheadtail.
+  rewrite Htail in Hheadtail.
+  injection Hheadtail.
+  intro H. left. symmetry. exact H.
+- right. injection Hheadtail. intro H. symmetry. exact H.
+- right. injection Hheadtail. intro H. symmetry. exact H.
+- unfold RSOPM_list_max in Hheadtail.
+  unfold RSOPM_list_max in Htail.
+  destruct tail as [| head' tail'] eqn:Htail2.  
+  - discriminate Hheadtail.
+  - rewrite Htail in Hheadtail.
+    destruct (head <= previous_max).
+    - discriminate Hheadtail.
+    - discriminate Hheadtail.
+apply I.
+Qed.
+
+Coercion bool_to_Prop : bool >-> Sortclass.
+
+Lemma le_helper :
+  forall x y z : T RSOPM,
+  (x <= y) /\ (z = x \/ z = y) -> x <= z.
+Proof.
+  intros x y z.
+  intro H.
+ (* destruct H as [[H1 | H2] [H3 | H4]].
+  - (* Case 1: x <= y and z = x *)
+    rewrite H3. (*have proof of this in real_subsets*) admit.
+  - (* Case 2: x <= y and z = y *)
+    rewrite H4. assumption.
+  - (* Case 3: y <= x and z = x *)
+    rewrite H3. (*again proof is in real_subsets*) admit.
+  - (* Case 4: y <= x and z = y *)
+    rewrite H4. admit.*)
+Admitted.
+
+Lemma RSOPM_list_max_monotonic :
+  forall (head : T RSOPM) (tail : list (T RSOPM)),
+    match (RSOPM_list_max tail) with 
+    | None => True 
+    | Some previous_max => 
+      match RSOPM_list_max (head :: tail) with
+      | None => False
+      | Some new_max => bool_to_Prop(previous_max <= new_max)
+      end 
+    end.
+Proof.
+  intros head tail.
+  destruct (RSOPM_list_max tail) as [previous_max|] eqn:E1.
+  - destruct (RSOPM_list_max (head :: tail)) as [new_max|] eqn:E2.
+  unfold RSOPM_list_max in E2.
+  assert ((new_max = previous_max \/ new_max = head) -> previous_max <= new_max).
+  (*apply le_helper.*)
+  unfold RSOPM_list_max in E2. admit.
+
+Admitted.
 
 Lemma max_none_for_empty:
     forall l,
@@ -468,6 +581,8 @@ Proof.
   destruct (RSOPM_list_max l); last discriminate.
   destruct (a <= t); discriminate.
 Qed.
+
+Print map.
 
 Definition compute_lb (lt0_partition: LinearSystem 1): option (T RSOPM) :=
     RSOPM_list_max (map (fun ineq => - (ineq 0%nat / ineq 1%nat)) lt0_partition).
@@ -491,7 +606,14 @@ Proof.
     unfold is_linear_system_solution,interpret_inequalities. easy.
   * pose proof partition_inequalities_cons as Hcons.
     specialize (Hcons 1%nat a sys).
+    (*ab hier MJ*)
+    rewrite <- Hpart in Hcons.
+    apply IHsys. 
+    rewrite Hpart.
+    unfold partition_inequalities in Hpart. 
+    (*ist dieses Statement wahr?*) 
 Admitted.
+
 
 Lemma compute_lb_monotone:
   forall head tail lb1,
@@ -500,6 +622,16 @@ Lemma compute_lb_monotone:
           compute_lb (head :: tail) = Some lb2 /\
           lb1 <= lb2 = true).
 Proof.
+  intros head tail lb1.
+  intro H1.
+  destruct (compute_lb (head :: tail)) as [lb2 |] eqn:H2.
+  - (* Case 1: compute_lb (head :: tail) = Some lb2 *)
+    (* Now we have compute_lb (head :: tail) = Some lb2, and we know that lb1 <= lb2 by the definition of compute_lb *)
+    exists lb2.
+    split.
+    reflexivity.
+  unfold compute_lb in H1.
+
 Admitted.
 
 Lemma compute_lb_none_for_empty:
