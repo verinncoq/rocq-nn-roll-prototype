@@ -107,6 +107,8 @@ Proof.
     apply Hnot2.
 Qed.    
 
+Print andb.
+
 Fixpoint trivial_consistency (sys: LinearSystem 0): bool :=
 match sys with
 | nil => true
@@ -467,7 +469,7 @@ Definition bool_to_Prop (b : bool) : Prop :=
   | false => False
   end.
 
-Lemma Some_eq_Some: forall x y : nat, Some x = Some y -> x = y.
+Lemma Some_eq_Some: forall x y : T RSOPM, Some x = Some y -> x = y.
 Proof.
   intros x y H. (* Introduce the variables and hypothesis *)
   injection H. (* Use injection to derive x = y from Some x = Some y *)
@@ -708,6 +710,76 @@ Proof.
   *)
 Qed.
 
+Check Rle.
+
+Lemma RSOPM_le_refl : forall x : T RSOPM, x <= x = true.
+Proof.
+  intro x.
+  unfold "<=".
+  apply ax_real_leq_true.
+  apply Rle_refl.
+Qed.
+
+Lemma RSOPM_le_neg : forall x y : T RSOPM, x <= y = false -> y <= x = true.
+Proof.
+intros x y.
+intro H.
+apply ax_real_leq_true.
+apply ax_real_leq_false in H.
+apply Rlt_le.
+exact H.
+Qed.
+
+Lemma RSOPM_list_max_monotonic2 : forall head tail max1,
+    RSOPM_list_max tail = Some max1 ->
+    (exists max2,
+      	RSOPM_list_max (head :: tail) = Some max2 /\
+        max1 <= max2 = true).
+Proof.
+intros head tail max1 H1.
+destruct (RSOPM_list_max (head :: tail)) as [max2 |] eqn:H2.
+destruct (RSOPM_list_max tail) as [previous_max |] eqn:Hmax_tail.
+- destruct (head <= previous_max) eqn:Hhead.
+  + exists previous_max.
+    split.
+    rewrite <- H2.
+    unfold RSOPM_list_max in H2.
+    simpl.
+    rewrite Hmax_tail.
+    rewrite Hhead.
+    reflexivity.
+- injection H1 as ->.
+unfold "<=". apply RSOPM_le_refl. 
+- exists head.
+  split.
+  rewrite <- H2.
+  simpl.
+  unfold RSOPM_list_max in H2.
+  rewrite Hmax_tail.
+  rewrite Hhead. 
+  reflexivity.
+- assert (previous_max = max1) as H3.
+  + apply Some_eq_Some. exact H1.
+  rewrite H3 in Hhead. apply RSOPM_le_neg. exact Hhead. (*EASY RSOPM LEMMA*)
+- exists head.
+  split.
+  rewrite <- H2.
+  unfold RSOPM_list_max. fold RSOPM_list_max.
+  rewrite Hmax_tail.
+  reflexivity.
+  discriminate.
+- exists head.
+  split.
+  unfold RSOPM_list_max in H2. fold RSOPM_list_max in H2.
+  destruct (RSOPM_list_max tail).
+  destruct (head <= t).
+  discriminate. discriminate. discriminate.
+  - unfold RSOPM_list_max in H2. fold RSOPM_list_max in H2.
+  destruct (RSOPM_list_max tail).
+  destruct (head <= t).
+  discriminate. discriminate. discriminate. 
+Qed.
+
 Lemma compute_lb_monotone:
   forall head tail lb1,
       compute_lb tail = Some lb1 ->
@@ -717,15 +789,13 @@ Lemma compute_lb_monotone:
 Proof.
   intros head tail lb1.
   intro H1.
-  destruct (compute_lb (head :: tail)) as [lb2 |] eqn:H2.
-  - (* Case 1: compute_lb (head :: tail) = Some lb2 *)
-    (* Now we have compute_lb (head :: tail) = Some lb2, and we know that lb1 <= lb2 by the definition of compute_lb *)
-    exists lb2.
-    split.
-    reflexivity.
-  unfold compute_lb in H1.
-
-Admitted.
+  unfold compute_lb.
+  apply RSOPM_list_max_monotonic2. 
+  rewrite <- H1.
+  unfold compute_lb.
+  unfold map.
+  reflexivity.
+Qed.
 
 Lemma compute_lb_none_for_empty:
     forall l,
@@ -890,6 +960,7 @@ Definition trivial_extract (sys: LinearSystem 1): option (T RSOPM) :=
     | true => satisfy_bounds (compute_lb lt0) (compute_ub gt0)
     | false => None
     end.
+    
 
 Lemma trivial_extract_correct:
     forall (sys: LinearSystem 1),
@@ -937,6 +1008,18 @@ Proof.
            injection Hextract; intro Hinject.
            rewrite Hsol. rewrite <- Hinject.
            apply ax_real_leq_true. lra.
+           unfold satisfy_bounds in Hextract.
+           destruct (trivial_consistency eq0_sys) eqn:Htrivial.
+          - destruct (compute_lb lt0_sys) eqn:Hlb.
+          + destruct (compute_ub gt0_sys) eqn:Hub.
+            * destruct (t <= t0) eqn:Hle.
+            * discriminate.
+          
+
+
+
+
+
    * (* Requires some more work *)
 Admitted.
 
