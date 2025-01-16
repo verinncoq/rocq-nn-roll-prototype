@@ -23,17 +23,75 @@ Open Scope RSOPM_scope.
 
 (*TODO!!!*)
 
+Definition af_to_linSys {d : nat} 
+    (af: AffineFunction (RSOPM:=RSOPMD) (d + d) 1) 
+    : LinearSystem (RSOPM:=RSOPMD) d :=
+        match af with
+        | Affine C b =>
+            map (fun i =>
+                   fun j =>
+                     if j=? 0 then coeff_colvec 0 b i 
+                     else coeff_mat 0 C i (j-1)) 
+                (seq 0 1) 
+        end.
+
+
 Definition convert_to_fme {d: nat}
     (affine_el: AffineElement (RSOPM:=RSOPMD) (d + d) 1)
     (W: ConvexPolyhedron (RSOPM:=RSOPMD) d)
-    : LinearSystem (RSOPM:=RSOPMD) d. (*Maybe not d*)
+    : LinearSystem (RSOPM:=RSOPMD) d := (*Maybe not d*)
+      match affine_el with
+        | Element _ af => af_to_linSys af
+      end.
+
+Lemma colvec_satisfies_inequalities :
+  forall (d: nat) (C: matrix (T := T RSOPMD) 1 d) 
+         (b: colvec (RSOPM := RSOPMD) 1) 
+         (x: colvec d),
+    (forall i, (((toRS ((Mmult (T:=RSOPMD) C x) + b)%M) <= 0) = true)) ->
+    interpret_inequalities (af_to_linSys (Affine C b)) (fun i => coeff_colvec 0 x i).
+Admit.
+
+
+Lemma convert_to_fme_correct_helper:
+  forall (d:nat) (af: AffineElement (d + d) 1) (W: ConvexPolyhedron d) (x: colvec(RSOPM:=RSOPMD) d),
+    in_convex_polyhedron x W ->
+    match affine_element_eval af (colvec_concat x x) with
+    | Some r => interpret_inequalities (convert_to_fme af W) (fun _ => (toRS r))
+    | None => True
+    end.
+Proof.
+  intros d af W x HxinW.
+  destruct (affine_element_eval af (colvec_concat x x)).
+    - unfold interpret_inequalities.
+      unfold convert_to_fme. 
+      destruct af as [elem af_fn].
+      unfold af_to_linSys. 
+      destruct af_fn as [C b].
+      induction (seq 0 d) as [| i tail IH].
+        + simpl. exact I.
+        + simpl. split.
+          - unfold interpret_inequality. simpl.
+            admit.
+          - apply IH.
 Admitted.
+
 
 Theorem convert_to_fme_correct {d: nat}:
     forall affine_el (W: ConvexPolyhedron (RSOPM:=RSOPMD) d),
         satisfaction_over_element affine_el W <-> 
         fme_solve (convert_to_fme affine_el W) = None.
-Admitted.
+
+Proof.
+  intros af W.
+  specialize (fme_correct (d + d) (convert_to_fme af W)).
+  split.
+    - intro.
+      admit.
+    - intro.
+      unfold satisfaction_over_element.
+      intros x HxinW.
+
 
 End NNDHAffineElementToFME.
 
