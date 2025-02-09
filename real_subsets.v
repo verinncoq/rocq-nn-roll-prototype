@@ -33,6 +33,31 @@ Record RealSubsetOPM := BuildRSOPM {
 
 End RealSubsetsTypes.
 
+Section RealSubsetExtensions.
+
+Context {RSOPM: RealSubsetOPM}.
+
+Definition RSeq (x y: (T RSOPM)) :=
+    match RSOPM_le RSOPM x y, RSOPM_le RSOPM y x with
+    | true, true => true
+    | _, _ => false
+    end.
+
+Definition RSlt (x y: (T RSOPM)) :=
+    match RSOPM_le RSOPM x y, RSOPM_le RSOPM y x with
+    | true, false => true
+    | _, _ => false
+    end.
+
+Definition RSge (x y: (T RSOPM)) :=
+    RSOPM_le RSOPM y x.
+
+Definition RSgt (x y: (T RSOPM)) :=
+    RSlt y x.
+    
+End RealSubsetExtensions.
+
+
 Module RealSubsetNotations.
     
 Declare Scope RSOPM_scope.
@@ -52,6 +77,11 @@ Notation "- x" := (RSopp x) : RSOPM_scope.
 Definition RSle {RSOPM: RealSubsetOPM} := RSOPM_le RSOPM.
 Infix "<=" := RSle : RSOPM_scope.
 
+Infix "<" := RSlt : RSOPM_scope.
+Infix ">=" := RSge : RSOPM_scope.
+Infix ">" := RSgt : RSOPM_scope.
+Infix "==" := RSeq (at level 70, no associativity): RSOPM_scope.
+
 Definition RSplus {RSOPM: RealSubsetOPM} := RSOPM_plus RSOPM.
 Infix "+" := RSplus : RSOPM_scope.
 
@@ -62,19 +92,6 @@ End RealSubsetNotations.
 
 Import RealSubsetNotations.
 Open Scope RSOPM_scope.
-
-Section SubsetExtensions.
-
-Context {RSOPM: RealSubsetOPM}.
-
-(* Equality based on less-or-equal operator *)
-Definition RSeq (x y: (T RSOPM)) :=
-    match x <= y, y <= x with
-    | true, true => true
-    | _, _ => false
-    end.
-    
-End SubsetExtensions.
 
 Ltac RSOPM_realize :=
     repeat (
