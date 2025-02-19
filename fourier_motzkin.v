@@ -392,6 +392,93 @@ Proof.
          - apply Hsol_gt0sys.
 Qed.
 
+Lemma partition_inequalities_solutions_2: 
+    forall (sys: LinearSystem 1) lt0 eq0 gt0 sol,
+        (lt0, eq0, gt0) = partition_inequalities sys ->
+        is_linear_system_solution sys sol ->
+        (is_linear_system_solution lt0 sol /\
+        is_linear_system_solution eq0 sol /\
+        is_linear_system_solution gt0 sol).
+Proof.
+induction sys.
+intros lt0 eq0 gt0 sol Hpart Hsys.
+unfold partition_inequalities in Hpart.
+unfold partition in Hpart.
+injection Hpart; intros Hgt0 Heq0 Hlt0.
+subst.
+unfold is_linear_system_solution.
+unfold interpret_inequalities.
+split. exact I. split. exact I. exact I.
+intros lt0_a eq0_a gt0_a sol Hpart Hsys.
+remember (partition_inequalities sys) as part_sys.
+destruct part_sys as [[lt0 eq0] gt0].
+pose proof partition_inequalities_cons as Hcons.
+specialize (Hcons 1%nat a sys).
+rewrite <- Hpart in Hcons.
+rewrite <- Heqpart_sys in Hcons.
+remember (partition_inequalities sys) as part_sys.
+specialize (IHsys lt0 eq0 gt0 sol eq_refl).
+destruct Hcons as [Hcons|[Hcons|Hcons]].
+all: destruct Hcons as [Ha1 [Ha2 [Hlt0 [Hgt0 Heq0]]]].
+- subst.
+  unfold is_linear_system_solution in Hsys.
+  unfold interpret_inequalities in Hsys.
+  fold (interpret_inequalities (n:=1)) in Hsys.
+  destruct Hsys as [Hsys1 Hsys2].
+  unfold is_linear_system_solution at 2.
+  unfold interpret_inequalities. fold (interpret_inequalities (n:=1)).
+  rewrite <- and_assoc.
+  rewrite <- (and_assoc (is_linear_system_solution lt0 sol) (interpret_inequality a sol) (is_linear_system_solution eq0 sol)).
+  rewrite (and_comm (is_linear_system_solution lt0 sol) (interpret_inequality a sol)).
+  rewrite and_assoc.
+  rewrite and_assoc.
+  split.
+  exact Hsys1.
+  apply IHsys.
+  exact Hsys2.
+- subst.
+  unfold is_linear_system_solution in Hsys.
+  unfold interpret_inequalities in Hsys.
+  fold (interpret_inequalities (n:=1)) in Hsys.
+  destruct Hsys as [Hsys1 Hsys2].
+  unfold is_linear_system_solution at 1.
+  unfold interpret_inequalities. fold (interpret_inequalities (n:=1)).
+  rewrite and_assoc.
+  split.
+  exact Hsys1.
+  apply IHsys.
+  exact Hsys2.
+- - subst.
+  unfold is_linear_system_solution in Hsys.
+  unfold interpret_inequalities in Hsys.
+  fold (interpret_inequalities (n:=1)) in Hsys.
+  destruct Hsys as [Hsys1 Hsys2].
+  unfold is_linear_system_solution at 3.
+  unfold interpret_inequalities. fold (interpret_inequalities (n:=1)).
+  rewrite (and_comm (interpret_inequality a sol) (interpret_inequalities gt0 sol)).
+  rewrite <- and_assoc.
+  rewrite <- and_assoc.
+  split.
+  rewrite and_assoc.
+  apply IHsys.
+  exact Hsys2.
+  exact Hsys1.
+Qed.
+
+Lemma partition_inequalities_solutions_contraposition: 
+    forall (sys: LinearSystem 1) lt0 eq0 gt0 sol,
+        (lt0, eq0, gt0) = partition_inequalities sys ->
+        (~ (is_linear_system_solution lt0 sol) \/
+        ~(is_linear_system_solution eq0 sol) \/
+        ~(is_linear_system_solution gt0 sol)) ->
+        ~(is_linear_system_solution sys sol ).
+Proof.
+pose proof partition_inequalities_solutions_2 as Hsplit.
+intros sys lt0 eq0 gt0 sol Hpartition Hneg Hsys.
+specialize (Hsplit sys lt0 eq0 gt0 sol Hpartition).
+tauto.
+Qed.
+
 Lemma trivial_consistency_partition_solution:
     forall (sys: LinearSystem 1) lt0 eq0 gt0 sol,
         (lt0, eq0, gt0) = partition_inequalities sys ->
@@ -1013,6 +1100,125 @@ Proof.
         apply H.
 Qed.
 
+Lemma compute_lb_none : forall sys sol lt0 eq0 gt0,
+        (lt0, eq0, gt0) = partition_inequalities sys ->
+        match (compute_lb lt0) with
+        | Some lb => (lb <= sol 1%nat = false) ->
+        (~ is_linear_system_solution lt0 sol)
+        | None => True 
+        end.
+Proof.
+Admitted.
+
+Lemma compute_lb_none_2 : forall sys sol lt0 eq0 gt0,
+        (lt0, eq0, gt0) = partition_inequalities sys ->
+        match (compute_lb lt0) with
+        | Some lb => (lb <= sol 1%nat = false) ->
+        (~ is_linear_system_solution lt0 sol)
+        | None => True 
+        end.
+Proof.
+
+Lemma compute_ub_none : forall sys sol lt0 eq0 gt0,
+        (lt0, eq0, gt0) = partition_inequalities sys ->
+        match (compute_ub gt0) with
+        | Some ub => (sol 1%nat <= ub = false) ->
+        (~ is_linear_system_solution gt0 sol)
+        | None => True 
+        end.
+Proof.
+  intros sys sol.
+  induction sys; intros lt0 eq0 gt0 Hpart.
+  * unfold partition_inequalities in Hpart.
+    unfold partition in Hpart.
+    apply pair_equal_spec in Hpart; destruct Hpart as [Hpart1 Hpart2].
+    apply pair_equal_spec in Hpart1; destruct Hpart1 as [Hpart1 Hpart3].
+    rewrite Hpart2.
+    unfold is_linear_system_solution,interpret_inequalities.
+    destruct (compute_ub []) eqn:Hub.
+    + cbn. exact I.
+    + cbn. exact I.
+    (*Induktionsschlusss*)
+  * pose proof partition_inequalities_cons as Hcons.
+    specialize (Hcons 1%nat a sys).
+    rewrite <- Hpart in Hcons.
+    remember (partition_inequalities sys) as part_sys.
+    destruct part_sys as [[lt0_sys eq0_sys] gt0_sys].
+    specialize (IHsys lt0_sys eq0_sys gt0_sys eq_refl).
+    destruct Hcons as [Hcons|[Hcons|Hcons]].
+    all: destruct Hcons as [Ha1 [Ha2 [Hlt0 [Hgt0 Heq0]]]]. 
+    - rewrite Hgt0.
+      apply IHsys.
+    - rewrite Hgt0.
+      apply IHsys.
+    - rewrite Hgt0.
+      unfold compute_ub.
+      rewrite map_cons.
+      unfold RSOPM_list_min; fold RSOPM_list_min.
+      pose proof (eq_refl (compute_ub (gt0_sys))) as Hub_sys.
+      unfold compute_ub in Hub_sys at 1.
+      remember (RSOPM_list_min (map _ gt0_sys)) as ub_sys.
+      pose proof (eq_trans Hequb_sys Hub_sys) as Hub_eq.
+      unfold is_linear_system_solution.
+      destruct ub_sys.
+      + destruct (- (a 0%nat / a 1%nat) <= t) eqn:Hta.
+        * intro.
+          unfold interpret_inequalities. fold (interpret_inequalities (n:=1)).
+          rewrite <- Hub_eq in IHsys.
+          apply or_not_and.
+          left.
+          unfold "~".
+          intro.
+          unfold interpret_inequality in H0.
+          unfold interpret_inequality_helper in H0.
+          rewrite ax_real_leq_true in H0.
+          rewrite ax_real_leq_false in H.
+          rewrite ax_opp_is_opp in H.
+          rewrite ax_real_div in H.
+          rewrite ax_real_leq_false in Ha1.
+          rewrite ax_zero_is_zero in Ha1.
+          rewrite Ropp_div_distr_l in H.
+        apply Rcomplements.Rlt_div_l in H.
+        apply (Rplus_gt_compat_l (INJ_RSOPM RSOPM (a 0%nat))) in H.
+        rewrite Rplus_opp_r in H.
+        rewrite <- ax_real_mult in H.
+        rewrite <- ax_real_plus in H.
+        apply Rgt_lt in H.
+        rewrite <- (ax_zero_is_zero) in H. 
+        
+        rewrite <- (ax_real_leq_false RSOPM (RSOPM_plus RSOPM (a 0%nat) (RSOPM_mult RSOPM (sol 1%nat) (a 1%nat))) 0) in H.
+
+          
+
+          apply Rcomplements.Rlt_div_r in H.
+          apply Rlt_minus in H.
+          unfold Rminus in H.
+          rewrite Ropp_involutive in H.
+          rewrite Rmult_comm in H.
+
+
+          admit.
+        * intro.
+          rewrite <- Hub_eq in IHsys.
+          apply IHsys in H.
+          unfold "~".
+           unfold interpret_inequalities. fold (interpret_inequalities (n:=1)).
+          intro. 
+          destruct H0 as [H1 H2].
+          unfold is_linear_system_solution in H.
+          contradiction.
+      + symmetry in Hub_eq.
+        apply compute_ub_none_for_empty in Hub_eq.
+        subst.
+        unfold interpret_inequalities.
+        unfold interpret_inequality.
+        unfold interpret_inequality_helper.
+        intro.
+        (*nerviges umformen*)
+        admit.
+Admitted.
+
+
 Definition satisfy_bounds 
     (lbo: option (T RSOPM)) 
     (ubo: option (T RSOPM)) 
@@ -1051,37 +1257,6 @@ Proof.
     * destruct v2; discriminate H.
 Qed.
 
-Lemma satisfy_bounds_correct:
-    forall sys lt0 eq0 gt0,
-        (lt0, eq0, gt0) = partition_inequalities sys ->
-        match (satisfy_bounds (compute_lb lt0) (compute_ub gt0)) with
-        | Some v => True 
-        | None => ~ (exists sol, is_linear_system_solution sys sol)
-        end.
-Proof.
-intro sys.
-induction sys.
-intros.
-destruct (satisfy_bounds (compute_lb lt0) (compute_ub gt0)) eqn:H0.
-exact I.
-unfold is_linear_system_solution.
-unfold interpret_inequalities.
-injection H as H1 H2 H3.
-subst.
-unfold satisfy_bounds in H0.
-destruct (compute_lb []) eqn:H1; try discriminate.
-intros.
-destruct (satisfy_bounds (compute_lb lt0) (compute_ub gt0)) eqn:H2; try discriminate.
-exact I.
-apply no_linear_system_solution_cons.
-remember (partition_inequalities sys) as part_sys.
-destruct part_sys as [[lt0_sys eq0_sys] gt0_sys].
-specialize (IHsys lt0_sys eq0_sys gt0_sys). 
-destruct (satisfy_bounds (compute_lb lt0_sys) (compute_ub gt0_sys)) eqn:H3.
-(*Beweisstrategir nicht haltbar*)
-Admitted.
-
-
 Definition trivial_extract (sys: LinearSystem 1): option (T RSOPM) :=
     let (p, gt0) := partition_inequalities sys in
     let (lt0, eq0) := p in
@@ -1104,1159 +1279,6 @@ Proof.
               exact H3b.
 Qed.
 
-Lemma partition_head_eq0 {n:nat} (sys: LinearSystem n) : forall a lt0 eq0 gt0 lt02 eq02 gt02, (lt0,eq0,gt0) = partition_inequalities sys  -> 
-      (a n = 0) -> (partition_inequalities (n:= n) (a :: sys) = (lt02, eq02, gt02)) ->
-(lt02,eq02,gt02)=(lt0,a::eq0, gt0).
-Proof.
-intros.
-unfold partition_inequalities in H1.
-unfold partition_inequalities in H.
-destruct (partition (fun ineq : nat -> T RSOPM => ineq n <= 0) (a :: sys)) as [le0_a gt0_a] eqn:Hpartition1.
-destruct (partition (fun ineq : nat -> T RSOPM => 0 <= ineq n) le0_a) as [eq0_a lt0_a] eqn:Hpartition2.
-unfold partition in Hpartition1.
-destruct ((fix partition (l : list (nat -> T RSOPM)) :
-list (nat -> T RSOPM) * list
-(nat -> T RSOPM) :=
-match l with
-| [] => ([], [])
-| x :: tl =>
-let (g, d) := partition tl in
-if x n <= 0 then (x :: g, d)
-else (g, x :: d)
-end) sys) eqn:H3.
-destruct (a n <= 0) eqn:H2.
-injection Hpartition1 as Hpartition1_a Hpartition1_b.
-rewrite <- Hpartition1_a in Hpartition2.
-unfold partition in Hpartition2.
-destruct (
-(fix partition (l : list (nat -> T RSOPM)) :
-list (nat -> T RSOPM) * list (nat -> T RSOPM) :=
-match l with
-| [] => ([], [])
-| x :: tl => let (g, d) := partition tl in if 0 <= x n then (x :: g, d)
-else (g, x :: d)
-end) l) eqn:H5.
-destruct (0 <= a n) eqn:H4.
-unfold partition in H.
-rewrite H3 in H.
-destruct ((fix partition (l : list (nat -> T RSOPM)) : list (nat -> T RSOPM) * list (nat -> T RSOPM) :=
-match l with
-| [] => ([], [])
-| x :: tl => let (g, d) := partition tl in if 0 <= x n then (x :: g, d) else (g, x :: d)
-end) l) eqn:H6.
-injection H as HH1 HH2.
-injection H5 as HH5.
-injection Hpartition2 as Hpartition2_a Hpartition2_b.
-subst. rewrite <-  H1. 
-reflexivity.
-rewrite H0 in H4.
-rewrite RSOPM_le_refl in H4.
-discriminate.
-rewrite H0 in H2.
-rewrite RSOPM_le_refl in H2.
-discriminate.
-(*Yes there should be some automation for this*)
-Qed.
-
-Lemma partition_head_lt0 {n:nat} (sys: LinearSystem n) : forall a lt0 eq0 gt0 lt02 eq02 gt02, (lt0,eq0,gt0) = partition_inequalities sys  -> 
-      ((a n <= 0) /\ ~ (0 <= a n)) -> (partition_inequalities (n:= n) (a :: sys) = (lt02, eq02, gt02)) ->
-(lt02,eq02,gt02)=(a::lt0,eq0, gt0).
-Proof.
-intros.
-unfold partition_inequalities in H1.
-unfold partition_inequalities in H.
-destruct (partition (fun ineq : nat -> T RSOPM => ineq n <= 0) (a :: sys)) as [le0_a gt0_a] eqn:Hpartition1.
-destruct (partition (fun ineq : nat -> T RSOPM => 0 <= ineq n) le0_a) as [eq0_a lt0_a] eqn:Hpartition2.
-unfold partition in Hpartition1.
-destruct ((fix partition (l : list (nat -> T RSOPM)) :
-list (nat -> T RSOPM) * list
-(nat -> T RSOPM) :=
-match l with
-| [] => ([], [])
-| x :: tl =>
-let (g, d) := partition tl in
-if x n <= 0 then (x :: g, d)
-else (g, x :: d)
-end) sys) eqn:H3.
-destruct (a n <= 0) eqn:H2.
-injection Hpartition1 as Hpartition1_a Hpartition1_b.
-rewrite <- Hpartition1_a in Hpartition2.
-unfold partition in Hpartition2.
-destruct (
-(fix partition (l : list (nat -> T RSOPM)) :
-list (nat -> T RSOPM) * list (nat -> T RSOPM) :=
-match l with
-| [] => ([], [])
-| x :: tl => let (g, d) := partition tl in if 0 <= x n then (x :: g, d)
-else (g, x :: d)
-end) l) eqn:H5.
-destruct (0 <= a n) eqn:H4.
-destruct H0 as [H01 H02].
-contradiction.
-unfold partition in H.
-rewrite H3 in H.
-destruct ((fix partition (l : list (nat -> T RSOPM)) : list (nat -> T RSOPM) * list (nat -> T RSOPM) :=
-match l with
-| [] => ([], [])
-| x :: tl => let (g, d) := partition tl in if 0 <= x n then (x :: g, d) else (g, x :: d)
-end) l) eqn:H6.
-injection H as HH1 HH2.
-injection H5 as HH5.
-injection Hpartition2 as Hpartition2_a Hpartition2_b.
-subst. rewrite <-  H1. 
-reflexivity.
-rewrite <- H2 in H0.
-injection Hpartition1 as Hpartition1_a Hpartition1_b.
-rewrite <- Hpartition1_a in Hpartition2.
-unfold partition in Hpartition2.
-destruct (
-(fix partition (l : list (nat -> T RSOPM)) :
-list (nat -> T RSOPM) * list (nat -> T RSOPM) :=
-match l with
-| [] => ([], [])
-| x :: tl => let (g, d) := partition tl in if 0 <= x n then (x :: g, d)
-else (g, x :: d)
-end) l) eqn:H5.
-destruct (0 <= a n) eqn:H4.
-destruct H0 as [H01 H02].
-exfalso. apply H02. exact I.
-assert (0 <= a n \/ a n <= 0) as H6.
-apply RSOPM_total_order_prop.
-- destruct H6.
-  + rewrite H4 in H6. contradiction.
-  + rewrite H2 in H6. contradiction.
-Qed.
-
-Lemma partition_head_gt0 {n:nat} (sys: LinearSystem n) : forall a lt0 eq0 gt0 lt02 eq02 gt02, (lt0,eq0,gt0) = partition_inequalities sys  -> 
-      (~ (a n <= 0) /\ (0 <= a n)) -> (partition_inequalities (n:= n) (a :: sys) = (lt02, eq02, gt02)) ->
-(lt02,eq02,gt02)=(lt0,eq0, a::gt0).
-Proof.
-intros.
-unfold partition_inequalities in H1.
-unfold partition_inequalities in H.
-destruct (partition (fun ineq : nat -> T RSOPM => ineq n <= 0) (a :: sys)) as [le0_a gt0_a] eqn:Hpartition1.
-destruct (partition (fun ineq : nat -> T RSOPM => 0 <= ineq n) le0_a) as [eq0_a lt0_a] eqn:Hpartition2.
-unfold partition in Hpartition1.
-destruct ((fix partition (l : list (nat -> T RSOPM)) :
-list (nat -> T RSOPM) * list
-(nat -> T RSOPM) :=
-match l with
-| [] => ([], [])
-| x :: tl =>
-let (g, d) := partition tl in
-if x n <= 0 then (x :: g, d)
-else (g, x :: d)
-end) sys) eqn:H3.
-destruct (a n <= 0) eqn:H2.
-destruct H0 as [f t].
-unfold "~" in f. exfalso. apply f. exact I.
-injection Hpartition1 as Hpartition1_a Hpartition1_b.
-rewrite <- Hpartition1_a in Hpartition2.
-unfold partition in Hpartition2.
-destruct (
-(fix partition (l : list (nat -> T RSOPM)) :
-list (nat -> T RSOPM) * list (nat -> T RSOPM) :=
-match l with
-| [] => ([], [])
-| x :: tl => let (g, d) := partition tl in if 0 <= x n then (x :: g, d)
-else (g, x :: d)
-end) l) eqn:H5.
-destruct (0 <= a n) eqn:H4.
-unfold partition in H.
-rewrite H3 in H.
-destruct ((fix partition (l : list (nat -> T RSOPM)) : list (nat -> T RSOPM) * list (nat -> T RSOPM) :=
-match l with
-| [] => ([], [])
-| x :: tl => let (g, d) := partition tl in if 0 <= x n then (x :: g, d) else (g, x :: d)
-end) l) eqn:H6.
-injection H as HH1 HH2.
-injection H5 as HH5.
-injection Hpartition2 as Hpartition2_a Hpartition2_b.
-subst. rewrite <-  H1. 
-reflexivity.
-destruct H0 as [H01 H02].
-contradiction.
-Qed.
-    
-Lemma partition_head {n:nat} (sys: LinearSystem n) (a: LinearInequality n) : forall lt0 eq0 gt0 lt02 eq02 gt02, (lt0,eq0,gt0) = partition_inequalities sys  -> 
-      (partition_inequalities (n:= n) (a :: sys) = (lt02, eq02, gt02) ->
-      ((lt02,eq02,gt02)=(a::lt0, eq0, gt0) \/ (lt02,eq02,gt02)=(lt0,a::eq0, gt0) \/ (lt02,eq02,gt02)=(lt0,eq0, a::gt0))).
-Proof.
-intros.
-assert (H0' := H0).
-unfold partition_inequalities in H0.
-destruct (partition (fun ineq : nat -> T RSOPM => ineq n <= 0) (a :: sys)) as [le0_a gt0_a] eqn:Hpartition1.
-destruct (partition (fun ineq : nat -> T RSOPM => 0 <= ineq n) le0_a) as [eq0_a lt0_a] eqn:Hpartition2.
-unfold partition in Hpartition1. 
-destruct  ((fix partition (l : list (nat -> T RSOPM)) :
-list (nat -> T RSOPM) * list (nat -> T RSOPM) :=
-match l with
-| [] => ([], [])
-| x :: tl =>
-let (g, d) := partition tl in
-if x n <= 0 then (x :: g, d) else (g, x :: d)
-end) sys) eqn:H1.
-destruct (a n <= 0) eqn:Hpartition1_a.
-apply pair_equal_spec in Hpartition1.
-destruct Hpartition1 as [Hle0_a Hgt0_a].
-rewrite <- Hle0_a in Hpartition2.
-unfold partition in Hpartition2.
-destruct ((fix partition (l : list (nat -> T RSOPM)) :
-list (nat -> T RSOPM) * list (nat -> T RSOPM) :=
-match l with
-| [] => ([], [])
-| x :: tl =>
-let (g, d) := partition tl in
-if 0 <= x n then (x :: g, d) else (g, x :: d)
-end) l) eqn:H2.
-destruct (0 <= a n) eqn:Hpartition2_a.
-right. left.
-apply (partition_head_eq0 sys).
-exact H.
-apply RSOPM_le_and_le_eq.
-split. 
-rewrite Hpartition1_a. exact I.
-rewrite Hpartition2_a. exact I.
-exact H0'.
-left. 
-apply (partition_head_lt0 sys).
-exact H.
-split.
-rewrite Hpartition1_a. exact I.
-rewrite Hpartition2_a. unfold "~". intro. exact H3.
-exact H0'.
-destruct (0 <= a n) eqn:Hpartition2_a.
-right. right.
-apply (partition_head_gt0 sys).
-exact H. 
-split. rewrite Hpartition1_a.
-unfold "~". intro. exact H2.
-rewrite Hpartition2_a. exact I.
-exact H0'.
-(*irgendwas ist hier nicht ganz in richtiger reinfogle*)
-Admitted.
-
-Lemma trivial_extract_correct:
-    forall (sys: LinearSystem 1),
-        match trivial_extract sys with
-        | Some r => (forall sol, 
-            sol 1%nat = r -> is_linear_system_solution sys sol)
-        | None => ~ (exists sol, is_linear_system_solution sys sol)
-        end. 
-Proof.
-    intro sys.
-    induction sys.
-      destruct (trivial_extract []) eqn: Hextract.
-        + intros.
-          unfold is_linear_system_solution.
-          unfold interpret_inequalities.
-          exact I.
-        + unfold trivial_extract in Hextract.
-          destruct (partition_inequalities []) 
-          as [[lt0_sys eq0_sys] gt0_sys] eqn:Hpart_sys.
-          unfold satisfy_bounds in Hextract.
-          destruct (trivial_consistency eq0_sys) eqn:Htrivial.
-          - destruct (compute_lb lt0_sys) eqn:Hlb.
-          + destruct (compute_ub gt0_sys) eqn:Hub.
-            * destruct (t <= t0) eqn:Hle.
-            * discriminate.
-            unfold partition_inequalities in Hpart_sys.
-            unfold partition in Hpart_sys.
-            apply pair_equal_spec in Hpart_sys; destruct Hpart_sys as [Hpart1 Hpart2].
-            apply pair_equal_spec in Hpart1; destruct Hpart1 as [Hpart1 Hpart3].
-            unfold compute_lb in Hlb. 
-            rewrite <- Hpart1 in Hlb.
-            simpl in Hlb.
-            discriminate. discriminate.
-            unfold is_linear_system_solution.
-            destruct (compute_ub gt0_sys) eqn:H1; discriminate.
-            unfold "~". intro H.
-            unfold partition_inequalities in Hpart_sys.
-            unfold partition in Hpart_sys.
-            apply pair_equal_spec in Hpart_sys; destruct Hpart_sys as [Hpart1 Hpart2].
-            apply pair_equal_spec in Hpart1; destruct Hpart1 as [Hpart1 Hpart3].
-            rewrite <- Hpart3 in Htrivial.
-            unfold trivial_consistency in Htrivial. discriminate.
-    (*induktionsschritt*)
-    remember (partition_inequalities sys) as part eqn:Hpart.
-    destruct part as ((lt0, eq0), gt0).
-    remember (partition_inequalities (a::sys)) as part eqn:Hpart_a.
-    (*case triv exract = some*)
-    destruct (trivial_extract (a::sys)) eqn:Htriv.
-    + intros.
-      destruct part as ((lt0_a, eq0_a), gt0_a).
-      apply (partition_inequalities_solutions (a::sys) lt0_a eq0_a gt0_a).
-      (*case about lt0_a*)
-      exact Hpart_a.
-      apply (compute_lb_correct (a::sys) sol lt0_a eq0_a gt0_a).
-      exact Hpart_a.
-      destruct (compute_lb lt0_a) eqn:Hlb.
-      unfold trivial_extract in Htriv.
-      rewrite <- Hpart_a in Htriv.
-      destruct (trivial_consistency eq0_a) eqn:Htriv2.
-      unfold satisfy_bounds in Htriv.
-      destruct (compute_ub gt0_a) eqn:Hub; try discriminate.
-      + destruct (compute_lb lt0_a) eqn:Hlb2; try discriminate.
-        + destruct (t2 <= t1) eqn:Hle; try discriminate.
-          apply Some_eq_Some in Htriv.
-          apply Some_eq_Some in Hlb.
-          subst. apply RSOPM_le_refl.
-        destruct (compute_lb lt0_a) eqn:Hlb2; try discriminate.
-          apply Some_eq_Some in Htriv.
-          apply Some_eq_Some in Hlb.
-          subst. apply RSOPM_le_refl.
-        discriminate. exact I.
-      (*case about eq0_a*)
-      pose proof (trivial_consistency_correct (a::sys)) as Hcons.
-      apply (trivial_consistency_partition_solution 
-                    (a::sys) lt0_a eq0_a gt0_a sol).
-       * exact Hpart_a.
-      unfold trivial_extract in Htriv.
-      rewrite <- Hpart_a in Htriv.
-      destruct (trivial_consistency eq0_a) eqn:Htriv2.
-      reflexivity. discriminate. 
-      (*case about lt0_a*)
-      apply (compute_ub_correct (a::sys) sol lt0_a eq0_a gt0_a).
-      exact Hpart_a.
-      destruct (compute_ub gt0_a) eqn:Hlb.
-      unfold trivial_extract in Htriv.
-      rewrite <- Hpart_a in Htriv.
-      destruct (trivial_consistency eq0_a) eqn:Htriv2.
-      unfold satisfy_bounds in Htriv.
-      destruct (compute_lb lt0_a) eqn:Hub; try discriminate.
-      + destruct (compute_ub gt0_a) eqn:Hlb2; try discriminate.
-        + destruct (t1 <= t2) eqn:Hle; try discriminate.
-          apply Some_eq_Some in Htriv.
-          apply Some_eq_Some in Hlb.
-          subst. exact Hle.
-        rewrite Hlb in Htriv.
-        apply Some_eq_Some in Htriv.
-        subst. apply RSOPM_le_refl.
-        discriminate. exact I.
-  (*case triv exract = none*)
-  unfold is_linear_system_solution.
-  unfold interpret_inequalities. fold (interpret_inequalities (n:=1)).
-  unfold trivial_extract in Htriv.
-  destruct part as ((lt0_a, eq0_a), gt0_a).
-  rewrite <- Hpart_a in Htriv.
-  apply Quantoren_demorgan.
-  intro sol.
-  destruct (trivial_extract sys) eqn:Htriv_sys. 
-    + left.
-      destruct (trivial_consistency eq0_a) eqn:Htriv_a.
-      + (*Fall unterscheidung über a*)
-        + destruct (a 1%nat <= 0) eqn:Hle.
-          + destruct (0 <= a 1%nat) eqn:Hge.
-            + assert (a 1%nat =0).
-              admit.
-              assert ((lt0_a, eq0_a, gt0_a) = (lt0, a::eq0, gt0)) as Hpart_eq.
-              apply (partition_head_eq0 sys a lt0 eq0 gt0 lt0_a eq0_a gt0_a).
-              assumption. exact H. rewrite Hpart_a. reflexivity.
-              injection Hpart_eq as H1 H2 H3.
-              subst.
-              unfold trivial_extract in Htriv_sys.
-              rewrite <- Hpart in Htriv_sys.
-              unfold trivial_consistency in Htriv_a.
-              fold trivial_consistency in Htriv_a.
-              apply andb_prop in Htriv_a as [Hle2 Htriv2].
-              rewrite Htriv2 in Htriv_sys.
-              rewrite Htriv in Htriv_sys. discriminate.
-              (*case a 1 < 0*)
-            + assert ((lt0_a, eq0_a, gt0_a) = (a::lt0, eq0, gt0)) as Hpart_eq.
-              apply (partition_head_lt0 sys a lt0 eq0 gt0 lt0_a eq0_a gt0_a).
-              assumption. split. rewrite Hle. exact I. intro. rewrite Hge in H. exact H.
-              rewrite Hpart_a. reflexivity.
-              injection Hpart_eq as H1 H2 H3.
-              subst.
-              unfold satisfy_bounds in Htriv.
-              destruct (compute_lb (a::lt0)) eqn:Hlb_a.
-              + destruct (compute_ub gt0) eqn:Hub_a.
-                * destruct (t0 <= t1) eqn:Hle_a0.
-                  + discriminate.
-                  unfold "~".
-                  intros.
-                  unfold interpret_inequality in H.
-                  unfold interpret_inequality_helper in H.
-                  unfold compute_lb in Hlb_a.
-                  rewrite map_cons in Hlb_a.
-                  unfold RSOPM_list_max in Hlb_a. fold RSOPM_list_max in Hlb_a.
-                  destruct (RSOPM_list_max (map (fun ineq : nat -> T RSOPM => - (ineq 0%nat / ineq 1%nat)) lt0)) eqn:HRSOPM_max.
-                  - setoid_rewrite HRSOPM_max in Hlb_a.
-                    unfold trivial_extract in Htriv_sys. 
-                    rewrite <- Hpart in Htriv_sys.
-                    rewrite Htriv_a in Htriv_sys.
-                    unfold satisfy_bounds in Htriv_sys.
-                    unfold compute_lb in Htriv_sys.
-                    rewrite HRSOPM_max in Htriv_sys.
-                    rewrite Hub_a in Htriv_sys.
-                    destruct (- (a 0%nat / a 1%nat) <= t2) eqn:Hle_a.
-                    + destruct (t2 <= t1) eqn:Hle_a1.
-                      * apply Some_eq_Some in Htriv_sys. 
-
-                  (*copied from andrei anfang
-                  unfold compute_lb in Htriv.
-              rewrite map_cons in Htriv.
-              unfold RSOPM_list_max in Htriv. fold RSOPM_list_max in Htriv.
-              pose proof (eq_refl (compute_lb (a::lt0))) as Hlb_sys.
-              unfold compute_lb in Hlb_sys at 1.
-              remember (RSOPM_list_max (map (fun ineq : nat -> T RSOPM => - (ineq 0%nat / ineq 1%nat)) (a::lt0))) as lb_sys.
-              assert (lb_sys = (compute_lb (a::lt0))) as Hlb_eq.
-              exact Hlb_sys.
-              destruct lb_sys as [lb_sys|]. 
-              * remember (- (a 0%nat / a 1%nat) <= lb_sys) as le_res.
-              destruct le_res.
-              unfold interpret_inequality, interpret_inequality_helper.
-              rewrite ax_real_leq_true.
-              RSOPM_realize.
-              symmetry in Heqle_res.
-              rewrite ax_real_leq_false in Hge.
-              rewrite ax_zero_is_zero in Hge.
-              rewrite ax_real_leq_true in Heqle_res.
-              rewrite ax_opp_is_opp, ax_real_div in Heqle_res.
-              intro H.
-              pose proof (Rle_trans _ _ _ Heqle_res H) as Hfinal.
-              rewrite <- Rdiv_opp_r in Hfinal.
-              rewrite Rcomplements.Rle_div_l in Hfinal; last lra.
-              apply Rle_minus in Hfinal.
-              rewrite Ropp_mult_distr_r_reverse in Hfinal.
-              unfold Rminus in Hfinal.
-              rewrite Ropp_involutive in Hfinal.
-              rewrite Rplus_comm in Hfinal.
-              rewrite Rmult_comm in Hfinal.
-              apply Hfinal.
-              copied from andrei ende*)
-                * discriminate.
-              + apply compute_lb_none_for_empty in Hlb_a.
-                discriminate.
-            + destruct (0 <= a 1%nat) eqn:Hge.
-              (*case a 1 > 0*)
-              + assert ((lt0_a, eq0_a, gt0_a) = (lt0, eq0, a::gt0)) as Hpart_eq.
-              apply (partition_head_gt0 sys a lt0 eq0 gt0 lt0_a eq0_a gt0_a).
-              assumption. split. rewrite Hle. intro H; exact H. rewrite Hge. exact I.
-              rewrite Hpart_a. reflexivity.
-              injection Hpart_eq as H1 H2 H3.
-              subst.
-              unfold satisfy_bounds in Htriv.
-              destruct (compute_lb (lt0)) eqn:Hlb_a.
-              + destruct (compute_ub (a::gt0)) eqn:Hub_a.
-                * destruct (t0 <= t1) eqn:Hle_a0.
-                  + discriminate.
-                  + admit.
-                * discriminate.
-              + apply compute_lb_none_for_empty in Hlb_a.
-                destruct (compute_ub (a::gt0)) eqn:Hub_a.
-                + discriminate.
-                + apply compute_ub_none_for_empty in Hub_a.
-                  discriminate.
-              (*case where a should not exist*)
-              rewrite ax_real_leq_false in Hle.
-              rewrite ax_real_leq_false in Hge.
-              rewrite ax_zero_is_zero in Hle.
-              rewrite ax_zero_is_zero in Hge.
-              apply (Rlt_asym 0 (INJ_RSOPM RSOPM (a 1%nat))) in Hle.
-              contradiction.
-              (*case where trivial_consistency a::eq is false*)
-        + destruct (a 1%nat <= 0) eqn:Hle.
-          + destruct (0 <= a 1%nat) eqn:Hge.
-            + assert (a 1%nat =0).
-              admit.
-              assert ((lt0_a, eq0_a, gt0_a) = (lt0, a::eq0, gt0)) as Hpart_eq.
-              apply (partition_head_eq0 sys a lt0 eq0 gt0 lt0_a eq0_a gt0_a).
-              assumption. exact H. rewrite Hpart_a. reflexivity.
-              injection Hpart_eq as H1 H2 H3.
-              subst.
-              unfold trivial_extract in Htriv_sys.
-              rewrite <- Hpart in Htriv_sys.
-              unfold trivial_consistency in Htriv_a.
-              fold trivial_consistency in Htriv_a.
-              destruct (trivial_consistency eq0) eqn:Htriv2.
-              + (*same max wtv argument as above*)
-              admit.
-              + discriminate.
-              assert ((lt0_a, eq0_a, gt0_a) = (a::lt0, eq0, gt0)) as Hpart_eq.
-              apply (partition_head_lt0 sys a lt0 eq0 gt0 lt0_a eq0_a gt0_a).
-              assumption. split. rewrite Hle. exact I. intro. rewrite Hge in H. exact H.
-              rewrite Hpart_a. reflexivity.
-              injection Hpart_eq as H1 H2 H3.
-              subst.
-              unfold trivial_extract in Htriv_sys.
-              rewrite <- Hpart in Htriv_sys.
-              unfold trivial_consistency in Htriv_a.
-              fold trivial_consistency in Htriv_a.
-              rewrite Htriv_a in Htriv_sys.
-              discriminate.
-            + destruct (0 <= a 1%nat) eqn:Hge.
-            + assert ((lt0_a, eq0_a, gt0_a) = (lt0, eq0, a::gt0)) as Hpart_eq.
-              apply (partition_head_gt0 sys a lt0 eq0 gt0 lt0_a eq0_a gt0_a).
-              assumption. split. rewrite Hle. intro H; exact H. rewrite Hge. exact I.
-              rewrite Hpart_a. reflexivity.
-              injection Hpart_eq as H1 H2 H3.
-              subst.
-              unfold trivial_extract in Htriv_sys.
-              rewrite <- Hpart in Htriv_sys.
-              rewrite Htriv_a in Htriv_sys.
-              discriminate.
-              (*case where a should not exist*)
-              rewrite ax_real_leq_false in Hle.
-              rewrite ax_real_leq_false in Hge.
-              rewrite ax_zero_is_zero in Hle.
-              rewrite ax_zero_is_zero in Hge.
-              apply (Rlt_asym 0 (INJ_RSOPM RSOPM (a 1%nat))) in Hle.
-              contradiction.
-              
-              
-
-              unfold is_linear_system_solution.
-              rewrite Hgt0.
-              unfold interpret_inequalities; fold (interpret_inequalities gt0_sys sol).
-              destruct ub_sys as [ub_sys|]; rewrite <- Hub_eq in IHsys.
-              unfold satisfy_bounds in Htriv.
-
-
-
-            + apply (partition_head_eq0 sys a lt0 eq0 gt0 lt0_a eq0_a gt0_a).
-    + right.
-    assert (forall sol : LinearSystemSolution 1, ~ is_linear_system_solution sys sol).
-    apply not_ex_all_not.
-    exact IHsys.
-    apply H.
-Qed.
-
-
-
-
-            specialize (IHsys).
-            rewrite Hpart_sys. reflexivity.
-            apply RSOPM_le_and_le_eq. split.
-            rewrite Hcomp. exact I.
-            rewrite Hcomp2. exact I.
-            exact Hpart_sys_a.
-            assert ((lt0_sys_a, eq0_sys_a, gt0_sys_a) = (lt0_sys, a::eq0_sys, gt0_sys)).
-            apply (partition_head_eq0 sys a lt0_sys eq0_sys gt0_sys lt0_sys_a eq0_sys_a gt0_sys_a).
-            rewrite Hpart_sys. reflexivity.
-            apply RSOPM_le_and_le_eq.
-            rewrite Hcomp. rewrite Hcomp2.
-            split; exact I.
-            exact Hpart_sys_a.
-            apply Quantoren_demorgan.
-            unfold interpret_inequality.
-            unfold interpret_inequality_helper.
-            destruct (a 0%nat <= 0) eqn:Ha.
-            (*eigentlich müsst hier beweis dass linke seite falsch?*)
-            right.
-            destruct (if trivial_consistency eq0_sys
-                    then satisfy_bounds (compute_lb lt0_sys) (compute_ub gt0_sys)
-                    else None) eqn: Hextract.
-            admit.
-
-            apply IHsys.
-            injection H as H1 H2.
-            subst.
-            destruct (trivial_consistency eq0_sys) eqn:Htrivial.
-            destruct (trivial_consistency (a::eq0_sys)) eqn:Htriviala.
-            (*Case 1*)
-            exact Hextract.
-            (*Case 2*)
-            unfold trivial_consistency in Htriviala.
-            rewrite Ha in Htriviala.
-            simpl in Htriviala.
-            fold trivial_consistency in Htriviala.
-            rewrite Htriviala in Htrivial.
-            discriminate.
-            reflexivity.
-            left.
-            assert (a 1%nat = 0).
-            apply RSOPM_le_and_le_eq.
-            rewrite Hcomp. rewrite Hcomp2. 
-            split; exact I.
-            rewrite H1.
-            rewrite RSOPM_mult_0_r.
-            rewrite RSOPM_plus_comm.
-            rewrite RSOPM_plus_0_r.
-            unfold "<>". rewrite Ha.
-            discriminate.
-            (*schwierteil startet jetzt:*)
-            assert ((lt0_sys_a, eq0_sys_a, gt0_sys_a) = (a::lt0_sys, eq0_sys, gt0_sys)).
-            apply (partition_head_lt0 sys a lt0_sys eq0_sys gt0_sys lt0_sys_a eq0_sys_a gt0_sys_a).
-            rewrite Hpart_sys. reflexivity.
-            rewrite Hcomp. 
-            rewrite Hcomp2.
-            unfold "~". split.
-            exact I. intro. exact H.
-            exact Hpart_sys_a.
-            injection H as H1 H2.
-            subst.
-            destruct (trivial_consistency eq0_sys) eqn:Htrivial.
-            apply or_not_and.
-            unfold interpret_inequality.
-            unfold interpret_inequality_helper.
-            destruct ((a 1%nat) * (sol 1%nat) + (a 0%nat) <= 0) eqn: Hsol.
-            assert ((true <> true) <-> false).
-            split.
-            - intros H. apply H. reflexivity. (* Contradiction *)
-            - intros H. exfalso. apply H. (* False case *)
-            rewrite H.
-            assert (forall P: Prop, (false \/ P) <-> P).
-            intro P.
-            tauto.
-            rewrite H0.
-            unfold is_linear_system_solution in IHsys.
-            apply IHsys.
-            unfold satisfy_bounds.
-            destruct (compute_lb lt0_sys) as [lb |] eqn:Hlb;
-            destruct (compute_ub gt0_sys) as [ub |] eqn:Hub;
-            try discriminate.
-            (* Now, we only have the case where lb > ub *)
-            destruct (lb <= ub) eqn:Hleb.
-            - rewrite <- Hextract.
-              unfold compute_lb.
-              unfold map.
-              unfold RSOPM_list_max. fold RSOPM_list_max.
-              unfold compute_lb in Hlb. 
-              unfold map in Hlb. 
-              rewrite Hlb.
-            (* Now show, that sol is smaller then lowerbound*)
-            destruct (- (a 0%nat / a 1%nat) <= lb ) eqn:Hlb3.
-            unfold satisfy_bounds.
-            rewrite Hleb.
-            reflexivity.
-            unfold satisfy_bounds.
-            destruct (- (a 0%nat / a 1%nat) <= ub ) eqn:Hub3.
-            assert ((- (a 0%nat / a 1%nat) <= ub) = false).
-            (*Hier Hleb und Hleb kombinieren mit RSOPM transitivity*)
-            admit.
-            rewrite H1 in Hub3.
-            discriminate.
-            fold map in Hlb.
-            destruct lt0_sys eqn:Hlt0_sys.
-            unfold RSOPM_list_max in Hlb.
-            rewrite Hlb. reflexivity.
-
-            (* Hier ist endstation: Da sys consistent is entspricht es nicht der vorraussetzung. 
-            Eigentlich müsste die induktion also früher beginnen*)
-            - (* Here, we need to show `lb > ub` *)
-            apply leb_complete_conv in Hleb. (* Converts `leb lb ub = false` into `lb > ub` *)
-            assumption. 
-
-
-
-
-      
-        
-    
-
-
-
-      destruct part as ((lt0_a, eq0_a), gt0_a).
-    + destruct (a 1%nat <= 0) eqn:Hlt0.
-      + destruct (0 <= a 1%nat) eqn:Hgt0.
-        + pose proof partition_inequalities_cons as Hcons.
-        (*Hier neu*)
-
-
-
-(*Induction von ganz vorne*)
-Lemma trivial_extract_correct:
-    forall (sys: LinearSystem 1),
-        match trivial_extract sys with
-        | Some r => (forall sol, 
-            sol 1%nat = r -> is_linear_system_solution sys sol)
-        | None => ~ (exists sol, is_linear_system_solution sys sol)
-        end. 
-Proof.
-    intro sys.
-    induction sys.
-      destruct (trivial_extract []) eqn: Hextract.
-        + intros.
-          unfold is_linear_system_solution.
-          unfold interpret_inequalities.
-          exact I.
-        + unfold trivial_extract in Hextract.
-          destruct (partition_inequalities []) 
-          as [[lt0_sys eq0_sys] gt0_sys] eqn:Hpart_sys.
-          unfold satisfy_bounds in Hextract.
-          destruct (trivial_consistency eq0_sys) eqn:Htrivial.
-          - destruct (compute_lb lt0_sys) eqn:Hlb.
-          + destruct (compute_ub gt0_sys) eqn:Hub.
-            * destruct (t <= t0) eqn:Hle.
-            * discriminate.
-            unfold partition_inequalities in Hpart_sys.
-            unfold partition in Hpart_sys.
-            apply pair_equal_spec in Hpart_sys; destruct Hpart_sys as [Hpart1 Hpart2].
-            apply pair_equal_spec in Hpart1; destruct Hpart1 as [Hpart1 Hpart3].
-            unfold compute_lb in Hlb. 
-            rewrite <- Hpart1 in Hlb.
-            simpl in Hlb.
-            discriminate. discriminate.
-            unfold is_linear_system_solution.
-            destruct (compute_ub gt0_sys) eqn:H1; discriminate.
-            unfold "~". intro H.
-            unfold partition_inequalities in Hpart_sys.
-            unfold partition in Hpart_sys.
-            apply pair_equal_spec in Hpart_sys; destruct Hpart_sys as [Hpart1 Hpart2].
-            apply pair_equal_spec in Hpart1; destruct Hpart1 as [Hpart1 Hpart3].
-            rewrite <- Hpart3 in Htrivial.
-            unfold trivial_consistency in Htrivial. discriminate.
-    (*induktionsschritt*)
-    remember (partition_inequalities sys) as part eqn:Hpart.
-    destruct part as ((lt0, eq0), gt0).
-    remember (partition_inequalities (a::sys)) as part eqn:Hpart_a.
-    destruct part as ((lt0_a, eq0_a), gt0_a).
-    + destruct (a 1%nat <= 0) eqn:Hlt0.
-      + destruct (0 <= a 1%nat) eqn:Hgt0.
-        + pose proof partition_inequalities_cons as Hcons.
-          specialize (Hcons 1%nat a sys).
-          rewrite <- Hpart in Hcons.
-          rewrite <- Hpart_a in Hcons.
-          remember (partition_inequalities sys) as part_sys.
-          destruct part_sys as [[lt0_sys eq0_sys] gt0_sys].
-          specialize (IHsys lt0_sys eq0_sys gt0_sys eq_refl).
-          destruct Hcons as [Hcons|[Hcons|Hcons]].
-          all: destruct Hcons as [Ha1 [Ha2 [Hlt0 [Hgt0 Heq0]]].
-          (*Ab jetzt fall a1 = 0*)
-        + assert (a 1%nat = 0) as Ha.
-          apply RSOPM_le_and_le_eq; split. rewrite Hlt0. exact I. rewrite Hgt0. exact I.
-          assert ((lt0_a, eq0_a, gt0_a) = (lt0, a::eq0, gt0)) as Hpart_eq.
-          apply (partition_head_eq0 sys a lt0 eq0 gt0 lt0_a eq0_a gt0_a).
-          assumption. exact Ha. rewrite Hpart_a. reflexivity.
-          destruct (trivial_extract (a::sys)) eqn: Hextract.
-          destruct (trivial_extract sys) eqn: Hextract2.
-          intros.
-          unfold is_linear_system_solution.
-          unfold interpret_inequalities. fold (interpret_inequalities (n:=1)).
-          rewrite Hpart_eq in Hpart_a.
-          unfold interpret_inequality.
-          unfold interpret_inequality_helper.
-          unfold trivial_extract in Hextract.
-          rewrite <- Hpart_a in Hextract.
-          destruct (trivial_consistency (a::eq0)) eqn:Htrivial.
-          unfold trivial_consistency in Htrivial. fold trivial_consistency in Htrivial.
-          destruct (andb_prop (a 0%nat <= 0) (trivial_consistency eq0) Htrivial) as [Hle Htriv].
-          split.
-          rewrite Ha.
-          rewrite RSOPM_mult_0_r.
-          rewrite RSOPM_plus_comm.
-          rewrite RSOPM_plus_0_r.
-          exact Hle.
-          unfold is_linear_system_solution in IHsys.
-          apply IHsys. 
-          unfold trivial_extract in Hextract2.
-          rewrite <- Hpart in Hextract2.
-          destruct (trivial_consistency (eq0)) eqn:Htrivial2.
-          rewrite Hextract2 in Hextract.
-          apply Some_eq_Some. rewrite <- H in Hextract. rewrite Hextract. reflexivity.
-          discriminate. discriminate.
-          unfold trivial_extract in Hextract.
-          rewrite Hpart_eq in Hpart_a.
-          rewrite <- Hpart_a in Hextract.
-          destruct (trivial_consistency (a::eq0)) eqn:Htrivial.
-          unfold trivial_consistency in Htrivial. fold trivial_consistency in Htrivial.
-          unfold trivial_extract in Hextract2.
-          rewrite <- Hpart in Hextract2.
-          destruct (trivial_consistency (eq0)) eqn:Htrivial2.
-          rewrite Hextract2 in Hextract. discriminate.
-          destruct (andb_prop (a 0%nat <= 0) (false) Htrivial) as [Hle Htriv].
-          discriminate. discriminate.
-          destruct (trivial_extract sys) eqn: Hextract2.
-          intro.
-          unfold is_linear_system_solution in H.
-          unfold interpret_inequalities in H. fold (interpret_inequalities (n:=1)) in H.
-          unfold interpret_inequality in H.
-          unfold interpret_inequality_helper in H.
-          unfold trivial_extract in Hextract.
-          rewrite Hpart_eq in Hpart_a.
-          rewrite <- Hpart_a in Hextract.
-          destruct (trivial_consistency (a::eq0)) eqn:Htrivial.
-          unfold trivial_extract in Hextract2.
-          rewrite <- Hpart in Hextract2.
-          destruct (trivial_consistency (eq0)) eqn:Htrivial2.
-          rewrite Hextract2 in Hextract. discriminate. discriminate.
-          unfold trivial_consistency in Htrivial. fold trivial_consistency in Htrivial.
-          apply andb_false_iff in Htrivial.
-          unfold trivial_extract in Hextract2.
-          rewrite <- Hpart in Hextract2.
-          destruct (trivial_consistency (eq0)) eqn:Htrivial2.
-          unfold is_linear_system_solution in IHsys.
-          unfold trivial_consistency in Htrivial. fold trivial_consistency in Htrivial.
-          destruct Htrivial as [Hfalse | Habsurd].
-          rewrite Ha in H.
-          setoid_rewrite RSOPM_mult_0_r in H.
-          rewrite RSOPM_plus_comm in H.
-          rewrite RSOPM_plus_0_r in H.
-          rewrite Hfalse in H.
-          destruct H as [sol [Hfalse_a Hinterp]].
-          discriminate. discriminate. discriminate.
-          unfold is_linear_system_solution.
-          unfold interpret_inequalities. fold (interpret_inequalities (n:=1)).
-          rewrite Quantoren_demorgan.
-          intro sol.
-          right.
-          apply (not_ex_all_not (LinearSystemSolution 1)(is_linear_system_solution sys)). exact IHsys.
-          (*Ab jetzt fall a1 < 0*)
-          assert ((lt0_a, eq0_a, gt0_a) = (a::lt0, eq0, gt0)) as Hpart_eq.
-          apply (partition_head_lt0 sys a lt0 eq0 gt0 lt0_a eq0_a gt0_a).
-          assumption. rewrite Hlt0. rewrite Hgt0. split. exact I. intro. exact H.
-          rewrite Hpart_a. reflexivity.
-          + destruct (trivial_extract (a::sys)) eqn: Hextract.
-              + destruct (trivial_extract sys) eqn: Hextract2.
-                + intros.
-                  rewrite <- interpret_inequalities_cons.
-                  split.
-                  (*WEIRD
-                  * rewrite <- (trivial_consistency_single_ineq a sol).
-                  *)
-                  assert (trivial_consistency [a] = true).
-                  unfold trivial_consistency. 
-                  unfold trivial_extract in Hextract.
-                  rewrite Hpart_eq in Hpart_a.
-                  rewrite <- Hpart_a in Hextract.
-                  destruct (trivial_consistency (eq0)) eqn:Htrivial.
-                  unfold satisfy_bounds in Hextract.
-                  unfold trivial_consistency in Htrivial.
-                  admit.
-
-                  unfold interpret_inequality.
-                  unfold interpret_inequality_helper.
-                  unfold trivial_extract in Hextract.
-                  rewrite <- Hpart_a in Hextract.
-                  (*bei fall (trivial_consistency (a::eq0)) = false gibt es im folgenden probleme:
-                  Irgendwie komischer fall*)
-                  destruct (trivial_consistency (a::eq0)) eqn:Htrivial.
-                  unfold trivial_consistency in Htrivial. fold trivial_consistency in Htrivial.
-                  destruct (andb_prop (a 0%nat <= 0) (trivial_consistency eq0) Htrivial) as [Hle Htriv].
-                  split.
-                  rewrite Htriv in Hextract.
-                  unfold satisfy_bounds in Hextract.
-                  destruct (compute_lb (a :: lt0)) eqn:Hlb.
-                  destruct (compute_ub gt0) eqn:Hub.
-                  destruct (t1 <= t2) eqn:Ht1t2.
-                  unfold compute_lb in Hlb.
-                  (*Some argument about the max...*)
-                  admit.
-                  discriminate. 
-                  (*Same argument about the max...*)
-                  admit.
-                  unfold compute_lb in Hlb.
-                  unfold RSOPM_list_max in Hlb.
-                  destruct (map (fun ineq : nat -> T RSOPM =>
-                  - (ineq 0%nat / ineq 1%nat)) (a :: lt0)) eqn:Hl.
-                    + unfold map in Hl.
-                      discriminate.
-                    + destruct ((fix RSOPM_list_max (l : list (T RSOPM)) :
-                                option (T RSOPM) :=
-                                      match l with
-                                  | [] => None
-                                  | head :: tail =>
-                                  match RSOPM_list_max tail with
-                                  | Some previous_max =>
-                                  if head <= previous_max
-                                  then Some previous_max
-                                  else Some head
-                                  | None => Some head
-                                  end
-                                  end) l) eqn:Hl2.
-                      + destruct (t1 <= t2) eqn:Ht12; try discriminate.
-                      discriminate.
-                    
-                    
-                  
-                  admit.
-                  admit.
-                  
-                  - apply (compute_ub_correct (a::sys) _ (a::lt0) eq0 gt0).
-                  - exact Hpart_a.
-                  destruct compute_lb eqn:Hlb. rewrite Htriv in Hextract.
-                  unfold satisfy_bounds in Hextract. 
-                  destruct compute_ub eqn:Hub.
-                  destruct (t1 <= t2) eqn:Ht1t2.
-                  apply Some_eq_Some in Hextract.
-                  rewrite <- H in Hextract.
-                  rewrite <- Hextract.
-                  exact Ht1t2.
-                  discriminate.
-                  exact I.
-                  destruct (compute_ub gt0).
-                  rewrite Htriv in Hextract.
-                  unfold satisfy_bounds in Hextract.
-                  apply Some_eq_Some in Hextract.
-                  rewrite <- H in Hextract.
-                  rewrite <- Hextract.
-                  apply RSOPM_le_refl.
-                  exact I.
-                  split.
-                  unfold trivial_consistency in Htrivial. fold trivial_consistency in Htrivial.
-                  destruct trivial_consistency eqn:Htrivial2.
-                  (*Wie beweis compute_lb_correct, nur am ende wiederspruch*)
-                  admit.
-                  discriminate.
-                  apply Some_eq_Some in Hextract.
-                  rewrite <- H in Hextract.
-                  (*Same RSOPM Lemma apply H *)
-                  admit.
-                  exact I.
-                  (*some argument about the max ...*)
-                  admit.
-                  (*contradiction with trivial extract*)
-                  admit.
-                  destruct (trivial_extract sys) eqn: Hextract2.
-                  (*Weiß den Beweis noch nicht*)
-                  admit.
-                  (*Induktionvorraussetzung*)
-                  admit.
-                  (*Ab jetzt fall a1 > 0; Almost the same as before*)
-                  unfold is_linear_system_solution in IHsys.
-                  apply IHsys. 
-                  unfold trivial_extract in Hextract2.
-                  rewrite <- Hpart in Hextract2.
-                  destruct (trivial_consistency (eq0)) eqn:Htrivial2.
-                  rewrite Hextract2 in Hextract.
-                  apply Some_eq_Some. rewrite <- H in Hextract. rewrite Hextract. reflexivity.
-                  discriminate. discriminate.
-                  unfold trivial_extract in Hextract.
-                  rewrite Hpart_eq in Hpart_a.
-                  rewrite <- Hpart_a in Hextract.
-                  destruct (trivial_consistency (a::eq0)) eqn:Htrivial.
-                  unfold trivial_consistency in Htrivial. fold trivial_consistency in Htrivial.
-                  unfold trivial_extract in Hextract2.
-                  rewrite <- Hpart in Hextract2.
-                  destruct (trivial_consistency (eq0)) eqn:Htrivial2.
-                  rewrite Hextract2 in Hextract. discriminate.
-                  destruct (andb_prop (a 0%nat <= 0) (false) Htrivial) as [Hle Htriv].
-                  discriminate. discriminate.
-                  destruct (trivial_extract sys) eqn: Hextract2.
-                  intro.
-                  unfold is_linear_system_solution in H.
-                  unfold interpret_inequalities in H. fold (interpret_inequalities (n:=1)) in H.
-                  unfold interpret_inequality in H.
-                  unfold interpret_inequality_helper in H.
-                  unfold trivial_extract in Hextract.
-                  rewrite Hpart_eq in Hpart_a.
-                  rewrite <- Hpart_a in Hextract.
-                  destruct (trivial_consistency (a::eq0)) eqn:Htrivial.
-                  unfold trivial_extract in Hextract2.
-                  rewrite <- Hpart in Hextract2.
-                  destruct (trivial_consistency (eq0)) eqn:Htrivial2.
-                  rewrite Hextract2 in Hextract. discriminate. discriminate.
-                  unfold trivial_consistency in Htrivial. fold trivial_consistency in Htrivial.
-                  apply andb_false_iff in Htrivial.
-                  unfold trivial_extract in Hextract2.
-                  rewrite <- Hpart in Hextract2.
-                  destruct (trivial_consistency (eq0)) eqn:Htrivial2.
-                  unfold is_linear_system_solution in IHsys.
-                  unfold trivial_consistency in Htrivial. fold trivial_consistency in Htrivial.
-                  destruct Htrivial as [Hfalse | Habsurd].
-                  rewrite Ha in H.
-                  setoid_rewrite RSOPM_mult_0_r in H.
-                  rewrite RSOPM_plus_comm in H.
-                  rewrite RSOPM_plus_0_r in H.
-                  rewrite Hfalse in H.
-                  destruct H as [sol [Hfalse_a Hinterp]].
-                  discriminate. discriminate. discriminate.
-                  unfold is_linear_system_solution.
-                  unfold interpret_inequalities. fold (interpret_inequalities (n:=1)).
-                  rewrite Quantoren_demorgan.
-                  intro sol.
-                  right.
-                  apply (not_ex_all_not (LinearSystemSolution 1)(is_linear_system_solution sys)). exact IHsys.
-                  
-
-
-
-
-
-    destruct (andb_prop (a 0%nat <= 0) (trivial_consistency eq0) Htrivial) as [Hle Htriv].
-    
-    
-    unfold trivial_consistency in Hextract2.
-    unfold trivial_consistency in Htrivial.
-
-    destruct (trivial_extract sys) eqn:Hextract.
-    unfold trivial_extract in Hextract.
-    destruct (partition_inequalities sys) 
-      as [[lt0_sys eq0_sys] gt0_sys] eqn:Hpart_sys.
-   * intros sol Hsol.
-     destruct (trivial_consistency eq0_sys) eqn:Htriv_cons; try discriminate.
-     apply (partition_inequalities_solutions _ lt0_sys eq0_sys gt0_sys). 
-     - symmetry; apply Hpart_sys.
-     - apply (compute_lb_correct sys _ lt0_sys eq0_sys gt0_sys).
-       * symmetry; apply Hpart_sys.
-       * unfold satisfy_bounds in Hextract.
-         destruct (compute_lb lt0_sys) eqn:Hlb; try easy.
-         - destruct (compute_ub gt0_sys) eqn:Hub.
-           * destruct (t0 <= t1) eqn:Hcmp; try discriminate.
-             injection Hextract; intro Hinject.
-             rewrite Hinject. rewrite Hsol.
-             apply ax_real_leq_true. lra.
-           * injection Hextract; intro Hinject.
-             rewrite Hinject. rewrite Hsol.
-             apply ax_real_leq_true. lra.
-     - apply (trivial_consistency_partition_solution 
-                    sys lt0_sys eq0_sys gt0_sys sol).
-       * symmetry; apply Hpart_sys.
-       * apply Htriv_cons.
-     - apply (compute_ub_correct sys _ lt0_sys eq0_sys gt0_sys).
-       * symmetry; apply Hpart_sys.
-       * unfold satisfy_bounds in Hextract.
-         destruct (compute_lb lt0_sys) eqn:Hlb.
-         - destruct (compute_ub gt0_sys) eqn:Hub; try easy.
-           destruct (t0 <= t1) eqn:Hcmp; try discriminate.
-           injection Hextract; intro Hinject.
-           rewrite Hsol. rewrite <- Hinject.
-           apply Hcmp.
-         - destruct (compute_ub gt0_sys) eqn:Hub; try easy.
-           injection Hextract; intro Hinject.
-           rewrite Hsol. rewrite <- Hinject.
-           apply ax_real_leq_true. lra.
-           apply all_not_not_ex.
-           intro sol.
-           induction sys.
-           unfold trivial_extract in Hextract.
-          destruct (partition_inequalities []) 
-      as [[lt0_sys eq0_sys] gt0_sys] eqn:Hpart_sys.
-           unfold satisfy_bounds in Hextract.
-           destruct (trivial_consistency eq0_sys) eqn:Htrivial.
-          - destruct (compute_lb lt0_sys) eqn:Hlb.
-          + destruct (compute_ub gt0_sys) eqn:Hub.
-            * destruct (t <= t0) eqn:Hle.
-            * discriminate.
-            unfold partition_inequalities in Hpart_sys.
-            unfold partition in Hpart_sys.
-            apply pair_equal_spec in Hpart_sys; destruct Hpart_sys as [Hpart1 Hpart2].
-            apply pair_equal_spec in Hpart1; destruct Hpart1 as [Hpart1 Hpart3].
-            unfold compute_lb in Hlb. 
-            rewrite <- Hpart1 in Hlb.
-            simpl in Hlb.
-            discriminate. discriminate.
-            unfold is_linear_system_solution.
-            destruct (compute_ub gt0_sys) eqn:H1; discriminate.
-            unfold "~". intro H.
-            unfold partition_inequalities in Hpart_sys.
-            unfold partition in Hpart_sys.
-            apply pair_equal_spec in Hpart_sys; destruct Hpart_sys as [Hpart1 Hpart2].
-            apply pair_equal_spec in Hpart1; destruct Hpart1 as [Hpart1 Hpart3].
-            rewrite <- Hpart3 in Htrivial.
-            unfold trivial_consistency in Htrivial. discriminate.
-            (*ab hier induktionsschluss*)
-            unfold is_linear_system_solution.
-            unfold interpret_inequalities. fold (interpret_inequalities (n:=1)).
-            unfold trivial_extract in Hextract.
-            destruct (partition_inequalities (a::sys)) 
-      as [[lt0_sys_a eq0_sys_a] gt0_sys_a] eqn:Hpart_sys_a.
-            unfold trivial_extract in IHsys.
-            destruct (partition_inequalities (sys)) 
-      as [[lt0_sys eq0_sys] gt0_sys] eqn:Hpart_sys.
-            assert (Hpart_sys_a' := Hpart_sys_a).
-            assert (Hpart_sys' := Hpart_sys).
-            destruct (a 1%nat <= 0) eqn : Hcomp.
-            destruct (0 <= a 1%nat) eqn : Hcomp2.
-            assert ((lt0_sys_a, eq0_sys_a, gt0_sys_a) = (lt0_sys, a::eq0_sys, gt0_sys)).
-            apply (partition_head_eq0 sys a lt0_sys eq0_sys gt0_sys lt0_sys_a eq0_sys_a gt0_sys_a).
-            rewrite Hpart_sys. reflexivity.
-            apply RSOPM_le_and_le_eq. split.
-            rewrite Hcomp. exact I.
-            rewrite Hcomp2. exact I.
-            exact Hpart_sys_a.
-            assert ((lt0_sys_a, eq0_sys_a, gt0_sys_a) = (lt0_sys, a::eq0_sys, gt0_sys)).
-            apply (partition_head_eq0 sys a lt0_sys eq0_sys gt0_sys lt0_sys_a eq0_sys_a gt0_sys_a).
-            rewrite Hpart_sys. reflexivity.
-            apply RSOPM_le_and_le_eq.
-            rewrite Hcomp. rewrite Hcomp2.
-            split; exact I.
-            exact Hpart_sys_a.
-            apply or_not_and.
-            unfold interpret_inequality.
-            unfold interpret_inequality_helper.
-            destruct (a 0%nat <= 0) eqn:Ha.
-            (*eigentlich müsst hier beweis dass linke seite falsch?*)
-            right.
-            apply IHsys.
-            injection H as H1 H2.
-            subst.
-            destruct (trivial_consistency eq0_sys) eqn:Htrivial.
-            destruct (trivial_consistency (a::eq0_sys)) eqn:Htriviala.
-            (*Case 1*)
-            exact Hextract.
-            (*Case 2*)
-            unfold trivial_consistency in Htriviala.
-            rewrite Ha in Htriviala.
-            simpl in Htriviala.
-            fold trivial_consistency in Htriviala.
-            rewrite Htriviala in Htrivial.
-            discriminate.
-            reflexivity.
-            left.
-            assert (a 1%nat = 0).
-            apply RSOPM_le_and_le_eq.
-            rewrite Hcomp. rewrite Hcomp2. 
-            split; exact I.
-            rewrite H1.
-            rewrite RSOPM_mult_0_r.
-            rewrite RSOPM_plus_comm.
-            rewrite RSOPM_plus_0_r.
-            unfold "<>". rewrite Ha.
-            discriminate.
-            (*schwierteil startet jetzt:*)
-            assert ((lt0_sys_a, eq0_sys_a, gt0_sys_a) = (a::lt0_sys, eq0_sys, gt0_sys)).
-            apply (partition_head_lt0 sys a lt0_sys eq0_sys gt0_sys lt0_sys_a eq0_sys_a gt0_sys_a).
-            rewrite Hpart_sys. reflexivity.
-            rewrite Hcomp. 
-            rewrite Hcomp2.
-            unfold "~". split.
-            exact I. intro. exact H.
-            exact Hpart_sys_a.
-            injection H as H1 H2.
-            subst.
-            destruct (trivial_consistency eq0_sys) eqn:Htrivial.
-            apply or_not_and.
-            unfold interpret_inequality.
-            unfold interpret_inequality_helper.
-            destruct ((a 1%nat) * (sol 1%nat) + (a 0%nat) <= 0) eqn: Hsol.
-            assert ((true <> true) <-> false).
-            split.
-            - intros H. apply H. reflexivity. (* Contradiction *)
-            - intros H. exfalso. apply H. (* False case *)
-            rewrite H.
-            assert (forall P: Prop, (false \/ P) <-> P).
-            intro P.
-            tauto.
-            rewrite H0.
-            unfold is_linear_system_solution in IHsys.
-            apply IHsys.
-            unfold satisfy_bounds.
-            destruct (compute_lb lt0_sys) as [lb |] eqn:Hlb;
-            destruct (compute_ub gt0_sys) as [ub |] eqn:Hub;
-            try discriminate.
-            (* Now, we only have the case where lb > ub *)
-            destruct (lb <= ub) eqn:Hleb.
-            - rewrite <- Hextract.
-              unfold compute_lb.
-              unfold map.
-              unfold RSOPM_list_max. fold RSOPM_list_max.
-              unfold compute_lb in Hlb. 
-              unfold map in Hlb. 
-              rewrite Hlb.
-            (* Now show, that sol is smaller then lowerbound*)
-            destruct (- (a 0%nat / a 1%nat) <= lb ) eqn:Hlb3.
-            unfold satisfy_bounds.
-            rewrite Hleb.
-            reflexivity.
-            unfold satisfy_bounds.
-            destruct (- (a 0%nat / a 1%nat) <= ub ) eqn:Hub3.
-            assert ((- (a 0%nat / a 1%nat) <= ub) = false).
-            (*Hier Hleb und Hleb kombinieren mit RSOPM transitivity*)
-            admit.
-            rewrite H1 in Hub3.
-            discriminate.
-            fold map in Hlb.
-            destruct lt0_sys eqn:Hlt0_sys.
-            unfold RSOPM_list_max in Hlb.
-            rewrite Hlb. reflexivity.
-
-            (* Hier ist endstation: Da sys consistent is entspricht es nicht der vorraussetzung. 
-            Eigentlich müsste die induktion also früher beginnen*)
-            - (* Here, we need to show `lb > ub` *)
-            apply leb_complete_conv in Hleb. (* Converts `leb lb ub = false` into `lb > ub` *)
-            assumption. (* Use existing hypothesis if available *)
 
 Lemma trivial_extract_correct:
     forall (sys: LinearSystem 1),
@@ -2315,324 +1337,51 @@ Proof.
             destruct compute_ub eqn:Hub; try easy.
             destruct (t <= t0) eqn:Hcmp; try discriminate.
             unfold is_linear_system_solution.
-            unfold interpret_inequalities.
-           induction sys.
-           unfold trivial_extract in Hextract.
-          destruct (partition_inequalities []) 
-      as [[lt0_sys eq0_sys] gt0_sys] eqn:Hpart_sys.
-           unfold satisfy_bounds in Hextract.
-           destruct (trivial_consistency eq0_sys) eqn:Htrivial.
-          - destruct (compute_lb lt0_sys) eqn:Hlb.
-          + destruct (compute_ub gt0_sys) eqn:Hub.
-            * destruct (t <= t0) eqn:Hle.
-            * discriminate.
-            unfold partition_inequalities in Hpart_sys.
-            unfold partition in Hpart_sys.
-            apply pair_equal_spec in Hpart_sys; destruct Hpart_sys as [Hpart1 Hpart2].
-            apply pair_equal_spec in Hpart1; destruct Hpart1 as [Hpart1 Hpart3].
-            unfold compute_lb in Hlb. 
-            rewrite <- Hpart1 in Hlb.
-            simpl in Hlb.
-            discriminate. discriminate.
-            unfold is_linear_system_solution.
-            destruct (compute_ub gt0_sys) eqn:H1; discriminate.
-            unfold "~". intro H.
-            unfold partition_inequalities in Hpart_sys.
-            unfold partition in Hpart_sys.
-            apply pair_equal_spec in Hpart_sys; destruct Hpart_sys as [Hpart1 Hpart2].
-            apply pair_equal_spec in Hpart1; destruct Hpart1 as [Hpart1 Hpart3].
-            rewrite <- Hpart3 in Htrivial.
-            unfold trivial_consistency in Htrivial. discriminate.
-            (*ab hier induktionsschluss*)
-            unfold is_linear_system_solution.
-            unfold interpret_inequalities. fold (interpret_inequalities (n:=1)).
-            unfold trivial_extract in Hextract.
-            destruct (partition_inequalities (a::sys)) 
-      as [[lt0_sys_a eq0_sys_a] gt0_sys_a] eqn:Hpart_sys_a.
-            unfold trivial_extract in IHsys.
-            destruct (partition_inequalities (sys)) 
-      as [[lt0_sys eq0_sys] gt0_sys] eqn:Hpart_sys.
-            assert (Hpart_sys_a' := Hpart_sys_a).
-            assert (Hpart_sys' := Hpart_sys).
-            destruct (a 1%nat <= 0) eqn : Hcomp.
-            destruct (0 <= a 1%nat) eqn : Hcomp2.
-            assert ((lt0_sys_a, eq0_sys_a, gt0_sys_a) = (lt0_sys, a::eq0_sys, gt0_sys)).
-            apply (partition_head_eq0 sys a lt0_sys eq0_sys gt0_sys lt0_sys_a eq0_sys_a gt0_sys_a).
-            rewrite Hpart_sys. reflexivity.
-            apply RSOPM_le_and_le_eq. split.
-            rewrite Hcomp. exact I.
-            rewrite Hcomp2. exact I.
-            exact Hpart_sys_a.
-            assert ((lt0_sys_a, eq0_sys_a, gt0_sys_a) = (lt0_sys, a::eq0_sys, gt0_sys)).
-            apply (partition_head_eq0 sys a lt0_sys eq0_sys gt0_sys lt0_sys_a eq0_sys_a gt0_sys_a).
-            rewrite Hpart_sys. reflexivity.
-            apply RSOPM_le_and_le_eq.
-            rewrite Hcomp. rewrite Hcomp2.
-            split; exact I.
-            exact Hpart_sys_a.
-            apply or_not_and.
-            unfold interpret_inequality.
-            unfold interpret_inequality_helper.
-            destruct (a 0%nat <= 0) eqn:Ha.
-            (*eigentlich müsst hier beweis dass linke seite falsch?*)
-            right.
-            apply IHsys.
-            injection H as H1 H2.
-            subst.
-            destruct (trivial_consistency eq0_sys) eqn:Htrivial.
-            destruct (trivial_consistency (a::eq0_sys)) eqn:Htriviala.
-            (*Case 1*)
-            exact Hextract.
-            (*Case 2*)
-            unfold trivial_consistency in Htriviala.
-            rewrite Ha in Htriviala.
-            simpl in Htriviala.
-            fold trivial_consistency in Htriviala.
-            rewrite Htriviala in Htrivial.
-            discriminate.
-            reflexivity.
-            left.
-            assert (a 1%nat = 0).
-            apply RSOPM_le_and_le_eq.
-            rewrite Hcomp. rewrite Hcomp2. 
-            split; exact I.
-            rewrite H1.
-            rewrite RSOPM_mult_0_r.
-            rewrite RSOPM_plus_comm.
-            rewrite RSOPM_plus_0_r.
-            unfold "<>". rewrite Ha.
-            discriminate.
-            (*schwierteil startet jetzt:*)
-            assert ((lt0_sys_a, eq0_sys_a, gt0_sys_a) = (a::lt0_sys, eq0_sys, gt0_sys)).
-            apply (partition_head_lt0 sys a lt0_sys eq0_sys gt0_sys lt0_sys_a eq0_sys_a gt0_sys_a).
-            rewrite Hpart_sys. reflexivity.
-            rewrite Hcomp. 
-            rewrite Hcomp2.
-            unfold "~". split.
-            exact I. intro. exact H.
-            exact Hpart_sys_a.
-            injection H as H1 H2.
-            subst.
-            destruct (trivial_consistency eq0_sys) eqn:Htrivial.
-            apply or_not_and.
-            unfold interpret_inequality.
-            unfold interpret_inequality_helper.
-            destruct ((a 1%nat) * (sol 1%nat) + (a 0%nat) <= 0) eqn: Hsol.
-            assert ((true <> true) <-> false).
-            split.
-            - intros H. apply H. reflexivity. (* Contradiction *)
-            - intros H. exfalso. apply H. (* False case *)
-            rewrite H.
-            assert (forall P: Prop, (false \/ P) <-> P).
-            intro P.
-            tauto.
-            rewrite H0.
-            unfold is_linear_system_solution in IHsys.
-            apply IHsys.
-            unfold satisfy_bounds.
-            destruct (compute_lb lt0_sys) as [lb |] eqn:Hlb;
-            destruct (compute_ub gt0_sys) as [ub |] eqn:Hub;
-            try discriminate.
-            (* Now, we only have the case where lb > ub *)
-            destruct (lb <= ub) eqn:Hleb.
-            - rewrite <- Hextract.
-              unfold compute_lb.
-              unfold map.
-              unfold RSOPM_list_max. fold RSOPM_list_max.
-              unfold compute_lb in Hlb. 
-              unfold map in Hlb. 
-              rewrite Hlb.
-            (* Now show, that sol is smaller then lowerbound*)
-            destruct (- (a 0%nat / a 1%nat) <= lb ) eqn:Hlb3.
-            unfold satisfy_bounds.
-            rewrite Hleb.
-            reflexivity.
-            unfold satisfy_bounds.
-            destruct (- (a 0%nat / a 1%nat) <= ub ) eqn:Hub3.
-            assert ((- (a 0%nat / a 1%nat) <= ub) = false).
-            (*Hier Hleb und Hleb kombinieren mit RSOPM transitivity*)
+            destruct (t <= sol 1%nat) eqn:Hsol; try easy.
+            + destruct (sol 1%nat <= t0) eqn:Hsol2; try easy.
+              * rewrite ax_real_leq_false in Hcmp.
+                rewrite ax_real_leq_true in Hsol.
+                rewrite ax_real_leq_true in Hsol2.
+                lra.
+              * apply (partition_inequalities_solutions_contraposition sys lt0 eq0 gt0).
+                exact Hpart.
+                right. right.
+                pose proof (compute_ub_none sys sol lt0 eq0 gt0) as Hub_correct.
+                rewrite Hub in Hub_correct.
+                apply Hub_correct.
+                exact Hpart.
+                exact Hsol2.
+            + destruct (sol 1%nat <= t0) eqn:Hsol2; try easy.
+              * apply (partition_inequalities_solutions_contraposition sys lt0 eq0 gt0).
+                exact Hpart.
+                left.
+                pose proof (compute_lb_none sys sol lt0 eq0 gt0) as Hlb_correct.
+                rewrite Hlb in Hlb_correct.
+                apply Hlb_correct.
+                exact Hpart.
+                exact Hsol.
+              * apply (partition_inequalities_solutions_contraposition sys lt0 eq0 gt0).
+                exact Hpart.
+                left.
+                pose proof (compute_lb_none sys sol lt0 eq0 gt0) as Hlb_correct.
+                rewrite Hlb in Hlb_correct.
+                apply Hlb_correct.
+                exact Hpart.
+                exact Hsol.
+            destruct compute_ub eqn:Hub; try easy.
+            apply (partition_inequalities_solutions_contraposition sys lt0 eq0 gt0).
+            exact Hpart.
+            right. left.
+            pose proof trivial_consistency_correct as Hcons.
+            specialize (Hcons eq0).
+            rewrite Htriv_cons in Hcons.
+            rename sol into n.
+            assert (forall sol : LinearSystemSolution 0, ~ is_linear_system_solution eq0 sol).
+            apply not_ex_all_not.
+            (*very weird variable thing. I cannot use exact for some reason here*)
             admit.
-            rewrite H1 in Hub3.
-            discriminate.
-            fold map in Hlb.
-            destruct lt0_sys eqn:Hlt0_sys.
-            unfold RSOPM_list_max in Hlb.
-            rewrite Hlb. reflexivity.
-
-            (* Hier ist endstation: Da sys consistent is entspricht es nicht der vorraussetzung. 
-            Eigentlich müsste die induktion also früher beginnen*)
-            - (* Here, we need to show `lb > ub` *)
-            apply leb_complete_conv in Hleb. (* Converts `leb lb ub = false` into `lb > ub` *)
-            assumption. (* Use existing hypothesis if available *)
-
-            
-            
-
-            (*ab hier alter versuch*)
-            unfold partition_inequalities in Hpart_sys.
-            destruct (partition (fun ineq : nat -> T RSOPM => ineq 1%nat <= 0) (a :: sys)) as [le0 gt0] eqn:Hpartition1.
-            destruct (partition (fun ineq : nat -> T RSOPM => 0 <= ineq 1%nat) le0) as [eq0 lt0] eqn:Hpartition2.
-            inversion Hpart_sys; subst.
-            unfold partition in Hpartition1.  
-            destruct
-              ((fix partition (l : list (nat -> T RSOPM)) :
-              list (nat -> T RSOPM) * list (nat -> T RSOPM) :=
-              match l with
-              | [] => ([], [])
-              | x :: tl =>
-              let (g, d) := partition tl in
-              if x 1%nat <= 0 then (x :: g, d) else (g, x :: d)
-              end) sys).
-            destruct (a 1%nat <= 0) eqn:Hpartition_sys.
-            injection Hpartition1 as Hle0 Hgt0.
-            rewrite <- Hle0 in Hpartition2.
-            unfold partition in Hpartition2.
-            destruct
-              ((fix partition (l : list (nat -> T RSOPM)) :
-              list (nat -> T RSOPM) * list (nat -> T RSOPM) :=
-              match l with
-              | [] => ([], [])
-              | x :: tl =>
-              let (g, d) := partition tl in
-              if 0 <= x 1%nat then (x :: g, d) else (g, x :: d)
-              end) l).
-            destruct (0 <=  a 1%nat) eqn:Hpartition2_sys.
-            injection Hpartition2 as H2eq0 H2lt0.
-            rewrite <- H2eq0 in Hextract.
-            unfold satisfy_bounds in Hextract.
-                 - destruct (compute_lb lt0_sys) eqn:Hlb.
-          + destruct (compute_ub gt0_sys) eqn:Hub.
-            * destruct (t <= t0) eqn:Hle.
-            destruct (trivial_consistency (a :: l1)) eqn:Htrivial.
-            setoid_rewrite Htrivial in Hextract.
-            discriminate.
-            setoid_rewrite Htrivial in Hextract.
-            unfold trivial_consistency in Htrivial.
-            pose proof ((negb_andb (a 0%nat <= 0) ((fix trivial_consistency (sys : LinearSystem 0) : bool :=
-              match sys with
-                | [] => true
-                | ineq :: tail => (ineq 0%nat <= 0) &&
-                  trivial_consistency tail
-              end) l1))) as Hdemorgan.
-            rewrite Htrivial in Hdemorgan.
-            unfold negb in Hdemorgan.
-            destruct (a 0%nat <= 0) eqn:H2le0.
-            rewrite orb_false_l in Hdemorgan.
-            destruct (
-            (fix trivial_consistency (sys : LinearSystem 0) : bool :=
-            match sys with
-              | [] => true
-              | ineq :: tail =>
-              (ineq 0%nat <= 0) && trivial_consistency tail
-            end) l1) eqn: Hcons.
-            discriminate.
-            assert (forall lt0 eq0 gt0, partition_inequalities sys = (lt0,eq0,gt0) -> l1 = eq0). 
-            intros.
-            destruct l1 as [| ineq tail].
-            discriminate.
-
-
-
-
-
-            (*Note: Fallunterscheidung für a: in welcher partition ist es? 
-            Wenn es nicht in der partition eq0 ist, dann ist trivial_extract sys = trivial_extract a :: sys
-            also kann man IHsys benutzen.
-            Falls a in eq0 ist, dann muss man anders ran.
-            *)
-            admit.
-            admit.
-            admit.
-   * (* Requires some more work *)
+            apply H.
 Admitted.
-
-(* Old proof attempt 
-   unfold trivial_extract.
-   pose proof (partition_inequalities_cons _ a sys) as Hsplit.
-   destruct (partition_inequalities sys) 
-      as [[lt0_sys eq0_sys] gt0_sys] eqn:Hpart_sys.
-   destruct (partition_inequalities (a :: sys))
-      as [[lt0_is eq0_is] gt0_is] eqn:Hpart_is.
-   destruct Hsplit as [Hsplit|[Hsplit|Hsplit]];
-   destruct Hsplit as [Ha_le0 [Ha_ge0 [Hlt0 [Hgt0 Heq0]]]].   
-
-
-
-
-   induction sys.
-   * unfold trivial_extract,compute_lb,compute_ub; simpl; easy.
-   * unfold trivial_extract.
-     unfold trivial_extract in IHsys.
-     pose proof (partition_inequalities_cons _ a sys) as Hsplit.
-     destruct (partition_inequalities sys) 
-        as [[lt0_sys eq0_sys] gt0_sys] eqn:Hpart_sys.
-     destruct (partition_inequalities (a :: sys))
-        as [[lt0_is eq0_is] gt0_is] eqn:Hpart_is.
-     destruct Hsplit as [Hsplit|[Hsplit|Hsplit]];
-     destruct Hsplit as [Ha_le0 [Ha_ge0 [Hlt0 [Hgt0 Heq0]]]].
-     - rewrite Heq0.
-       destruct (trivial_consistency (a :: eq0_sys)) eqn:Hconsis.
-       * apply trivial_consistency_cons in Hconsis. 
-         destruct Hconsis as [Ha_cons Heq0_cons].
-         rewrite Heq0_cons in IHsys.
-         rewrite Hlt0; rewrite Hgt0.
-         destruct satisfy_bounds.
-         - intros sol Hsol.
-           specialize (IHsys sol Hsol).
-           apply is_linear_system_solution_cons.
-           split.
-           * unfold is_linear_system_solution, interpret_inequalities,
-             interpret_inequality, interpret_inequality_helper; split; last easy.
-             apply (trivial_consistency_single_ineq a sol) in Ha_cons.
-             unfold is_linear_system_solution, interpret_inequalities,
-             interpret_inequality, interpret_inequality_helper in Ha_cons.
-             destruct Ha_cons as [Ha_cons Htrivial].
-             apply ax_real_leq_true in Ha_le0, Ha_ge0, Ha_cons.
-             apply ax_real_leq_true; RSOPM_realize.
-             rewrite ax_zero_is_zero in Ha_le0, Ha_ge0, Ha_cons.
-             assert (INJ_RSOPM RSOPM (a 1%nat) = 0%R) as Hhelp. lra.
-             rewrite Hhelp. lra.
-           * apply IHsys.
-         - apply no_linear_system_solution_cons.
-           apply IHsys. 
-       * rewrite trivial_consistency_andb in Hconsis.
-         destruct (trivial_consistency eq0_sys) eqn:Heq0_cons.
-         - rewrite Bool.andb_true_r in Hconsis.
-           intro Hsol.
-           destruct Hsol as [not_sol Hnot_sol].
-           apply is_linear_system_solution_cons in Hnot_sol.
-           destruct Hnot_sol as [Hnot_a Hnot_sys].
-           unfold trivial_consistency in Hconsis.
-           rewrite Bool.andb_true_r in Hconsis.
-           unfold is_linear_system_solution, interpret_inequalities,
-           interpret_inequality, interpret_inequality_helper in Hnot_a.
-           destruct Hnot_a as [Hnot_a Htrivial].
-           apply ax_real_leq_true in Ha_le0, Ha_ge0, Hnot_a.
-           rewrite ax_real_plus, ax_real_mult in Hnot_a.
-           apply ax_real_leq_false in Hconsis.
-           rewrite ax_zero_is_zero in Ha_le0,Ha_ge0, Hnot_a, Hconsis.
-           assert (INJ_RSOPM RSOPM (a 1%nat) = 0%R) as Hhelp. lra.
-           rewrite Hhelp in Hnot_a. lra.
-         - apply no_linear_system_solution_cons.
-           apply IHsys.  
-     - rewrite Heq0.
-       destruct (trivial_consistency eq0_sys).
-       * rewrite Hlt0; rewrite Hgt0.
-         destruct (satisfy_bounds (compute_lb lt0_sys) _) eqn:Hbounds_sys.
-         - destruct (satisfy_bounds (compute_lb (a :: _)) _) eqn:Hbounds_is.
-           * intros sol Hsol.
-             apply is_linear_system_solution_cons; split.
-             - admit.
-             - admit.
-           *         
-         - rewrite satisfy_bounds_none_preservation; last apply Hbounds_sys.
-           apply no_linear_system_solution_cons.
-           apply IHsys.
-       * apply no_linear_system_solution_cons.
-         apply IHsys.     
-     -*)
-
-     *)
 
 Definition guaranteed_extract (sys: LinearSystem 1): T RSOPM :=
     match trivial_extract sys with
