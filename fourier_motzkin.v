@@ -350,18 +350,124 @@ Proof.
       lra.
 Qed. 
 
+Definition bool_to_Prop (b : bool) : Prop :=
+  match b with
+  | true => True
+  | false => False
+  end.
 
-Lemma trivial_remove_var_eq0_sol (n:nat): 
-    forall (sys: LinearSystem (S n)) lt0 eq0 gt0,
+Coercion bool_to_Prop : bool >-> Sortclass.
+
+
+Lemma RSOPM_le_and_le_eq : forall x y : T RSOPM, (x <= y) = true /\ (y <= x) = true <-> (x=y).
+Proof.
+intros.
+repeat rewrite <- RSOPM_bool_prop.
+split.
+intro.
+apply ax_equality.
+rewrite <- Rle_le_eq.
+split.
+destruct H as [H1 H2].
+rewrite <- ax_real_leq_true.
+exact H1.
+rewrite <- ax_real_leq_true.
+destruct H as [H1 H2].
+exact H2.
+intro.
+rewrite H.
+split.
+apply RSOPM_le_refl.
+apply RSOPM_le_refl.
+Qed.
+
+Lemma RSOPM_0_mult : forall x : T RSOPM,  0 *  x = 0.
+Proof.
+intros.
+apply ax_equality.
+rewrite ax_real_mult.
+rewrite ax_zero_is_zero.
+rewrite (Rmult_0_l (INJ_RSOPM RSOPM x)).
+reflexivity.
+Qed.
+
+Lemma trivial_remove_var_eq0_sol: 
+    forall (n:nat) (sys: LinearSystem (S n)) lt0 eq0 gt0,
         (lt0, eq0, gt0) = partition_inequalities sys -> 
         forall sol, (is_linear_system_solution (n:=(S n)) eq0 sol <->
         is_linear_system_solution (n:=n) eq0 sol).
 Proof.
-Admitted.
-        
-
-
-
+intros n sys.
+induction sys.
++ intros lt0 eq0 gt0 Hpart sol.
+  unfold partition_inequalities in Hpart.
+  unfold partition in Hpart.
+  injection Hpart; intros.
+  subst.
+  unfold is_linear_system_solution; unfold interpret_inequalities.
+  reflexivity.
++ intros lt0 eq0 gt0 Hpart sol.
+  pose proof (partition_inequalities_cons (S n)) as Hcons.
+  specialize (Hcons a sys).
+  remember (partition_inequalities (n:=(S n)) sys) as part_sys.
+  destruct part_sys as [[lt0_sys eq0_sys] gt0_sys].
+  rewrite <- Hpart in Hcons.
+  specialize (IHsys lt0_sys eq0_sys gt0_sys eq_refl sol).
+  destruct Hcons as [Hcons|[Hcons|Hcons]].
+  all: destruct Hcons as [Ha1 [Ha2 [Hlt0 [Hgt0 Heq0]]]].
+  unfold partition_inequalities in Hpart.
+  destruct (partition
+  (fun ineq : nat -> T RSOPM =>
+  ineq (S n) <= 0) (a :: sys)).
+  destruct (partition
+  (fun ineq : nat -> T RSOPM =>
+  0 <= ineq (S n))).
+  - subst.
+    unfold is_linear_system_solution.
+    unfold interpret_inequalities. 
+    fold (interpret_inequalities (n:=(S n))).
+    fold (interpret_inequalities (n:=n)).
+    rewrite IHsys.
+    unfold is_linear_system_solution.
+    split.
+    intro.
+    destruct H as [H1 H2].
+    split.
+    unfold interpret_inequality in H1.
+    unfold interpret_inequality_helper in H1.
+    fold (interpret_inequality_helper (n:=n)) in H1.
+    unfold interpret_inequality.
+    assert (a (S n) = 0).
+    apply RSOPM_le_and_le_eq.
+    split. exact Ha1. exact Ha2.
+    rewrite H in H1.
+    rewrite RSOPM_0_mult in H1.
+    rewrite RSOPM_plus_comm in H1.
+    rewrite RSOPM_plus_0_r in H1.
+    exact H1.
+    exact H2.
+    intro.
+    destruct H as [H1 H2].
+    split.
+    unfold interpret_inequality.
+    unfold interpret_inequality_helper.
+    fold (interpret_inequality_helper (n:=n)).
+    assert (a (S n) = 0).
+    apply RSOPM_le_and_le_eq.
+    split. exact Ha1. exact Ha2.
+    unfold interpret_inequality.
+    unfold interpret_inequality_helper.
+    rewrite H .
+    rewrite RSOPM_0_mult.
+    rewrite RSOPM_plus_comm.
+    rewrite RSOPM_plus_0_r.
+    exact H1.
+    exact H2.
+  - subst.
+   exact IHsys.
+  - subst.
+    exact IHsys.
+Qed.
 
 
 Lemma partition_inequalities_solutions: 
@@ -571,13 +677,6 @@ match l with
 end. 
 
 
-
-Definition bool_to_Prop (b : bool) : Prop :=
-  match b with
-  | true => True
-  | false => False
-  end.
-
 Lemma Some_eq_Some: forall x y : T RSOPM, Some x = Some y -> x = y.
 Proof.
   intros x y H. (* Introduce the variables and hypothesis *)
@@ -642,7 +741,7 @@ destruct tail as [| head' tail'] eqn:Htail2.
 apply I.
 Qed.
 
-Coercion bool_to_Prop : bool >-> Sortclass.
+
 
 Lemma max_none_for_empty:
     forall l,
@@ -855,22 +954,6 @@ exact I.
 exact H.
 Qed.
 
-Lemma RSOPM_le_and_le_eq : forall x y : T RSOPM, (x <= y) /\ (y <= x) <-> (x=y).
-Proof.
-intros.
-repeat rewrite <- RSOPM_bool_prop.
-split.
-intro.
-apply ax_equality.
-rewrite <- Rle_le_eq.
-repeat rewrite ax_real_leq_true in H.
-exact H.
-intro.
-rewrite H.
-split.
-apply RSOPM_le_refl.
-apply RSOPM_le_refl.
-Qed.
 
 Lemma RSOPM_total_order_prop : forall x y : T RSOPM, (x <= y) \/ (y <= x).
 Proof.
@@ -1539,6 +1622,9 @@ intros.
 remember (partition_inequalities sys) as part_sys.
 destruct part_sys as [[lt0 eq0] gt0].
 unfold remove_var.
+rewrite <- Heqpart_sys.
+unfold compose_inequalities.
+unfold map.
 Admitted.
 
 
