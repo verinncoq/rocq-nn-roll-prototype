@@ -42,6 +42,7 @@ Fixpoint interpret_inequality_helper {n: nat}
     | S i => (ineq n) * (sol n) + interpret_inequality_helper (n:=i) ineq sol
     end.
 
+
 Definition interpret_inequality {n: nat} 
     (ineq: LinearInequality n) 
     (sol: LinearSystemSolution n)
@@ -170,7 +171,7 @@ Lemma trivial_consistency_correct:
     forall (sys: LinearSystem 0),
         if trivial_consistency sys
         then (forall sol, is_linear_system_solution sys sol)
-        else ~ (exists n0, is_linear_system_solution sys n0).
+        else ~ (exists sol, is_linear_system_solution sys sol).
 Proof.
     intros sys.
     induction sys; first easy.
@@ -349,6 +350,20 @@ Proof.
       lra.
 Qed. 
 
+
+Lemma trivial_remove_var_eq0_sol (n:nat): 
+    forall (sys: LinearSystem (S n)) lt0 eq0 gt0,
+        (lt0, eq0, gt0) = partition_inequalities sys -> 
+        forall sol, (is_linear_system_solution (n:=(S n)) eq0 sol <->
+        is_linear_system_solution (n:=n) eq0 sol).
+Proof.
+Admitted.
+        
+
+
+
+
+
 Lemma partition_inequalities_solutions: 
     forall (sys: LinearSystem 1) lt0 eq0 gt0 sol,
         (lt0, eq0, gt0) = partition_inequalities sys ->
@@ -392,8 +407,8 @@ Proof.
          - apply Hsol_gt0sys.
 Qed.
 
-Lemma partition_inequalities_solutions_2: 
-    forall (sys: LinearSystem 1) lt0 eq0 gt0 sol,
+Lemma partition_inequalities_solutions_2 {n:nat}: 
+    forall (sys: LinearSystem n) lt0 eq0 gt0 sol,
         (lt0, eq0, gt0) = partition_inequalities sys ->
         is_linear_system_solution sys sol ->
         (is_linear_system_solution lt0 sol /\
@@ -413,7 +428,7 @@ intros lt0_a eq0_a gt0_a sol Hpart Hsys.
 remember (partition_inequalities sys) as part_sys.
 destruct part_sys as [[lt0 eq0] gt0].
 pose proof partition_inequalities_cons as Hcons.
-specialize (Hcons 1%nat a sys).
+specialize (Hcons n a sys).
 rewrite <- Hpart in Hcons.
 rewrite <- Heqpart_sys in Hcons.
 remember (partition_inequalities sys) as part_sys.
@@ -465,15 +480,15 @@ all: destruct Hcons as [Ha1 [Ha2 [Hlt0 [Hgt0 Heq0]]]].
   exact Hsys1.
 Qed.
 
-Lemma partition_inequalities_solutions_contraposition: 
-    forall (sys: LinearSystem 1) lt0 eq0 gt0 sol,
+Lemma partition_inequalities_solutions_contraposition {n:nat}: 
+    forall (sys: LinearSystem n) lt0 eq0 gt0 sol,
         (lt0, eq0, gt0) = partition_inequalities sys ->
         (~ (is_linear_system_solution lt0 sol) \/
         ~(is_linear_system_solution eq0 sol) \/
         ~(is_linear_system_solution gt0 sol)) ->
         ~(is_linear_system_solution sys sol ).
 Proof.
-pose proof partition_inequalities_solutions_2 as Hsplit.
+pose proof (partition_inequalities_solutions_2 (n:=n))as Hsplit.
 intros sys lt0 eq0 gt0 sol Hpartition Hneg Hsys.
 specialize (Hsplit sys lt0 eq0 gt0 sol Hpartition).
 tauto.
@@ -530,6 +545,7 @@ Proof.
       - reflexivity.
       - rewrite Heq0 in Htriv_cons; apply Htriv_cons.
 Qed.
+
 
 Fixpoint RSOPM_list_min (l: list (T RSOPM)): option (T RSOPM) :=
 match l with
@@ -1486,15 +1502,17 @@ Proof.
             apply (partition_inequalities_solutions_contraposition sys lt0 eq0 gt0).
             exact Hpart.
             right. left.
+            rewrite (trivial_remove_var_eq0_sol 0 sys lt0 eq0 gt0).
             pose proof trivial_consistency_correct as Hcons.
             specialize (Hcons eq0).
             rewrite Htriv_cons in Hcons.
-            assert (forall n0 : LinearSystemSolution 0, ~ is_linear_system_solution eq0 n0).
+            assert (forall n0 : LinearSystemSolution 0, ~ is_linear_system_solution (n:=0) eq0 n0).
             apply not_ex_all_not.
-            (*very weird variable thing. I cannot use exact for some reason here*)
-            admit.
+            exact Hcons.
             apply H.
-Admitted.
+            exact Hpart.
+Qed.
+
 
 Definition guaranteed_extract (sys: LinearSystem 1): T RSOPM :=
     match trivial_extract sys with
@@ -1513,6 +1531,16 @@ Definition remove_var {n: nat} (sys: LinearSystem (S n)): LinearSystem n :=
     let (p, gt0) := partition_inequalities sys in
     let (lt0, eq0) := p in
     (compose_inequalities lt0 gt0) ++ eq0.
+
+Lemma remove_var_sol {n: nat}: forall (sys: LinearSystem (S n)) sol,
+    is_linear_system_solution sys sol -> is_linear_system_solution (remove_var sys) sol.
+Proof. 
+intros.
+remember (partition_inequalities sys) as part_sys.
+destruct part_sys as [[lt0 eq0] gt0].
+unfold remove_var.
+Admitted.
+
 
 Fixpoint insert_solution_helper {n: nat} 
     (ineq: LinearInequality n)
@@ -1578,7 +1606,22 @@ Proof.
       rewrite Htrivial in Hcorrect.
       apply Hcorrect.
     (*induktionsschritt*)
-    unfold fme_solve. fold (fme_solve (n:= n)).
+    * unfold fme_solve. fold (fme_solve (n:= n)).
+      destruct n eqn:Hn.
+      + admit.
+      + specialize (IHn (remove_var (remove_var sys))).
+        * destruct (fme_solve (n:= S (S n0)) (remove_var (remove_var sys))) eqn:Hfme_solve.
+        Set Printing All.
+        rewrite Hfme_solve in IHn.
+          
+
+        - 
+      specialize (IHn (remove_var sys)).
+      destruct (fme_solve (remove_var sys)) as [subsol |] eqn:Hsubsol.
+      Set Printing Implicit.
+
+
+
 
 Admitted.     
 
