@@ -42,7 +42,6 @@ Fixpoint interpret_inequality_helper {n: nat}
     | S i => (ineq n) * (sol n) + interpret_inequality_helper (n:=i) ineq sol
     end.
 
-
 Definition interpret_inequality {n: nat} 
     (ineq: LinearInequality n) 
     (sol: LinearSystemSolution n)
@@ -108,19 +107,26 @@ Proof.
     apply Hnot2.
 Qed.    
 
-Print andb.
+Lemma is_linear_system_solution_app:
+  forall n (sys1 sys2: LinearSystem n) sol,
+    is_linear_system_solution sys1 sol ->
+    is_linear_system_solution sys2 sol ->
+    is_linear_system_solution (sys1 ++ sys2) sol.
+Proof.
+Admitted.
+
+Lemma is_linear_system_solution_sub:
+  forall n (sys: LinearSystem (S n)) sol,
+    is_linear_system_solution (n:=S n) sys sol ->
+    is_linear_system_solution (n:=n) sys sol.
+Proof.
+Admitted.
 
 Fixpoint trivial_consistency (sys: LinearSystem 0): bool :=
 match sys with
 | nil => true
 | ineq :: tail => andb (ineq 0%nat <= 0) (trivial_consistency tail) 
 end.
-
-Lemma plus2 : plus 2 2 = 4.
-Proof.
-simpl.
-reflexivity.
-Qed.
 
 Lemma trivial_consistency_cons:
     forall n (ineq: LinearInequality n) sys,
@@ -358,27 +364,35 @@ Definition bool_to_Prop (b : bool) : Prop :=
 
 Coercion bool_to_Prop : bool >-> Sortclass.
 
-
-Lemma RSOPM_le_and_le_eq : forall x y : T RSOPM, (x <= y) = true /\ (y <= x) = true <-> (x=y).
+Lemma RSOPM_le_refl : forall x : T RSOPM, x <= x = true.
 Proof.
-intros.
-repeat rewrite <- RSOPM_bool_prop.
-split.
-intro.
-apply ax_equality.
-rewrite <- Rle_le_eq.
-split.
-destruct H as [H1 H2].
-rewrite <- ax_real_leq_true.
-exact H1.
-rewrite <- ax_real_leq_true.
-destruct H as [H1 H2].
-exact H2.
-intro.
-rewrite H.
-split.
-apply RSOPM_le_refl.
-apply RSOPM_le_refl.
+  intro x.
+  unfold "<=".
+  apply ax_real_leq_true.
+  apply Rle_refl.
+Qed.
+
+Lemma RSOPM_le_and_le_eq: 
+  forall x y : T RSOPM, (x <= y) = true /\ (y <= x) = true <-> (x=y).
+Proof.
+  intros.
+  repeat rewrite <- RSOPM_bool_prop.
+  split.
+  intro.
+  apply ax_equality.
+  rewrite <- Rle_le_eq.
+  split.
+  destruct H as [H1 H2].
+  rewrite <- ax_real_leq_true.
+  exact H1.
+  rewrite <- ax_real_leq_true.
+  destruct H as [H1 H2].
+  exact H2.
+  intro.
+  rewrite H.
+  split.
+  apply RSOPM_le_refl.
+  apply RSOPM_le_refl.
 Qed.
 
 Lemma RSOPM_0_mult : forall x : T RSOPM,  0 *  x = 0.
@@ -741,8 +755,6 @@ destruct tail as [| head' tail'] eqn:Htail2.
 apply I.
 Qed.
 
-
-
 Lemma max_none_for_empty:
     forall l,
         RSOPM_list_max l = None -> l = [].
@@ -764,8 +776,6 @@ Proof.
   destruct (RSOPM_list_min l); last discriminate.
   destruct (a <= t); discriminate.
 Qed.
-
-Print map.
 
 Definition compute_lb (lt0_partition: LinearSystem 1): option (T RSOPM) :=
     RSOPM_list_max (map (fun ineq => - (ineq 0%nat / ineq 1%nat)) lt0_partition).
@@ -883,32 +893,16 @@ Proof.
       specialize (IHsys H).
       rewrite <- Hlt0 in IHsys. 
       apply IHsys.
-  (* Notiz für Malte von Andrei:  
-        es war ein Problem mit Quantoren und zu frühem intros
-          intros lt0 eq0 gt0 macht die drei zu festen Variablen in IHsys,
-        man muss zuerst induction und dann intros
-          dann entsteht ein IHsys mit forall lt0 eq0 gt0, ...
-  *)
-Qed.
-
-Check Rle.
-
-Lemma RSOPM_le_refl : forall x : T RSOPM, x <= x = true.
-Proof.
-  intro x.
-  unfold "<=".
-  apply ax_real_leq_true.
-  apply Rle_refl.
 Qed.
 
 Lemma RSOPM_le_neg : forall x y : T RSOPM, x <= y = false -> y <= x = true.
 Proof.
-intros x y.
-intro H.
-apply ax_real_leq_true.
-apply ax_real_leq_false in H.
-apply Rlt_le.
-exact H.
+  intros x y.
+  intro H.
+  apply ax_real_leq_true.
+  apply ax_real_leq_false in H.
+  apply Rlt_le.
+  exact H.
 Qed.
 
 Lemma Reals_leq : forall x y : R, (x <= y)%R \/ (y <= x)%R <-> (x < y)%R \/ (y <= x)%R.
@@ -1610,23 +1604,53 @@ Definition compose_inequalities {n: nat} (sys1 sys2: LinearSystem n): LinearSyst
         (fun i => (ineq1 i/ineq1 n) + (ineq2 i/ineq2 n)))
     (list_prod sys1 sys2).
 
+Lemma compose_inequalities_correct:
+    forall n (sys: LinearSystem (S n)) lt0 eq0 gt0 sol,
+      is_linear_system_solution sys sol ->
+      (lt0, eq0, gt0) = partition_inequalities sys ->
+      is_linear_system_solution (n:=n) (compose_inequalities lt0 gt0) sol.
+Proof.
+    intros n sys lt0 eq0 gt0 sol Hsol Hpart.
+Admitted.
+
 Definition remove_var {n: nat} (sys: LinearSystem (S n)): LinearSystem n :=
     let (p, gt0) := partition_inequalities sys in
     let (lt0, eq0) := p in
     (compose_inequalities lt0 gt0) ++ eq0.
 
-Lemma remove_var_sol {n: nat}: forall (sys: LinearSystem (S n)) sol,
-    is_linear_system_solution sys sol -> is_linear_system_solution (remove_var sys) sol.
-Proof. 
-intros.
-remember (partition_inequalities sys) as part_sys.
-destruct part_sys as [[lt0 eq0] gt0].
-unfold remove_var.
-rewrite <- Heqpart_sys.
-unfold compose_inequalities.
-unfold map.
-Admitted.
+Lemma remove_var_preserves_solution:
+    forall n (sys: LinearSystem (S n)) sol,
+      is_linear_system_solution sys sol ->
+      is_linear_system_solution (remove_var sys) sol.
+Proof.
+    intros n sys sol H.
+    unfold remove_var.
+    remember (partition_inequalities sys) as sys_p.
+    destruct sys_p as [sys_p sys_gt0].
+    destruct sys_p as [sys_lt0 sys_eq0].
+    apply is_linear_system_solution_app.
+    * apply (compose_inequalities_correct n sys sys_lt0 sys_eq0 sys_gt0 sol).
+      apply H. apply Heqsys_p. 
+    * pose proof (partition_inequalities_solutions_2 sys sys_lt0 sys_eq0 sys_gt0 sol Heqsys_p H) as Hp_ineq.
+      destruct Hp_ineq as [H1 H2].
+      destruct H2 as [Hmain H2].
+      apply is_linear_system_solution_sub.
+      apply Hmain.
+Qed.
 
+Lemma remove_var_no_solution:
+    forall n (sys: LinearSystem (S n)),
+      ~ (exists sol: LinearSystemSolution n, is_linear_system_solution (remove_var sys) sol) ->
+      ~ (exists sol: LinearSystemSolution (S n), is_linear_system_solution sys sol).
+Proof.
+    intros n sys Hrvar Hsol.
+    unfold not in Hrvar.
+    apply Hrvar.
+    destruct Hsol as [sol Hsol].
+    exists sol.
+    apply remove_var_preserves_solution.
+    apply Hsol.
+Qed.
 
 Fixpoint insert_solution_helper {n: nat} 
     (ineq: LinearInequality n)
@@ -1661,14 +1685,43 @@ Fixpoint fme_solve {n: nat} (sys: LinearSystem n)
     | S i => 
         match fme_solve (n:=i) (remove_var sys) with
         | Some subsol => Some
-            (fun sol_arg =>
-            match sol_arg with
-            | S i => guaranteed_extract (insert_solution sys subsol)
-            | _ => subsol sol_arg 
-            end)
+            (fun sol_arg: nat =>
+            if sol_arg =? S i then
+              guaranteed_extract (insert_solution sys subsol)
+            else
+              subsol sol_arg )
         | None => None
         end
     end.
+
+Lemma solution_extension_correct:
+    forall n (sys: LinearSystem (S n)) sol,
+      is_linear_system_solution (remove_var sys) sol ->
+      is_linear_system_solution sys
+        (fun sol_arg: nat =>
+          if sol_arg =? S n then
+            guaranteed_extract (insert_solution sys sol)
+          else 
+            sol sol_arg).
+Proof.
+Admitted.
+
+Lemma fme_solve_SSn:
+    forall n (sys: LinearSystem (S (S n))),
+      fme_solve sys = 
+        match fme_solve (remove_var sys) with
+        | Some subsol =>
+            Some (fun sol_arg : nat => if sol_arg =? S (S n) then
+                                        guaranteed_extract (insert_solution sys subsol)  
+                                      else
+                                        subsol sol_arg)
+        | None => None
+        end.
+Proof.
+    intros n sys.
+    unfold fme_solve; fold (fme_solve (n:=n)).
+    reflexivity. 
+Qed.
 
 Theorem fme_correct:
     forall n (sys: LinearSystem n),
@@ -1683,33 +1736,22 @@ Proof.
       pose proof (trivial_consistency_correct sys) as Htrivial.
       destruct (trivial_consistency sys) eqn:Hresult; apply Htrivial.
     * unfold fme_solve.
-    destruct (trivial_extract sys) as [s |] eqn:Htrivial.
-    + pose proof (trivial_extract_correct sys) as Hcorrect.
-      rewrite Htrivial in Hcorrect.
-      apply Hcorrect.
-      reflexivity.
-    + pose proof (trivial_extract_correct sys) as Hcorrect.
-      rewrite Htrivial in Hcorrect.
-      apply Hcorrect.
-    (*induktionsschritt*)
-    * unfold fme_solve. fold (fme_solve (n:= n)).
-      destruct n eqn:Hn.
-      + admit.
-      + specialize (IHn (remove_var (remove_var sys))).
-        * destruct (fme_solve (n:= S (S n0)) (remove_var (remove_var sys))) eqn:Hfme_solve.
-        Set Printing All.
-        rewrite Hfme_solve in IHn.
-          
-
-        - 
+      destruct (trivial_extract sys) as [s |] eqn:Htrivial.
+      - pose proof (trivial_extract_correct sys) as Hcorrect.
+        rewrite Htrivial in Hcorrect.
+        apply Hcorrect.
+        reflexivity.
+      - pose proof (trivial_extract_correct sys) as Hcorrect.
+        rewrite Htrivial in Hcorrect.
+        apply Hcorrect.
+    * rewrite fme_solve_SSn.
       specialize (IHn (remove_var sys)).
-      destruct (fme_solve (remove_var sys)) as [subsol |] eqn:Hsubsol.
-      Set Printing Implicit.
-
-
-
-
-Admitted.     
-
+      remember (fme_solve (remove_var sys)) as subsol.
+      destruct subsol.
+      - apply solution_extension_correct.
+        apply IHn.   
+      - apply remove_var_no_solution.
+        apply IHn.  
+Qed.     
 
 End FourierMotzkinImplementation.
