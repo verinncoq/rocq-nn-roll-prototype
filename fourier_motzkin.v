@@ -59,10 +59,10 @@ Fixpoint interpret_inequalities {n :nat}
     end.
 
 Lemma interpret_inequalities_cons:
-forall n (ineq: LinearInequality n) 
-    (sys: LinearSystem n) (sol: LinearSystemSolution n),
-    (interpret_inequalities [ineq] sol /\ interpret_inequalities sys sol) <->
-    interpret_inequalities (ineq :: sys) sol.
+    forall n (ineq: LinearInequality n) 
+        (sys: LinearSystem n) (sol: LinearSystemSolution n),
+        (interpret_inequalities [ineq] sol /\ interpret_inequalities sys sol) <->
+        interpret_inequalities (ineq :: sys) sol.
 Proof.
     intros n ineq sys sol.
     split.
@@ -75,6 +75,31 @@ Proof.
       intro H; split.
       - split; first apply H; last easy.
       - apply H.
+Qed.
+
+Lemma interpret_inequalities_app:
+    forall n (sys1: LinearSystem n) sys2 sol,
+      interpret_inequalities sys1 sol /\ interpret_inequalities sys2 sol <->
+      interpret_inequalities (sys1 ++ sys2) sol.
+Proof.
+    intros n sys1 sys2 sol.
+    induction sys1.
+    * simpl; easy.
+    * rewrite <- app_comm_cons.
+      unfold interpret_inequalities; fold (interpret_inequalities (n:=n)).
+      split; intro H.
+      - split.
+        * apply H.
+        * apply IHsys1.
+          split; apply H.
+      - split; try split.
+        * apply H.
+        * destruct H as [H1 H2].
+          apply IHsys1 in H2.
+          apply H2.
+        * destruct H as [H1 H2].
+          apply IHsys1 in H2.
+          apply H2.
 Qed.
 
 Definition is_linear_system_solution {n: nat} 
@@ -108,19 +133,14 @@ Proof.
 Qed.    
 
 Lemma is_linear_system_solution_app:
-  forall n (sys1 sys2: LinearSystem n) sol,
-    is_linear_system_solution sys1 sol ->
-    is_linear_system_solution sys2 sol ->
-    is_linear_system_solution (sys1 ++ sys2) sol.
+    forall n (sys1 sys2: LinearSystem n) sol,
+      is_linear_system_solution sys1 sol /\ is_linear_system_solution sys2 sol <->
+      is_linear_system_solution (sys1 ++ sys2) sol.
 Proof.
-Admitted.
-
-Lemma is_linear_system_solution_sub:
-  forall n (sys: LinearSystem (S n)) sol,
-    is_linear_system_solution (n:=S n) sys sol ->
-    is_linear_system_solution (n:=n) sys sol.
-Proof.
-Admitted.
+  intros n sys1 sys2 sol.
+  unfold is_linear_system_solution.
+  apply interpret_inequalities_app.
+Qed.
 
 Fixpoint trivial_consistency (sys: LinearSystem 0): bool :=
 match sys with
@@ -1604,13 +1624,84 @@ Definition compose_inequalities {n: nat} (sys1 sys2: LinearSystem n): LinearSyst
         (fun i => (ineq1 i/ineq1 n) + (ineq2 i/ineq2 n)))
     (list_prod sys1 sys2).
 
+Lemma compose_inequalities_cons_right_reverse:
+    forall n (ineq: LinearInequality (S n)) sys1 sys2 sol,
+      is_linear_system_solution (n:=n) (compose_inequalities (n:=S n) sys1 (ineq :: sys2)) sol ->
+      is_linear_system_solution (n:=n) (compose_inequalities (n:=S n) sys1 sys2) sol.
+Proof.
+    intros n ineq sys1 sys2 sol H.
+    unfold compose_inequalities in H.
+    unfold list_prod in H; fold (list_prod sys1 (ineq :: sys2)) in H.
+    induction sys1; first exact I.
+    unfold list_prod in H; fold (list_prod sys1 (ineq :: sys2)) in H.
+    rewrite map_app in H.
+    apply is_linear_system_solution_app in H.
+    destruct H as [H1 H2].
+    specialize (IHsys1 H2).
+    unfold compose_inequalities, list_prod; fold (list_prod sys1 sys2).
+    repeat rewrite map_app.
+    apply is_linear_system_solution_app; split.
+    * repeat rewrite map_cons in H1.
+      apply is_linear_system_solution_cons in H1.
+      apply H1.
+    * fold (compose_inequalities sys1 sys2).
+      apply IHsys1.
+Qed.
+
+Lemma compose_inequalities_cons_left:
+    forall n (ineq: LinearInequality (S n)) sys1 sys2 sol,
+      is_linear_system_solution (n:=n) [ineq] sol ->
+      is_linear_system_solution (n:=n) (compose_inequalities (n:=S n) sys1 sys2) sol ->
+      is_linear_system_solution (n:=n) (compose_inequalities (n:=S n) (ineq :: sys1) sys2) sol.
+Proof.
+    intros n ineq sys1 sys2 sol Hineq H.
+    unfold compose_inequalities.
+    unfold list_prod; fold (list_prod sys1 sys2).
+    rewrite map_app.
+    fold (compose_inequalities sys1 sys2).
+    apply is_linear_system_solution_app.
+    split; last apply H.
+    induction sys2; first exact I.
+    repeat rewrite map_cons.
+    apply is_linear_system_solution_cons.
+    split.
+    -   
+    - apply IHsys2.
+      apply (compose_inequalities_cons_right_reverse _ a).
+      apply H.
+Admitted.
+
 Lemma compose_inequalities_correct:
-    forall n (sys: LinearSystem (S n)) lt0 eq0 gt0 sol,
+    forall n (sys: LinearSystem (S n)) sol lt0 eq0 gt0,
       is_linear_system_solution sys sol ->
       (lt0, eq0, gt0) = partition_inequalities sys ->
       is_linear_system_solution (n:=n) (compose_inequalities lt0 gt0) sol.
 Proof.
-    intros n sys lt0 eq0 gt0 sol Hsol Hpart.
+    intros n sys sol.
+    induction sys; intros lt0 eq0 gt0 Hsol Hpart.
+    * unfold partition_inequalities in Hpart. simpl in Hpart.
+      inversion Hpart.
+      unfold compose_inequalities; simpl.
+      exact I.
+    * pose proof (partition_inequalities_cons (S n) a sys) as Hp_cons.
+      rewrite <- Hpart in Hp_cons.
+      remember (partition_inequalities sys) as p_sys.
+      destruct p_sys as [p_sys sys_gt0].
+      destruct p_sys as [sys_lt0 sys_eq0].
+      apply is_linear_system_solution_cons in Hsol.
+      destruct Hsol as [Hsol_a Hsol_sys].
+      destruct Hp_cons as [Hp_cons|[Hp_cons|Hp_cons]].
+      - destruct Hp_cons as [Ha_le0 [Ha_ge0 [Hlt0 [Hgt0 Heq0]]]].
+        rewrite Hlt0, Hgt0.
+        specialize (IHsys sys_lt0 sys_eq0 sys_gt0 Hsol_sys eq_refl).
+        apply IHsys.
+      - destruct Hp_cons as [Ha_le0 [Ha_lt0 [Hlt0 [Hgt0 Heq0]]]].
+        rewrite Hlt0.
+        rewrite Hgt0.
+        specialize (IHsys sys_lt0 sys_eq0 sys_gt0 Hsol_sys eq_refl).
+        apply (compose_inequalities_cons_left n).
+        apply IHsys.
+      -
 Admitted.
 
 Definition remove_var {n: nat} (sys: LinearSystem (S n)): LinearSystem n :=
@@ -1634,8 +1725,9 @@ Proof.
     * pose proof (partition_inequalities_solutions_2 sys sys_lt0 sys_eq0 sys_gt0 sol Heqsys_p H) as Hp_ineq.
       destruct Hp_ineq as [H1 H2].
       destruct H2 as [Hmain H2].
-      apply is_linear_system_solution_sub.
-      apply Hmain.
+      apply (trivial_remove_var_eq0_sol n sys sys_lt0 sys_eq0 sys_gt0).
+      - apply Heqsys_p.
+      - apply Hmain.
 Qed.
 
 Lemma remove_var_no_solution:
@@ -1674,6 +1766,18 @@ Definition insert_solution {n: nat}
         end)
     sys.
 
+Lemma solution_extension_correct:
+    forall n (sys: LinearSystem (S n)) sol,
+      is_linear_system_solution (remove_var sys) sol ->
+      is_linear_system_solution sys
+        (fun sol_arg: nat =>
+          if sol_arg =? S n then
+            guaranteed_extract (insert_solution sys sol)
+          else 
+            sol sol_arg).
+Proof.
+Admitted.
+
 Fixpoint fme_solve {n: nat} (sys: LinearSystem n)
     : option (LinearSystemSolution n) :=
     match n with
@@ -1689,22 +1793,10 @@ Fixpoint fme_solve {n: nat} (sys: LinearSystem n)
             if sol_arg =? S i then
               guaranteed_extract (insert_solution sys subsol)
             else
-              subsol sol_arg )
+              subsol sol_arg)
         | None => None
         end
     end.
-
-Lemma solution_extension_correct:
-    forall n (sys: LinearSystem (S n)) sol,
-      is_linear_system_solution (remove_var sys) sol ->
-      is_linear_system_solution sys
-        (fun sol_arg: nat =>
-          if sol_arg =? S n then
-            guaranteed_extract (insert_solution sys sol)
-          else 
-            sol sol_arg).
-Proof.
-Admitted.
 
 Lemma fme_solve_SSn:
     forall n (sys: LinearSystem (S (S n))),
