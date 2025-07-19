@@ -489,6 +489,72 @@ Proof.
       lra.
 Qed. 
 
+Lemma partition_inequalities_lt0:
+  forall n (sys: LinearSystem n) lt0 eq0 gt0,
+    (lt0, eq0, gt0) = partition_inequalities sys ->
+    forall ineq,
+      In ineq lt0 -> (0 <= ineq n) = false.
+Proof.
+  intros n sys.
+  induction sys; intros lt0 eq0 gt0 Hpart ineq Hineq.
+  * unfold partition_inequalities, partition in Hpart.
+    injection Hpart; intros Hgt Heq Hlt.
+    rewrite Hlt in Hineq.
+    contradiction Hineq.
+  * remember (partition_inequalities sys) as part_sys.
+    destruct part_sys as [[lt0_sys eq0_sys] gt0_sys].
+    pose proof (partition_inequalities_cons _ a sys) as Hpcons.
+    rewrite <- Hpart in Hpcons.
+    rewrite <- Heqpart_sys in Hpcons.
+    destruct Hpcons as [Hpcons|[Hpcons|Hpcons]].
+    all: destruct Hpcons as [Ha_lt_0 [H0_lt_a [Hlt0 [Hgt0 Heq0]]]].
+    - rewrite Hlt0 in Hineq.
+      specialize (IHsys lt0_sys eq0_sys gt0_sys eq_refl ineq Hineq).
+      apply IHsys.
+    - rewrite Hlt0 in Hineq.
+      apply in_inv in Hineq.
+      destruct Hineq as [Hineq|Hineq].
+      * rewrite <- Hineq. apply H0_lt_a.
+      * specialize (IHsys lt0_sys eq0_sys gt0_sys eq_refl ineq Hineq).
+        apply IHsys.
+    - rewrite Hlt0 in Hineq.
+      specialize (IHsys lt0_sys eq0_sys gt0_sys eq_refl ineq Hineq).
+      apply IHsys.
+Qed.
+
+Lemma partition_inequalities_gt0:
+  forall n (sys: LinearSystem n) lt0 eq0 gt0,
+    (lt0, eq0, gt0) = partition_inequalities sys ->
+    forall ineq,
+      In ineq gt0 -> (ineq n <= 0) = false.
+Proof.
+  intros n sys.
+  induction sys; intros lt0 eq0 gt0 Hpart ineq Hineq.
+  * unfold partition_inequalities, partition in Hpart.
+    injection Hpart; intros Hgt Heq Hlt.
+    rewrite Hgt in Hineq.
+    contradiction Hineq.
+  * remember (partition_inequalities sys) as part_sys.
+    destruct part_sys as [[lt0_sys eq0_sys] gt0_sys].
+    pose proof (partition_inequalities_cons _ a sys) as Hpcons.
+    rewrite <- Hpart in Hpcons.
+    rewrite <- Heqpart_sys in Hpcons.
+    destruct Hpcons as [Hpcons|[Hpcons|Hpcons]].
+    all: destruct Hpcons as [Ha_lt_0 [H0_lt_a [Hlt0 [Hgt0 Heq0]]]].
+    - rewrite Hgt0 in Hineq.
+      specialize (IHsys lt0_sys eq0_sys gt0_sys eq_refl ineq Hineq).
+      apply IHsys.
+    - rewrite Hgt0 in Hineq.
+      specialize (IHsys lt0_sys eq0_sys gt0_sys eq_refl ineq Hineq).
+      apply IHsys.
+    - rewrite Hgt0 in Hineq.
+      apply in_inv in Hineq.
+      destruct Hineq as [Hineq|Hineq].
+      * rewrite <- Hineq. apply Ha_lt_0.
+      * specialize (IHsys lt0_sys eq0_sys gt0_sys eq_refl ineq Hineq).
+        apply IHsys.
+Qed.
+
 Definition bool_to_Prop (b : bool) : Prop :=
   match b with
   | true => True
@@ -1817,17 +1883,23 @@ Proof.
     destruct sys_p as [sys_lt0 sys_eq0].
     apply is_linear_system_solution_app; split.
     * apply compose_inequalities_correct.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
+      - apply (partition_inequalities_lt0 _ sys sys_lt0 sys_eq0 sys_gt0).
+        apply Heqsys_p.
+      - apply (partition_inequalities_gt0 _ sys sys_lt0 sys_eq0 sys_gt0).
+        apply Heqsys_p.
+      - apply (partition_inequalities_solutions_2 sys _ _ _ sol) in Heqsys_p.
+        * apply Heqsys_p.
+        * apply H.
+      - apply (partition_inequalities_solutions_2 sys _ _ _ sol) in Heqsys_p.
+        * apply Heqsys_p.
+        * apply H.
     * pose proof (partition_inequalities_solutions_2 sys sys_lt0 sys_eq0 sys_gt0 sol Heqsys_p H) as Hp_ineq.
       destruct Hp_ineq as [H1 H2].
       destruct H2 as [Hmain H2].
       apply (trivial_remove_var_eq0_sol n sys sys_lt0 sys_eq0 sys_gt0).
       - apply Heqsys_p.
       - apply Hmain.
-Admitted.
+Qed.
 
 Lemma remove_var_no_solution:
     forall n (sys: LinearSystem (S n)),
