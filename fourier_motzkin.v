@@ -42,11 +42,124 @@ Fixpoint interpret_inequality_helper {n: nat}
     | S i => (ineq n) * (sol n) + interpret_inequality_helper (n:=i) ineq sol
     end.
 
+Lemma interpret_inequality_helper_plus:
+  forall n (ineq1 ineq2: LinearInequality n) sol,
+    interpret_inequality_helper ineq1 sol + interpret_inequality_helper ineq2 sol =
+    interpret_inequality_helper (fun i => ineq1 i + ineq2 i) sol.
+Proof.
+  intros n ineq1 ineq2 sol.
+  induction n.
+  * unfold interpret_inequality_helper.
+    RSOPM_realize_eq.
+    rewrite Rplus_comm. reflexivity.
+  * unfold interpret_inequality_helper; fold (interpret_inequality_helper (n:=n)).
+    specialize (IHn ineq1 ineq2 sol).
+    rewrite <- IHn.
+    RSOPM_realize_eq.
+    lra.
+Qed.
+
+Lemma interpret_inequality_helper_div:
+  forall n (ineq: LinearInequality n) c sol,
+    interpret_inequality_helper ineq sol / c = interpret_inequality_helper (fun i => ineq i / c) sol.
+Proof.
+  intros n ineq c sol.
+  induction n.
+  * unfold interpret_inequality_helper.
+    RSOPM_realize_eq.
+    repeat rewrite ax_real_div.
+    apply Rdiv_eq_compat_r; reflexivity.
+  * unfold interpret_inequality_helper; fold (interpret_inequality_helper (n:=n)).
+    specialize (IHn ineq sol).
+    rewrite <- IHn.
+    RSOPM_realize_eq.
+    repeat (RSOPM_realize; rewrite ax_real_div).
+    lra.
+Qed.
+
 Definition interpret_inequality {n: nat} 
     (ineq: LinearInequality n) 
     (sol: LinearSystemSolution n)
     : Prop :=
     ((interpret_inequality_helper (n:=n) ineq sol <= 0) = true).
+
+Lemma interpret_inequality_first_zero:
+  forall n (ineq: LinearInequality (S n)) sol,
+    ineq (S n) = 0 ->
+    interpret_inequality (n:=S n) ineq sol ->
+    interpret_inequality (n:=n) ineq sol.
+Proof.
+  intros n ineq sol H0 H.
+  unfold interpret_inequality, interpret_inequality_helper in H; fold (interpret_inequality_helper (n:=n)) in H.
+  rewrite H0 in H.
+  apply ax_real_leq_true in H.
+  rewrite ax_real_plus, ax_real_mult, ax_zero_is_zero in H.
+  rewrite Rmult_0_l, Rplus_0_l in H.
+  apply ax_real_leq_true; rewrite ax_zero_is_zero.
+  apply H.
+Qed.
+
+Lemma interpet_inequality_plus:
+  forall n (ineq1 ineq2: LinearInequality n) sol,
+    interpret_inequality ineq1 sol ->
+    interpret_inequality ineq2 sol ->
+    interpret_inequality (fun i => ineq1 i + ineq2 i) sol.
+Proof.
+  intros n ineq1 ineq2 sol Hineq1 Hineq2.
+  unfold interpret_inequality. unfold interpret_inequality in Hineq1, Hineq2.
+  rewrite <- interpret_inequality_helper_plus.
+  apply ax_real_leq_true; apply ax_real_leq_true in Hineq1, Hineq2.
+  rewrite ax_zero_is_zero; rewrite ax_zero_is_zero in Hineq1, Hineq2.
+  rewrite ax_real_plus; lra.
+Qed.
+
+Lemma interpret_inequality_div:
+  forall n (ineq: LinearInequality n) c sol,
+    (c <= 0) = false ->
+    interpret_inequality ineq sol ->
+    interpret_inequality (fun i => ineq i / c) sol.
+Proof.
+  intros n ineq c sol Hc H.
+  unfold interpret_inequality.
+  rewrite <- interpret_inequality_helper_div.
+  unfold interpret_inequality in H.
+  apply ax_real_leq_true. rewrite ax_real_div.
+  apply ax_real_leq_false in Hc.
+  apply ax_real_leq_true in H.
+  rewrite ax_zero_is_zero; rewrite ax_zero_is_zero in Hc, H.
+  unfold Rle. unfold Rle in H.
+  destruct H as [H|H].
+  - left. apply Rdiv_neg_pos; lra.
+  - right. nra.
+Qed.
+
+Lemma interpret_inequality_compose:
+  forall n (ineq1 ineq2: LinearInequality (S n)) sol,
+      (0 <= ineq1 (S n)) = false ->
+      (ineq2 (S n) <= 0) = false ->
+      interpret_inequality (n:= S n) ineq1 sol ->
+      interpret_inequality (n:= S n) ineq2 sol ->
+      interpret_inequality (n:=n) (fun i: nat => ineq1 i / (RSopp (ineq1 (S n))) + (ineq2 i / ineq2 (S n))) sol.
+Proof.
+  intros n ineq1 ineq2 sol Hineq1 Hineq2 Hineq1_sol Hineq2_sol.
+  apply interpret_inequality_first_zero.
+  - apply ax_equality; rewrite ax_zero_is_zero.
+    rewrite ax_real_plus, ax_real_div, ax_real_div, ax_opp_is_opp.
+    apply ax_real_leq_false in Hineq1, Hineq2.
+    rewrite ax_zero_is_zero in Hineq1, Hineq2.
+    rewrite Rdiv_diag; last lra. 
+    rewrite Rdiv_opp_r, Rdiv_diag; last lra.
+    rewrite Rplus_opp_l; reflexivity.
+  - apply interpet_inequality_plus.
+    * apply interpret_inequality_div.
+      - apply ax_real_leq_false; apply ax_real_leq_false in Hineq1.
+        rewrite ax_zero_is_zero; rewrite ax_zero_is_zero in Hineq1.
+        rewrite ax_opp_is_opp; lra.
+      - apply Hineq1_sol. 
+    * apply interpret_inequality_div.
+      - apply Hineq2.
+      - apply Hineq2_sol.
+Qed.
 
 Fixpoint interpret_inequalities {n :nat} 
     (sys: LinearSystem n) 
@@ -1610,99 +1723,82 @@ Proof.
             exact Hpart.
 Qed.
 
-
 Definition guaranteed_extract (sys: LinearSystem 1): T RSOPM :=
     match trivial_extract sys with
     | Some s => s
     | None => 0
     end.
  
-Definition compose_inequalities {n: nat} (sys1 sys2: LinearSystem n): LinearSystem n :=
+Definition compose_inequalities {n: nat} (sys1 sys2: LinearSystem (S n)): LinearSystem n :=
     map
-    (fun prod_el: LinearInequality n * LinearInequality n =>
+    (fun prod_el: LinearInequality (S n) * LinearInequality (S n) =>
          let (ineq1, ineq2) := prod_el in 
-        (fun i => (ineq1 i/ineq1 n) + (ineq2 i/ineq2 n)))
+        (fun i => (ineq1 i/ - ineq1 (S n)) + (ineq2 i/ineq2 (S n))))
     (list_prod sys1 sys2).
 
-Lemma compose_inequalities_cons_right_reverse:
-    forall n (ineq: LinearInequality (S n)) sys1 sys2 sol,
-      is_linear_system_solution (n:=n) (compose_inequalities (n:=S n) sys1 (ineq :: sys2)) sol ->
-      is_linear_system_solution (n:=n) (compose_inequalities (n:=S n) sys1 sys2) sol.
-Proof.
-    intros n ineq sys1 sys2 sol H.
-    unfold compose_inequalities in H.
-    unfold list_prod in H; fold (list_prod sys1 (ineq :: sys2)) in H.
-    induction sys1; first exact I.
-    unfold list_prod in H; fold (list_prod sys1 (ineq :: sys2)) in H.
-    rewrite map_app in H.
-    apply is_linear_system_solution_app in H.
-    destruct H as [H1 H2].
-    specialize (IHsys1 H2).
-    unfold compose_inequalities, list_prod; fold (list_prod sys1 sys2).
-    repeat rewrite map_app.
-    apply is_linear_system_solution_app; split.
-    * repeat rewrite map_cons in H1.
-      apply is_linear_system_solution_cons in H1.
-      apply H1.
-    * fold (compose_inequalities sys1 sys2).
-      apply IHsys1.
-Qed.
-
-Lemma compose_inequalities_cons_left:
-    forall n (ineq: LinearInequality (S n)) sys1 sys2 sol,
-      is_linear_system_solution (n:=n) [ineq] sol ->
-      is_linear_system_solution (n:=n) (compose_inequalities (n:=S n) sys1 sys2) sol ->
-      is_linear_system_solution (n:=n) (compose_inequalities (n:=S n) (ineq :: sys1) sys2) sol.
-Proof.
-    intros n ineq sys1 sys2 sol Hineq H.
-    unfold compose_inequalities.
-    unfold list_prod; fold (list_prod sys1 sys2).
-    rewrite map_app.
-    fold (compose_inequalities sys1 sys2).
-    apply is_linear_system_solution_app.
-    split; last apply H.
-    induction sys2; first exact I.
-    repeat rewrite map_cons.
-    apply is_linear_system_solution_cons.
-    split.
-    -   
-    - apply IHsys2.
-      apply (compose_inequalities_cons_right_reverse _ a).
-      apply H.
-Admitted.
-
 Lemma compose_inequalities_correct:
-    forall n (sys: LinearSystem (S n)) sol lt0 eq0 gt0,
-      is_linear_system_solution sys sol ->
-      (lt0, eq0, gt0) = partition_inequalities sys ->
-      is_linear_system_solution (n:=n) (compose_inequalities lt0 gt0) sol.
+  forall n (lt0 gt0: LinearSystem (S n)) sol,
+    (forall ineq, In ineq lt0 -> (0 <= ineq (S n)) = false) ->
+    (forall ineq, In ineq gt0 -> (ineq (S n) <= 0) = false) ->
+    is_linear_system_solution (n:=S n) lt0 sol ->
+    is_linear_system_solution (n:=S n) gt0 sol ->
+    is_linear_system_solution (n:= n) (compose_inequalities lt0 gt0) sol.
 Proof.
-    intros n sys sol.
-    induction sys; intros lt0 eq0 gt0 Hsol Hpart.
-    * unfold partition_inequalities in Hpart. simpl in Hpart.
-      inversion Hpart.
-      unfold compose_inequalities; simpl.
-      exact I.
-    * pose proof (partition_inequalities_cons (S n) a sys) as Hp_cons.
-      rewrite <- Hpart in Hp_cons.
-      remember (partition_inequalities sys) as p_sys.
-      destruct p_sys as [p_sys sys_gt0].
-      destruct p_sys as [sys_lt0 sys_eq0].
-      apply is_linear_system_solution_cons in Hsol.
-      destruct Hsol as [Hsol_a Hsol_sys].
-      destruct Hp_cons as [Hp_cons|[Hp_cons|Hp_cons]].
-      - destruct Hp_cons as [Ha_le0 [Ha_ge0 [Hlt0 [Hgt0 Heq0]]]].
-        rewrite Hlt0, Hgt0.
-        specialize (IHsys sys_lt0 sys_eq0 sys_gt0 Hsol_sys eq_refl).
-        apply IHsys.
-      - destruct Hp_cons as [Ha_le0 [Ha_lt0 [Hlt0 [Hgt0 Heq0]]]].
-        rewrite Hlt0.
-        rewrite Hgt0.
-        specialize (IHsys sys_lt0 sys_eq0 sys_gt0 Hsol_sys eq_refl).
-        apply (compose_inequalities_cons_left n).
-        apply IHsys.
-      -
-Admitted.
+  intros n lt0 gt0 sol Hineq_lt0 Hineq_gt0 Hlt0 Hgt0.
+  induction lt0; first exact I.
+  * unfold compose_inequalities.
+    unfold list_prod; fold (list_prod lt0 gt0).
+    rewrite map_app.
+    fold (compose_inequalities (n:=n) lt0 gt0).
+    rewrite <- is_linear_system_solution_app; split.
+    - induction gt0; first exact I.
+      do 2 rewrite map_cons.
+      apply is_linear_system_solution_cons; split.
+      * apply is_linear_system_solution_cons in Hlt0,Hgt0.
+        destruct Hlt0 as [Ha Hlt0].
+        destruct Hgt0 as [Ha0 Hgt0].
+        specialize (Hineq_lt0 a (in_eq a lt0)).
+        specialize (Hineq_gt0 a0 (in_eq a0 gt0)).
+        unfold is_linear_system_solution, interpret_inequalities; split; last exact I.
+        unfold is_linear_system_solution, interpret_inequalities in Ha,Ha0.
+        destruct Ha as [Ha Hrem]; clear Hrem.
+        destruct Ha0 as [Ha0 Hrem]; clear Hrem.
+        apply (interpret_inequality_compose n a a0 sol).
+        - apply Hineq_lt0.
+        - apply Hineq_gt0.
+        - apply Ha.
+        - apply Ha0.
+      * apply IHgt0.
+        - intros ineq Hineq.
+          apply Hineq_gt0.
+          right; apply Hineq.  
+        - apply is_linear_system_solution_cons in Hgt0.
+          apply Hgt0. 
+        - intros H1 H2.
+          specialize (IHlt0 H1 H2).
+          clear Hineq_lt0. clear Hlt0. clear IHgt0. clear H1.
+          clear H2.
+          induction lt0; first exact I.
+          unfold compose_inequalities, list_prod in IHlt0; fold (list_prod lt0 (a0 :: gt0)) in IHlt0.
+          rewrite map_app in IHlt0.
+          apply is_linear_system_solution_app in IHlt0.
+          destruct IHlt0 as [H1 H2].
+          specialize (IHlt1 H2).
+          unfold compose_inequalities, list_prod; fold (list_prod lt0 gt0).
+          repeat rewrite map_app.
+          apply is_linear_system_solution_app; split.
+          * repeat rewrite map_cons in H1.
+            apply is_linear_system_solution_cons in H1.
+            apply H1.
+          * fold (compose_inequalities lt0 gt0).
+            apply IHlt1.
+    - apply IHlt0.
+      * intros ineq Hineq.
+        apply Hineq_lt0.
+        right; apply Hineq.
+      * apply is_linear_system_solution_cons in Hlt0.
+        apply Hlt0.    
+Qed.
 
 Definition remove_var {n: nat} (sys: LinearSystem (S n)): LinearSystem n :=
     let (p, gt0) := partition_inequalities sys in
@@ -1719,16 +1815,19 @@ Proof.
     remember (partition_inequalities sys) as sys_p.
     destruct sys_p as [sys_p sys_gt0].
     destruct sys_p as [sys_lt0 sys_eq0].
-    apply is_linear_system_solution_app.
-    * apply (compose_inequalities_correct n sys sys_lt0 sys_eq0 sys_gt0 sol).
-      apply H. apply Heqsys_p. 
+    apply is_linear_system_solution_app; split.
+    * apply compose_inequalities_correct.
+      - admit.
+      - admit.
+      - admit.
+      - admit.
     * pose proof (partition_inequalities_solutions_2 sys sys_lt0 sys_eq0 sys_gt0 sol Heqsys_p H) as Hp_ineq.
       destruct Hp_ineq as [H1 H2].
       destruct H2 as [Hmain H2].
       apply (trivial_remove_var_eq0_sol n sys sys_lt0 sys_eq0 sys_gt0).
       - apply Heqsys_p.
       - apply Hmain.
-Qed.
+Admitted.
 
 Lemma remove_var_no_solution:
     forall n (sys: LinearSystem (S n)),
