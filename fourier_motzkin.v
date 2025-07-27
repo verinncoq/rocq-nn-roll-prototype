@@ -1788,12 +1788,6 @@ Proof.
             apply H.
             exact Hpart.
 Qed.
-
-Definition guaranteed_extract (sys: LinearSystem 1): T RSOPM :=
-    match trivial_extract sys with
-    | Some s => s
-    | None => 0
-    end.
  
 Definition compose_inequalities {n: nat} (sys1 sys2: LinearSystem (S n)): LinearSystem n :=
     map
@@ -1901,6 +1895,13 @@ Proof.
       - apply Hmain.
 Qed.
 
+Lemma remove_var_finds_solution:
+    forall n (sys: LinearSystem (S n)) sol,
+      is_linear_system_solution (remove_var sys) sol ->
+      is_linear_system_solution (n:=n) sys sol.
+Proof.
+Admitted.   
+
 Lemma remove_var_no_solution:
     forall n (sys: LinearSystem (S n)),
       ~ (exists sol: LinearSystemSolution n, is_linear_system_solution (remove_var sys) sol) ->
@@ -1937,16 +1938,26 @@ Definition insert_solution {n: nat}
         end)
     sys.
 
-Lemma solution_extension_correct:
-    forall n (sys: LinearSystem (S n)) sol,
-      is_linear_system_solution (remove_var sys) sol ->
-      is_linear_system_solution sys
-        (fun sol_arg: nat =>
-          if sol_arg =? S n then
-            guaranteed_extract (insert_solution sys sol)
-          else 
-            sol sol_arg).
+Lemma insert_solution_correct:
+  forall n (sys: LinearSystem (S n)) sol,
+      (exists sol_full, is_linear_system_solution (n:=S n) sys sol_full) ->
+      exists sol1, is_linear_system_solution (insert_solution sys sol) sol1.
 Proof.
+  intros n sys sol Hfull.
+Admitted.
+    
+Definition prepend_to_solution {n} (s: T RSOPM) (sol: LinearSystemSolution n)
+  : nat -> T RSOPM 
+  :=
+  (fun sol_arg: nat => if sol_arg =? S n then s else sol sol_arg).  
+
+Lemma prepend_insert_split:
+  forall n s (sys: LinearSystem (S n)) sol,
+    is_linear_system_solution (n:=n) sys sol ->
+    is_linear_system_solution (n:=1) (insert_solution sys sol) (fun _ => s) ->
+    is_linear_system_solution (n:=S n) sys (prepend_to_solution s sol).
+Proof.
+  intros n s sys sol Hsol Hs.
 Admitted.
 
 Fixpoint fme_solve {n: nat} (sys: LinearSystem n)
@@ -1959,12 +1970,11 @@ Fixpoint fme_solve {n: nat} (sys: LinearSystem n)
            end
     | S i => 
         match fme_solve (n:=i) (remove_var sys) with
-        | Some subsol => Some
-            (fun sol_arg: nat =>
-            if sol_arg =? S i then
-              guaranteed_extract (insert_solution sys subsol)
-            else
-              subsol sol_arg)
+        | Some subsol => 
+            match trivial_extract (insert_solution sys subsol) with
+            | Some s => Some (prepend_to_solution s subsol) 
+            | None => None
+            end
         | None => None
         end
     end.
@@ -1972,12 +1982,12 @@ Fixpoint fme_solve {n: nat} (sys: LinearSystem n)
 Lemma fme_solve_SSn:
     forall n (sys: LinearSystem (S (S n))),
       fme_solve sys = 
-        match fme_solve (remove_var sys) with
-        | Some subsol =>
-            Some (fun sol_arg : nat => if sol_arg =? S (S n) then
-                                        guaranteed_extract (insert_solution sys subsol)  
-                                      else
-                                        subsol sol_arg)
+        match fme_solve (n:=S n) (remove_var sys) with
+        | Some subsol => 
+            match trivial_extract (insert_solution sys subsol) with
+            | Some s => Some (prepend_to_solution s subsol) 
+            | None => None
+            end
         | None => None
         end.
 Proof.
@@ -2011,10 +2021,23 @@ Proof.
       specialize (IHn (remove_var sys)).
       remember (fme_solve (remove_var sys)) as subsol.
       destruct subsol.
-      - apply solution_extension_correct.
-        apply IHn.   
+      - remember (trivial_extract (insert_solution sys l)) as sol1.
+        destruct sol1.
+        * pose proof (trivial_extract_correct (insert_solution sys l)) as Htriv.
+          rewrite <- Heqsol1 in Htriv.
+          specialize (Htriv (fun _ => t) eq_refl).
+          apply prepend_insert_split.
+          - apply remove_var_finds_solution; apply IHn.
+          - apply Htriv. 
+        * pose proof (trivial_extract_correct (insert_solution sys l)) as Htriv.
+          rewrite <- Heqsol1 in Htriv.
+          intros Hsol.
+          apply (insert_solution_correct _ sys l) in Hsol.
+          contradiction.
       - apply remove_var_no_solution.
         apply IHn.  
 Qed.     
+
+Print Assumptions fme_correct.
 
 End FourierMotzkinImplementation.
