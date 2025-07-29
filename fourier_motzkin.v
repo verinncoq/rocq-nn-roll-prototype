@@ -1,4 +1,4 @@
-From Coq Require Import List Reals Lra Bool Logic Classical_Prop Classical_Pred_Type.
+From Coq Require Import List Reals Lia Lra Bool Logic Classical_Prop Classical_Pred_Type.
 Import ListNotations.
 
 From Verinncoq Require Import real_subsets.
@@ -684,16 +684,17 @@ Qed.
 
 
 Lemma partition_inequalities_solutions: 
-    forall (sys: LinearSystem 1) lt0 eq0 gt0 sol,
+    forall n (sys: LinearSystem n) lt0 eq0 gt0 sol,
         (lt0, eq0, gt0) = partition_inequalities sys ->
         is_linear_system_solution lt0 sol ->
         is_linear_system_solution eq0 sol ->
         is_linear_system_solution gt0 sol ->
         is_linear_system_solution sys sol.
 Proof.
-   intros sys. induction sys.
-   * unfold is_linear_system_solution, interpret_inequalities; easy.
-   * pose proof (partition_inequalities_cons 1 a sys) as Hsplit.
+   intros n sys. induction sys.
+   * intros lt0 eq0 gt0 sol Hpart Hlt0 Heq0 Hgt0. 
+      unfold is_linear_system_solution, interpret_inequalities; easy.
+   * pose proof (partition_inequalities_cons n a sys) as Hsplit.
      destruct (partition_inequalities sys) 
        as [[lt0_sys eq0_sys] gt0_sys] eqn:Hpart_sys.
      intros lt0_is eq0_is gt0_is sol Hpart_is.
@@ -812,6 +813,14 @@ intros sys lt0 eq0 gt0 sol Hpartition Hneg Hsys.
 specialize (Hsplit sys lt0 eq0 gt0 sol Hpartition).
 tauto.
 Qed.
+
+Lemma partition_inequalities_rank_down:
+  forall n (sys: LinearSystem (S n)) lt0 eq0 gt0 lt0_n eq0_n gt0_n,
+    (lt0, eq0, gt0) = partition_inequalities (n:=S n) sys ->
+    (lt0_n, eq0_n, gt0_n) = partition_inequalities (n:=n) sys ->
+    lt0 = lt0_n /\ eq0 = eq0_n /\ gt0 = gt0_n.
+Proof.
+Admitted. 
 
 Lemma trivial_consistency_partition_solution:
     forall (sys: LinearSystem 1) lt0 eq0 gt0 sol,
@@ -1701,7 +1710,7 @@ Proof.
       as [[lt0_sys eq0_sys] gt0_sys] eqn:Hpart_sys.
    * intros sol Hsol.
      destruct (trivial_consistency eq0_sys) eqn:Htriv_cons; try discriminate.
-     apply (partition_inequalities_solutions _ lt0_sys eq0_sys gt0_sys). 
+     apply (partition_inequalities_solutions 1 _ lt0_sys eq0_sys gt0_sys). 
      - symmetry; apply Hpart_sys.
      - apply (compute_lb_correct sys _ lt0_sys eq0_sys gt0_sys).
        * symmetry; apply Hpart_sys.
@@ -1895,13 +1904,6 @@ Proof.
       - apply Hmain.
 Qed.
 
-Lemma remove_var_finds_solution:
-    forall n (sys: LinearSystem (S n)) sol,
-      is_linear_system_solution (remove_var sys) sol ->
-      is_linear_system_solution (n:=n) sys sol.
-Proof.
-Admitted.   
-
 Lemma remove_var_no_solution:
     forall n (sys: LinearSystem (S n)),
       ~ (exists sol: LinearSystemSolution n, is_linear_system_solution (remove_var sys) sol) ->
@@ -1916,15 +1918,6 @@ Proof.
     apply Hsol.
 Qed.
 
-Fixpoint insert_solution_helper {n: nat} 
-    (ineq: LinearInequality n)
-    (sol: LinearSystemSolution n)
-    : T RSOPM :=
-    match n with
-    | 0 => ineq 0%nat * sol 0%nat
-    | S i => ineq i * sol i + insert_solution_helper (n:=i) ineq sol 
-    end.
-
 Definition insert_solution {n: nat} 
     (sys: LinearSystem (S n))
     (sol: LinearSystemSolution n)
@@ -1934,7 +1927,7 @@ Definition insert_solution {n: nat}
         fun i =>
         match i with
         | 1 => ineq (S n)
-        | _ => insert_solution_helper ineq sol
+        | _ => interpret_inequality_helper ineq sol
         end)
     sys.
 
@@ -1945,20 +1938,117 @@ Lemma insert_solution_correct:
 Proof.
   intros n sys sol Hfull.
 Admitted.
-    
+
+Lemma insert_solution_cons_solution:
+  forall n ineq (sys: LinearSystem (S n)) sol sol_full,
+    is_linear_system_solution (insert_solution (ineq :: sys) sol) sol_full ->
+    is_linear_system_solution (insert_solution [ineq] sol ++ insert_solution sys sol) sol_full.
+Proof.
+  intros n ineq sys sol sol_full H.
+  unfold insert_solution in H.
+  rewrite map_cons in H.
+  apply is_linear_system_solution_cons in H.
+  apply is_linear_system_solution_app.
+  unfold insert_solution.
+  apply H.
+Qed.
+
 Definition prepend_to_solution {n} (s: T RSOPM) (sol: LinearSystemSolution n)
   : nat -> T RSOPM 
   :=
   (fun sol_arg: nat => if sol_arg =? S n then s else sol sol_arg).  
 
-Lemma prepend_insert_split:
-  forall n s (sys: LinearSystem (S n)) sol,
-    is_linear_system_solution (n:=n) sys sol ->
-    is_linear_system_solution (n:=1) (insert_solution sys sol) (fun _ => s) ->
-    is_linear_system_solution (n:=S n) sys (prepend_to_solution s sol).
+Lemma prepend_to_solution_not_last:
+  forall n1 n2 n3 s (sol: LinearSystemSolution n2),
+    (S n1 <> n3)%nat ->
+    prepend_to_solution (n:=n1) s sol n3 = sol n3.
 Proof.
-  intros n s sys sol Hsol Hs.
-Admitted.
+  intros n1 n2 n3 s sol Hn13.
+  unfold prepend_to_solution.
+  assert (Hhelp: n3 =? S n1 = false). {
+    apply Nat.eqb_neq.
+    lia.
+  }
+  rewrite Hhelp.
+  reflexivity.
+Qed.
+
+Lemma prepend_to_solution_last:
+  forall n1 n2 n3 s (sol: LinearSystemSolution n2),
+    (S n1 = n3)%nat ->
+    prepend_to_solution (n:=n1) s sol n3 = s.
+Proof.
+  intros n1 n2 n3 s sol Hn13.
+  unfold prepend_to_solution.
+  rewrite Hn13.
+  rewrite Nat.eqb_refl.
+  reflexivity.
+Qed.
+
+Lemma prepend_interpret_rank:
+  forall n n2 (a: LinearInequality (S n2)) s (sol: LinearSystemSolution n2),
+    (n2 > n)%nat ->
+    interpret_inequality_helper (n:=n) a (prepend_to_solution (n:=n2) s sol) = 
+    interpret_inequality_helper (n:=n) a (prepend_to_solution (n:=S n2) s sol).
+Proof.
+  intros n.
+  induction n; intros n2 a s sol Hn2.
+  * unfold interpret_inequality_helper. reflexivity.
+  * unfold interpret_inequality_helper; fold (interpret_inequality_helper (n:=n)).
+    rewrite (prepend_to_solution_not_last n2 n2 (S n)); last lia.
+    rewrite (prepend_to_solution_not_last (S n2) n2 (S n)); last lia.
+    rewrite (IHn n2 a s sol).
+    reflexivity. lia.
+Qed.
+
+Lemma prepend_interpret:
+  forall n (a: LinearInequality (S (S n))) s (sol: LinearSystemSolution (S n)),
+    interpret_inequality_helper (n:=n) a (prepend_to_solution s sol) = 
+    interpret_inequality_helper (n:=n) a sol.
+Proof.
+  intros n a s sol.
+  induction n.
+  * unfold interpret_inequality_helper; reflexivity.
+  * unfold interpret_inequality_helper; fold (interpret_inequality_helper (n:=n)).
+    rewrite <- (IHn a sol).
+    rewrite (prepend_to_solution_not_last (S (S n)) (S (S n)) (S n)); last lia.
+    rewrite (prepend_interpret_rank n (S n)).
+    reflexivity. lia.
+Qed.
+
+Lemma prepend_insert_split:
+  forall n (sys: LinearSystem (S n)) s (sol: LinearSystemSolution n),
+    is_linear_system_solution (n:=1) (insert_solution sys sol) (fun _ => s) ->
+    is_linear_system_solution (n:=S n) sys (prepend_to_solution (n:=n) s sol).
+Proof.
+  intros n sys s sol Hs.
+  induction sys; first exact I.
+  apply insert_solution_cons_solution in Hs.
+  apply is_linear_system_solution_app in Hs.
+  destruct Hs as [Ha_s Ha_sys].
+  apply is_linear_system_solution_cons; split.
+  * unfold is_linear_system_solution, interpret_inequalities; split; last (exact I).
+    unfold insert_solution, map in Ha_s.
+    unfold is_linear_system_solution, interpret_inequalities in Ha_s.
+    destruct Ha_s as [Ha_s Hrem]; clear Hrem.
+    unfold interpret_inequality in Ha_s.
+    unfold interpret_inequality.
+    induction n.
+    - unfold interpret_inequality_helper in Ha_s.
+      unfold interpret_inequality_helper.
+      unfold prepend_to_solution.
+      unfold Nat.eqb.
+      apply Ha_s.
+    - unfold interpret_inequality_helper. fold (interpret_inequality_helper (n:=n)).
+      unfold interpret_inequality_helper in Ha_s; fold (interpret_inequality_helper (n:=n)) in Ha_s.
+      unfold prepend_to_solution at 1.
+      rewrite Nat.eqb_refl.
+      rewrite (prepend_to_solution_not_last (S n) (S n) (S n)); last lia.
+      rewrite (prepend_interpret n a s sol).
+      apply Ha_s.
+  * apply IHsys.
+    apply Ha_sys.
+Qed.
 
 Fixpoint fme_solve {n: nat} (sys: LinearSystem n)
     : option (LinearSystemSolution n) :=
@@ -2026,9 +2116,7 @@ Proof.
         * pose proof (trivial_extract_correct (insert_solution sys l)) as Htriv.
           rewrite <- Heqsol1 in Htriv.
           specialize (Htriv (fun _ => t) eq_refl).
-          apply prepend_insert_split.
-          - apply remove_var_finds_solution; apply IHn.
-          - apply Htriv. 
+          apply prepend_insert_split. apply Htriv. 
         * pose proof (trivial_extract_correct (insert_solution sys l)) as Htriv.
           rewrite <- Heqsol1 in Htriv.
           intros Hsol.
