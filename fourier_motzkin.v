@@ -522,6 +522,39 @@ Proof.
       apply IHsys.
 Qed.
 
+Lemma partition_inequalities_eq0:
+  forall n (sys: LinearSystem n) lt0 eq0 gt0,
+    (lt0, eq0, gt0) = partition_inequalities sys ->
+    forall ineq,
+      In ineq lt0 -> (0 <= ineq n) = false.
+Proof.
+  intros n sys.
+  induction sys; intros lt0 eq0 gt0 Hpart ineq Hineq.
+  * unfold partition_inequalities, partition in Hpart.
+    injection Hpart; intros Hgt Heq Hlt.
+    rewrite Hlt in Hineq.
+    contradiction Hineq.
+  * remember (partition_inequalities sys) as part_sys.
+    destruct part_sys as [[lt0_sys eq0_sys] gt0_sys].
+    pose proof (partition_inequalities_cons _ a sys) as Hpcons.
+    rewrite <- Hpart in Hpcons.
+    rewrite <- Heqpart_sys in Hpcons.
+    destruct Hpcons as [Hpcons|[Hpcons|Hpcons]].
+    all: destruct Hpcons as [Ha_lt_0 [H0_lt_a [Hlt0 [Hgt0 Heq0]]]].
+    - rewrite Hlt0 in Hineq.
+      specialize (IHsys lt0_sys eq0_sys gt0_sys eq_refl ineq Hineq).
+      apply IHsys.
+    - rewrite Hlt0 in Hineq.
+      apply in_inv in Hineq.
+      destruct Hineq as [Hineq|Hineq].
+      * rewrite <- Hineq. apply H0_lt_a.
+      * specialize (IHsys lt0_sys eq0_sys gt0_sys eq_refl ineq Hineq).
+        apply IHsys.
+    - rewrite Hlt0 in Hineq.
+      specialize (IHsys lt0_sys eq0_sys gt0_sys eq_refl ineq Hineq).
+      apply IHsys.
+Qed.
+
 Lemma partition_inequalities_gt0:
   forall n (sys: LinearSystem n) lt0 eq0 gt0,
     (lt0, eq0, gt0) = partition_inequalities sys ->
@@ -553,6 +586,66 @@ Proof.
       * rewrite <- Hineq. apply Ha_lt_0.
       * specialize (IHsys lt0_sys eq0_sys gt0_sys eq_refl ineq Hineq).
         apply IHsys.
+Qed.
+
+Lemma partition_cons_lt0:
+  forall n (ineq: LinearInequality n) sys,
+      let (p_sys, gt0_sys) := partition_inequalities sys in
+      let (lt0_sys, eq0_sys) := p_sys in
+      ineq n <= 0 = true /\ 0 <= ineq n = false ->
+      (ineq :: lt0_sys, eq0_sys, gt0_sys) = partition_inequalities (ineq :: sys).
+Proof.
+  intros n ineq sys.
+  pose proof (partition_inequalities_cons n ineq sys).
+  remember (partition_inequalities sys) as sys_p.
+  destruct sys_p as [[lt0 eq0] gt0].
+  remember (partition_inequalities (ineq :: sys)) as sys_p2.
+  destruct sys_p2 as [[lt0_2 eq0_2] gt0_2].
+  intros Hineq; destruct Hineq as [Hineq1 Hineq2].
+  destruct H as [H|[H|H]]; destruct H as [Ha_ge_0 [H0_ge_a [Hsys_lt0 [Hsys_gt0 Hsys_eq0]]]].
+  * rewrite H0_ge_a in Hineq2; discriminate.
+  * rewrite Hsys_lt0, Hsys_gt0, Hsys_eq0; reflexivity.
+  * rewrite Ha_ge_0 in Hineq1; discriminate.
+Qed.
+
+Lemma partition_cons_eq0:
+  forall n (ineq: LinearInequality n) sys,
+      let (p_sys, gt0_sys) := partition_inequalities sys in
+      let (lt0_sys, eq0_sys) := p_sys in
+      ineq n <= 0 = true /\ 0 <= ineq n = true ->
+      (lt0_sys, ineq :: eq0_sys, gt0_sys) = partition_inequalities (ineq :: sys).
+Proof.
+  intros n ineq sys.
+  pose proof (partition_inequalities_cons n ineq sys).
+  remember (partition_inequalities sys) as sys_p.
+  destruct sys_p as [[lt0 eq0] gt0].
+  remember (partition_inequalities (ineq :: sys)) as sys_p2.
+  destruct sys_p2 as [[lt0_2 eq0_2] gt0_2].
+  intros Hineq; destruct Hineq as [Hineq1 Hineq2].
+  destruct H as [H|[H|H]]; destruct H as [Ha_ge_0 [H0_ge_a [Hsys_lt0 [Hsys_gt0 Hsys_eq0]]]].
+  * rewrite Hsys_lt0, Hsys_gt0, Hsys_eq0; reflexivity.
+  * rewrite H0_ge_a in Hineq2; discriminate. 
+  * rewrite Ha_ge_0 in Hineq1; discriminate.
+Qed.
+
+Lemma partition_cons_gt0:
+  forall n (ineq: LinearInequality n) sys,
+      let (p_sys, gt0_sys) := partition_inequalities sys in
+      let (lt0_sys, eq0_sys) := p_sys in
+      ineq n <= 0 = false /\ 0 <= ineq n = true ->
+      (lt0_sys, eq0_sys, ineq :: gt0_sys) = partition_inequalities (ineq :: sys).
+Proof.
+  intros n ineq sys.
+  pose proof (partition_inequalities_cons n ineq sys).
+  remember (partition_inequalities sys) as sys_p.
+  destruct sys_p as [[lt0 eq0] gt0].
+  remember (partition_inequalities (ineq :: sys)) as sys_p2.
+  destruct sys_p2 as [[lt0_2 eq0_2] gt0_2].
+  intros Hineq; destruct Hineq as [Hineq1 Hineq2].
+  destruct H as [H|[H|H]]; destruct H as [Ha_ge_0 [H0_ge_a [Hsys_lt0 [Hsys_gt0 Hsys_eq0]]]].
+  * rewrite Ha_ge_0 in Hineq1; discriminate.
+  * rewrite H0_ge_a in Hineq2; discriminate.
+  * rewrite Hsys_lt0, Hsys_gt0, Hsys_eq0; reflexivity.
 Qed.
 
 Definition bool_to_Prop (b : bool) : Prop :=
@@ -813,14 +906,6 @@ intros sys lt0 eq0 gt0 sol Hpartition Hneg Hsys.
 specialize (Hsplit sys lt0 eq0 gt0 sol Hpartition).
 tauto.
 Qed.
-
-Lemma partition_inequalities_rank_down:
-  forall n (sys: LinearSystem (S n)) lt0 eq0 gt0 lt0_n eq0_n gt0_n,
-    (lt0, eq0, gt0) = partition_inequalities (n:=S n) sys ->
-    (lt0_n, eq0_n, gt0_n) = partition_inequalities (n:=n) sys ->
-    lt0 = lt0_n /\ eq0 = eq0_n /\ gt0 = gt0_n.
-Proof.
-Admitted. 
 
 Lemma trivial_consistency_partition_solution:
     forall (sys: LinearSystem 1) lt0 eq0 gt0 sol,
@@ -1931,26 +2016,26 @@ Definition insert_solution {n: nat}
         end)
     sys.
 
-Lemma insert_solution_correct:
-  forall n (sys: LinearSystem (S n)) sol,
-      (exists sol_full, is_linear_system_solution (n:=S n) sys sol_full) ->
-      exists sol1, is_linear_system_solution (insert_solution sys sol) sol1.
+Lemma insert_solution_cons:
+  forall n ineq (sys: LinearSystem (S n)) sol,
+    insert_solution (ineq :: sys) sol = insert_solution [ineq] sol ++ insert_solution sys sol.
 Proof.
-  intros n sys sol Hfull.
-Admitted.
+  intros n ineq sys sol.
+  unfold insert_solution at 1 2.
+  unfold map at 2.
+  rewrite map_cons.
+  unfold app.
+  reflexivity.
+Qed.
 
 Lemma insert_solution_cons_solution:
   forall n ineq (sys: LinearSystem (S n)) sol sol_full,
-    is_linear_system_solution (insert_solution (ineq :: sys) sol) sol_full ->
+    is_linear_system_solution (insert_solution (ineq :: sys) sol) sol_full <->
     is_linear_system_solution (insert_solution [ineq] sol ++ insert_solution sys sol) sol_full.
 Proof.
-  intros n ineq sys sol sol_full H.
-  unfold insert_solution in H.
-  rewrite map_cons in H.
-  apply is_linear_system_solution_cons in H.
-  apply is_linear_system_solution_app.
-  unfold insert_solution.
-  apply H.
+  intros n ineq sys sol sol_full.
+  rewrite insert_solution_cons.
+  split; intros H; apply H.
 Qed.
 
 Definition prepend_to_solution {n} (s: T RSOPM) (sol: LinearSystemSolution n)
@@ -2023,7 +2108,7 @@ Lemma prepend_insert_split:
 Proof.
   intros n sys s sol Hs.
   induction sys; first exact I.
-  apply insert_solution_cons_solution in Hs.
+  rewrite insert_solution_cons_solution in Hs.
   apply is_linear_system_solution_app in Hs.
   destruct Hs as [Ha_s Ha_sys].
   apply is_linear_system_solution_cons; split.
@@ -2048,6 +2133,397 @@ Proof.
       apply Ha_s.
   * apply IHsys.
     apply Ha_sys.
+Qed.
+
+Lemma absurd_reconstruction_helper:
+  forall (sys: LinearSystem 1) sol,
+    (exists sol_full, is_linear_system_solution sys sol_full) ->
+    (exists sol1, is_linear_system_solution (insert_solution sys sol) sol1).
+Proof.
+  intros sys sol Hfull.
+  destruct Hfull as [sol_full Hfull].
+  exists (fun i => sol_full 1%nat).
+  induction sys; first exact I.
+  rewrite insert_solution_cons_solution.
+  apply is_linear_system_solution_app.
+  apply is_linear_system_solution_cons in Hfull.
+  destruct Hfull as [Ha Hrest].
+  split.
+  * unfold is_linear_system_solution.
+    unfold is_linear_system_solution in Ha.
+    unfold insert_solution, map, interpret_inequalities; split; last exact I.
+    unfold interpret_inequalities in Ha.
+    destruct Ha as [Ha Htrash]; clear Htrash.
+    unfold interpret_inequality.
+    unfold interpret_inequality in Ha.
+    clear IHsys; clear Hrest.
+    unfold interpret_inequality_helper.
+    unfold interpret_inequality_helper in Ha.
+    apply Ha.
+  * apply (IHsys Hrest).
+Qed.
+
+Definition insert_solution_ineq {n}
+    (ineq: LinearInequality (S n))
+    (sol: LinearSystemSolution n)
+    : LinearInequality 1 :=
+    (fun i =>
+        match i with
+        | 1 => ineq (S n)
+        | _ => interpret_inequality_helper (n:=n) ineq sol
+        end).
+  
+Lemma insert_solution_single:
+  forall n (ineq: LinearInequality (S n)) sol,
+    insert_solution [ineq] sol = [insert_solution_ineq ineq sol].
+Proof.
+  intros n ineq sol.
+  unfold insert_solution, map, insert_solution_ineq.
+  reflexivity.
+Qed.
+
+Lemma insert_partition:
+  forall n (sys: LinearSystem (S n)) sol sys_lt0 sys_eq0 sys_gt0,
+    (sys_lt0, sys_eq0, sys_gt0) = partition_inequalities sys ->
+    ((insert_solution sys_lt0 sol), (insert_solution sys_eq0 sol), (insert_solution sys_gt0 sol)) =
+      partition_inequalities (insert_solution sys sol).
+Proof.
+  intros n sys sol.
+  induction sys; intros sys_lt0 sys_eq0 sys_gt0 Hpart.
+  * unfold partition_inequalities, partition in Hpart.
+    injection Hpart; intros Hlt0 Heq0 Hgt0.
+    rewrite Hlt0, Heq0, Hgt0.
+    unfold insert_solution, map; reflexivity.
+  * pose proof (partition_inequalities_cons _ a sys) as Hcons.
+    rewrite <- Hpart in Hcons.
+    remember (partition_inequalities sys) as sys_part.
+    destruct sys_part as [[sysp_lt0 sysp_eq0] sysp_gt0].
+    specialize (IHsys sysp_lt0 sysp_eq0 sysp_gt0 eq_refl).
+    rewrite insert_solution_cons.
+    rewrite insert_solution_single; unfold app.
+    destruct Hcons as [Hcons|[Hcons|Hcons]]; destruct Hcons as [Ha_ge_0 [H0_ge_a [Hsys_lt0 [Hsys_gt0 Hsys_eq0]]]].
+    (* Duplication here *)
+    - rewrite Hsys_lt0, Hsys_eq0, Hsys_gt0.
+      rewrite insert_solution_cons.
+      rewrite insert_solution_single; unfold app.
+      pose proof (partition_cons_eq0 _ (insert_solution_ineq a sol) (insert_solution sys sol)) as Hmain.
+      rewrite <- IHsys in Hmain.
+      apply Hmain; split.
+      * unfold insert_solution_ineq; apply Ha_ge_0.
+      * unfold insert_solution_ineq; apply H0_ge_a.  
+    - rewrite Hsys_lt0, Hsys_eq0, Hsys_gt0.
+      rewrite insert_solution_cons.
+      rewrite insert_solution_single; unfold app.
+      pose proof (partition_cons_lt0 _ (insert_solution_ineq a sol) (insert_solution sys sol)) as Hmain.
+      rewrite <- IHsys in Hmain.
+      apply Hmain; split.
+      * unfold insert_solution_ineq; apply Ha_ge_0.
+      * unfold insert_solution_ineq; apply H0_ge_a.  
+    - rewrite Hsys_lt0, Hsys_eq0, Hsys_gt0.
+      rewrite insert_solution_cons.
+      rewrite insert_solution_single; unfold app.
+      pose proof (partition_cons_gt0 _ (insert_solution_ineq a sol) (insert_solution sys sol)) as Hmain.
+      rewrite <- IHsys in Hmain.
+      apply Hmain; split.
+      * unfold insert_solution_ineq; apply Ha_ge_0.
+      * unfold insert_solution_ineq; apply H0_ge_a. 
+Qed.
+
+Lemma trivial_consistency_insert_solution_eq0:
+  forall n (sys: LinearSystem (S (S n))) sol sys_lt0 sys_eq0 sys_gt0 sys1_lt0 sys1_eq0 sys1_gt0,
+    (sys_lt0, sys_eq0, sys_gt0) = partition_inequalities sys ->
+    is_linear_system_solution (n:=(S n)) sys_eq0 sol ->
+    (sys1_lt0, sys1_eq0, sys1_gt0) = partition_inequalities (insert_solution sys sol) ->
+    trivial_consistency sys1_eq0 = true.
+Proof.
+  intros n sys sol sys_lt0 sys_eq0 sys_gt0 sys1_lt0 sys1_eq0 sys1_gt0 Hpart_sys Hsol Hpart_sys1.
+  pose proof (partition_inequalities_eq0 _ _ _ _ _ Hpart_sys1) as Heq0.
+  rewrite <- (insert_partition _ _ _ sys_lt0 sys_eq0 sys_gt0) in Hpart_sys1; last apply Hpart_sys.
+  injection Hpart_sys1; intros Hsys1_gt0 Hsys1_eq0 Hsys1_lt0.
+  clear Hpart_sys; clear Hpart_sys1.
+  rewrite Hsys1_eq0; clear Hsys1_eq0.
+  induction sys_eq0; first reflexivity.
+  rewrite insert_solution_cons.
+  rewrite insert_solution_single; unfold app.
+  unfold trivial_consistency; fold (trivial_consistency).
+  rewrite <- (is_linear_system_solution_cons (S n) a sys_eq0 sol) in Hsol.
+  destruct Hsol as [Ha Hsol].
+  apply andb_true_intro; split.
+  * unfold is_linear_system_solution in Ha.
+    unfold interpret_inequalities in Ha.
+    unfold insert_solution_ineq.
+    unfold interpret_inequality in Ha.
+    apply Ha. 
+  * apply IHsys_eq0.
+    apply Hsol. 
+Qed.
+
+Lemma compute_lb_exists:
+  forall n (sys: LinearSystem (S (S n))) sol lb,
+    Some lb = compute_lb (insert_solution sys sol) ->
+    exists ineq, In ineq sys /\ lb = - ((insert_solution_ineq ineq sol) 0%nat / (insert_solution_ineq ineq sol) 1%nat).
+Proof.
+  intros n sys.
+  induction sys; intros sol lb Hlb.
+  * unfold insert_solution, compute_lb, map, RSOPM_list_max in Hlb.
+    discriminate. 
+  * rewrite insert_solution_cons in Hlb.
+    rewrite insert_solution_single in Hlb.
+    unfold app in Hlb.
+    unfold compute_lb in Hlb.
+    rewrite map_cons in Hlb.
+    unfold RSOPM_list_max in Hlb. fold RSOPM_list_max in Hlb.
+    destruct (RSOPM_list_max (map _ (insert_solution sys sol))) eqn:Hmax_prev.
+    * destruct (- (insert_solution_ineq a sol 0%nat / insert_solution_ineq a sol 1%nat) <= t) eqn:Hdec.
+      - specialize (IHsys sol t).
+        symmetry in Hmax_prev.
+        unfold compute_lb in IHsys.
+        specialize (IHsys Hmax_prev).
+        destruct IHsys as [ineq_past Hpast].
+        exists ineq_past; split.
+        * apply in_cons; apply Hpast.
+        * injection Hlb; intros Hlb_def.
+          rewrite Hlb_def.
+          apply Hpast.
+      - exists a; split.
+        - apply in_eq.
+        - injection Hlb; intros Hlb_def.
+          unfold insert_solution_ineq.
+          unfold interpret_inequality_helper; fold (interpret_inequality_helper (n:=n)).
+          apply Hlb_def.  
+    * exists a; split.
+      - apply in_eq.
+      - injection Hlb; intros Hlb_def.
+        unfold insert_solution_ineq.
+        unfold interpret_inequality_helper; fold (interpret_inequality_helper (n:=n)).
+        apply Hlb_def. 
+Qed.
+
+Lemma compute_ub_exists:
+  forall n (sys: LinearSystem (S (S n))) sol ub,
+    Some ub = compute_ub (insert_solution sys sol) ->
+    exists ineq, In ineq sys /\ ub = - ((insert_solution_ineq ineq sol) 0%nat / (insert_solution_ineq ineq sol) 1%nat).
+Proof.
+  intros n sys.
+  induction sys; intros sol ub Hub.
+  * unfold insert_solution, compute_ub, map, RSOPM_list_min in Hub.
+    discriminate. 
+  * rewrite insert_solution_cons in Hub.
+    rewrite insert_solution_single in Hub.
+    unfold app in Hub.
+    unfold compute_ub in Hub.
+    rewrite map_cons in Hub.
+    unfold RSOPM_list_min in Hub. fold RSOPM_list_min in Hub.
+    destruct (RSOPM_list_min (map _ (insert_solution sys sol))) eqn:Hmin_prev.
+    * destruct (- (insert_solution_ineq a sol 0%nat / insert_solution_ineq a sol 1%nat) <= t) eqn:Hdec.
+      - exists a; split.
+        - apply in_eq.
+        - injection Hub; intros Hub_def.
+          unfold insert_solution_ineq.
+          unfold interpret_inequality_helper; fold (interpret_inequality_helper (n:=n)).
+          apply Hub_def.  
+      - specialize (IHsys sol t).
+        symmetry in Hmin_prev.
+        unfold compute_ub in IHsys.
+        specialize (IHsys Hmin_prev).
+        destruct IHsys as [ineq_past Hpast].
+        exists ineq_past; split.
+        * apply in_cons; apply Hpast.
+        * injection Hub; intros Hub_def.
+          rewrite Hub_def.
+          apply Hpast.
+    * exists a; split.
+      - apply in_eq.
+      - injection Hub; intros Hub_def.
+        unfold insert_solution_ineq.
+        unfold interpret_inequality_helper; fold (interpret_inequality_helper (n:=n)).
+        apply Hub_def. 
+Qed.
+
+Lemma compose_inequalities_in:
+    forall n (sys1 sys2: LinearSystem (S n)) ineq1 ineq2,
+      In ineq1 sys1 -> In ineq2 sys2 ->
+      forall ineq,
+        In ineq (compose_inequalities [ineq1] [ineq2]) ->
+        In ineq (compose_inequalities sys1 sys2).
+Proof.
+  intros n sys1 sys2 ineq1 ineq2 HIn1 HIn2 ineq Hin.
+  unfold compose_inequalities.
+  unfold compose_inequalities in Hin.
+  apply in_map_iff.
+  apply in_map_iff in Hin.
+  destruct Hin as [ineq_compose Hineq_compose].
+  exists ineq_compose.
+  split; first apply Hineq_compose.
+  destruct Hineq_compose as [Htrash Hineq_compose]; clear Htrash.
+  destruct ineq_compose as [ineq_c1 ineq_c2].
+  apply in_prod_iff in Hineq_compose.
+  destruct Hineq_compose as [Hineq_c1 Hineq_c2].
+  unfold In in Hineq_c1, Hineq_c2.
+  destruct Hineq_c1; last contradiction.
+  destruct Hineq_c2; last contradiction.
+  apply in_prod.
+  * rewrite <- H. apply HIn1.
+  * rewrite <- H0. apply HIn2.
+Qed.
+
+Lemma is_linear_system_solution_subset:
+  forall n (sys1 sys2: LinearSystem n) sol,
+    is_linear_system_solution sys2 sol ->
+    (forall ineq, In ineq sys1 -> In ineq sys2) ->
+    is_linear_system_solution sys1 sol.
+Proof.
+  intros n sys1 sys2 sol Hsol Hsubset.
+  induction sys1; first exact I.
+  apply is_linear_system_solution_cons; split.
+  * specialize (Hsubset a (in_eq a sys1)).
+    unfold is_linear_system_solution, interpret_inequalities; split; last exact I.
+    clear IHsys1.
+    induction sys2.
+    - contradiction Hsubset.
+    - apply in_inv in Hsubset.
+      destruct Hsubset as [Ha | Ha].
+      * rewrite Ha in Hsol.
+        apply is_linear_system_solution_cons in Hsol.
+        apply Hsol.
+      * apply IHsys2.
+        - apply is_linear_system_solution_cons in Hsol.
+          apply Hsol.
+        - apply Ha.
+  * apply IHsys1.
+    intros ineq Hineq.
+    specialize (Hsubset ineq).
+    apply (in_cons a) in Hineq.
+    apply Hsubset, Hineq.
+Qed.
+
+Lemma compose_inequalities_reduce:
+  forall n (sys1 sys2: LinearSystem (S (S n))) sol,
+    is_linear_system_solution (compose_inequalities sys1 sys2) sol ->
+    forall ineq1 ineq2,
+      In ineq1 sys1 -> In ineq2 sys2 ->
+      is_linear_system_solution (compose_inequalities [ineq1] [ineq2]) sol.
+Proof.
+  intros n sys1 sys2 sol Hsol ineq1 ineq2 Hin1 Hin2.
+  apply (is_linear_system_solution_subset _ (compose_inequalities [ineq1] [ineq2])
+    (compose_inequalities sys1 sys2) sol). 
+  * apply Hsol.
+  * pose proof (compose_inequalities_in (S n) sys1 sys2 ineq1 ineq2 Hin1 Hin2) as Hcompose.
+    apply Hcompose.
+Qed.
+
+Lemma interpret_inequality_helper_reconstruction:
+  forall n e1 e2 sol,
+    - interpret_inequality_helper (n:=n) (fun i => (e1 i) / e2) sol =
+    interpret_inequality_helper (n:=n) (fun i => (e1 i) / - e2) sol.
+Proof.
+  intros n e1 e2 sol.
+  induction n.
+  * unfold interpret_inequality_helper.
+    RSOPM_realize_eq; repeat rewrite ax_real_div; RSOPM_realize.
+    rewrite Ropp_div_distr_r; reflexivity.
+  * unfold interpret_inequality_helper; fold (interpret_inequality_helper (n:=n)).
+    specialize (IHn sol).
+    rewrite <- IHn.
+    RSOPM_realize_eq; repeat rewrite ax_real_div; RSOPM_realize.
+    rewrite Ropp_div_distr_r.
+    rewrite Ropp_mult_distr_l_reverse.
+    rewrite <- Ropp_plus_distr.
+    reflexivity.
+Qed.
+
+Lemma reconstruction_algebra_helper:
+  forall n (lb_ineq ub_ineq: LinearInequality (S (S n))) sol,
+    ((interpret_inequality_helper 
+    (fun i : nat => lb_ineq i / - lb_ineq (S (S n)) + ub_ineq i / ub_ineq (S (S n))) sol) <= 0) = true ->
+    (- (insert_solution_ineq lb_ineq sol 0%nat / insert_solution_ineq lb_ineq sol 1%nat) <=
+    - (insert_solution_ineq ub_ineq sol 0%nat / insert_solution_ineq ub_ineq sol 1%nat)) = true.
+Proof.
+  intros n lb_ineq ub_ineq sol H.
+  unfold insert_solution_ineq.
+  do 2 rewrite interpret_inequality_helper_div.
+  assert (Hhelp: (forall (r1: T RSOPM) r2, (r1 + r2 <= 0) = true -> (r1 <= - r2) = true )%RS). {
+    intros r1 r2.
+    do 2 rewrite ax_real_leq_true.
+    RSOPM_realize.
+    lra.
+  }
+  apply Hhelp; clear Hhelp.
+  rewrite interpret_inequality_helper_reconstruction.
+  rewrite interpret_inequality_helper_plus.
+  apply H.
+Qed.
+
+Lemma reconstruction_bounds:
+  forall n (sys: LinearSystem (S (S n))) sol sys_lt0 sys_eq0 sys_gt0 lb ub,
+    (sys_lt0, sys_eq0, sys_gt0) = partition_inequalities sys ->
+    is_linear_system_solution (compose_inequalities sys_lt0 sys_gt0) sol ->
+    Some lb = compute_lb (insert_solution sys_lt0 sol) ->
+    Some ub = compute_ub (insert_solution sys_gt0 sol) ->
+    lb <= ub = true.
+Proof.
+  intros n sys sol sys_lt0 sys_eq0 sys_gt0 lb ub Hpart Hcompose Hlb Hub.
+  apply compute_lb_exists in Hlb.
+  apply compute_ub_exists in Hub.
+  destruct Hlb as [lb_ineq [Hlbin Hlb]].
+  destruct Hub as [ub_ineq [Hubin Hub]].
+  pose proof (compose_inequalities_reduce _ _ _ _ Hcompose lb_ineq ub_ineq Hlbin Hubin) as Hineqs.
+  unfold compose_inequalities,list_prod, app, map in Hineqs.
+  rewrite Hlb, Hub.
+  unfold is_linear_system_solution, interpret_inequalities, interpret_inequality in Hineqs.
+  apply reconstruction_algebra_helper.
+  apply Hineqs.
+Qed.
+
+Lemma reconstruction_always_succeds:
+  forall n (sys: LinearSystem (S (S n))) sol,
+    (exists sol_full, is_linear_system_solution sys sol_full) ->
+    is_linear_system_solution (remove_var sys) sol ->
+    exists sol1, is_linear_system_solution (insert_solution sys sol) sol1.
+Proof.
+  intros n sys sol Hfull Hrvar.
+  unfold remove_var in Hrvar.
+  remember (partition_inequalities sys) as sys_p.
+  destruct sys_p as [[sys_lt0 sys_eq0] sys_gt0].
+  apply is_linear_system_solution_app in Hrvar.
+  destruct Hrvar as [Hcompose Heq0].
+  exists (match trivial_extract (insert_solution sys sol) with | Some s => (fun _ => s) | None => (fun _ => 0) end).
+  pose proof (trivial_extract_correct (insert_solution sys sol)).
+  remember (trivial_extract (insert_solution sys sol)) as ext_res.
+  unfold trivial_extract in Heqext_res.
+  remember (partition_inequalities (insert_solution sys sol)) as sys1_part.
+  destruct sys1_part as [[sys1_lt0 sys1_eq0] sys1_gt0].
+  rewrite (trivial_consistency_insert_solution_eq0 
+              n sys sol sys_lt0 sys_eq0 sys_gt0 sys1_lt0 sys1_eq0 sys1_gt0 Heqsys_p Heq0 Heqsys1_part) in Heqext_res.
+  remember (compute_lb sys1_lt0) as sys1_lbo.
+  remember (compute_ub sys1_gt0) as sys1_ubo.
+  unfold satisfy_bounds in Heqext_res.
+  rewrite <- (insert_partition _ _ _ _ _ _ Heqsys_p) in Heqsys1_part.
+  injection Heqsys1_part; intros Hsys1_gt0 Hsys1_eq0 Hsys1_lt0.
+  destruct sys1_lbo; destruct sys1_ubo.
+  * rewrite (reconstruction_bounds n sys sol sys_lt0 sys_eq0 sys_gt0 t t0) in Heqext_res.
+    - rewrite Heqext_res.
+      rewrite Heqext_res in H.
+      specialize (H (fun _ => t) eq_refl).
+      apply H. 
+    - apply Heqsys_p.
+    - apply Hcompose.
+    - rewrite Hsys1_lt0 in Heqsys1_lbo.
+      apply Heqsys1_lbo.
+    - rewrite Hsys1_gt0 in Heqsys1_ubo.
+      apply Heqsys1_ubo.
+  * rewrite Heqext_res.
+    rewrite Heqext_res in H.
+    specialize (H (fun _ => t) eq_refl).
+    apply H. 
+  * rewrite Heqext_res.
+    rewrite Heqext_res in H.
+    specialize (H (fun _ => t) eq_refl).
+    apply H. 
+  * rewrite Heqext_res.
+    rewrite Heqext_res in H.
+    specialize (H (fun _ => 0) eq_refl).
+    apply H. 
 Qed.
 
 Fixpoint fme_solve {n: nat} (sys: LinearSystem n)
@@ -2120,11 +2596,12 @@ Proof.
         * pose proof (trivial_extract_correct (insert_solution sys l)) as Htriv.
           rewrite <- Heqsol1 in Htriv.
           intros Hsol.
-          apply (insert_solution_correct _ sys l) in Hsol.
+          pose proof (reconstruction_always_succeds n sys l Hsol IHn) as Hinsert.
           contradiction.
       - apply remove_var_no_solution.
         apply IHn.  
 Qed.     
+
 
 Print Assumptions fme_correct.
 
