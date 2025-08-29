@@ -2603,6 +2603,4 @@ Proof.
 Qed.     
 
 
-Print Assumptions fme_correct.
-
 End FourierMotzkinImplementation.

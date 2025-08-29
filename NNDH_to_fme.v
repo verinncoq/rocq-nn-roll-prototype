@@ -21,65 +21,190 @@ Section NNDHAffineElementToFME.
 Context {RSOPMD : RSOPMWithDiv}.
 Open Scope RSOPM_scope.
 
-(*TODO!!!*)
+Definition linsys_solution_to_colvec {d}
+  (sol: LinearSystemSolution (RSOPM:=RSOPMD) d)
+  : colvec d :=
+  mk_colvec d sol.
 
-Definition af_to_linSys {d : nat} 
-    (af: AffineFunction (RSOPM:=RSOPMD) (d + d) 1) 
-    : LinearSystem (RSOPM:=RSOPMD) d :=
-        match af with
-        | Affine C b =>
-            map (fun i =>
-                   fun j =>
-                     if j=? 0 then coeff_colvec 0 b 0 
-                     else coeff_mat 0 C i (j-1)) 
-                (seq 0 1) 
-        end.
+Definition colvec_to_linsys_solution {d}
+  (v: colvec (RSOPM:=RSOPMD) d)
+  : LinearSystemSolution d :=
+  coeff_colvec 0 v.
 
+Definition W_to_linsys {d}
+  (W: ConvexPolyhedron d)
+  : LinearSystem (RSOPM:=RSOPMD) d :=
+  match W with
+  | Polyhedron lincons => map (fun lincon => 
+    match lincon with
+    | Constraint c b =>
+        (fun i => if i =? 0 then (- b) else coeff_colvec 0 c (i - 1))
+    end
+    ) lincons
+  end.
 
-Definition convert_to_fme {d: nat}
+Lemma interpret_inequality_W_to_linsys_solution:
+  forall d (sol: LinearSystemSolution d) c b,
+    interpret_inequality (fun i => if i =? 0 then (- b) else coeff_colvec 0 c (i - 1)) sol ->
+    (c * linsys_solution_to_colvec sol)%v <= b = true.
+Proof.
+  intros d sol c b Hinterpret.
+  
+Admitted. 
+
+Lemma W_to_linsys_solution:
+  forall d (sol: LinearSystemSolution (RSOPM:=RSOPMD) d) W,
+    is_linear_system_solution (W_to_linsys W) sol ->
+    in_convex_polyhedron (linsys_solution_to_colvec sol) W.
+Proof.
+  intros d sol W Hsol.
+  unfold in_convex_polyhedron.
+  destruct W as [lcs]; intros constraint Hconstraint.
+  induction lcs; first contradiction Hconstraint.
+  unfold W_to_linsys in Hsol.
+  rewrite map_cons in Hsol.
+  rewrite <- is_linear_system_solution_cons in Hsol.
+  destruct Hsol as [Ha Hsol].
+  apply in_inv in Hconstraint.
+  destruct Hconstraint as [Hconstraint|Hconstraint].
+  * rewrite Hconstraint in Ha.
+    unfold satisfies_lc.
+    destruct constraint as [c b].
+    unfold is_linear_system_solution,interpret_inequalities in Ha.
+    destruct Ha as [Ha Hclear]; clear Hclear.
+    apply interpret_inequality_W_to_linsys_solution.
+    apply Ha.
+  * apply IHlcs.
+    - unfold W_to_linsys.
+      apply Hsol.
+    - apply Hconstraint.
+Qed.
+
+Lemma solution_W_to_linsys:
+  forall d (x: colvec (RSOPM:=RSOPMD) d) W,
+    in_convex_polyhedron x W ->
+    is_linear_system_solution (W_to_linsys W) (colvec_to_linsys_solution x).
+Proof.
+Admitted.
+
+Definition p_to_linsys {d}
+  (p: ConvexPolyhedron (d + d))
+  : LinearSystem (RSOPM:=RSOPMD) d :=
+  match p with
+  | Polyhedron lincons => map (fun lincon => 
+    match lincon with
+    | Constraint c b =>
+        (fun i => if i =? 0 then (- b) 
+                  else (coeff_colvec 0 c (i - 1)) + (coeff_colvec 0 c (i - 1 + d)))
+    end
+    ) lincons
+  end.
+
+Lemma p_to_linsys_solution:
+  forall d (sol: LinearSystemSolution (RSOPM:=RSOPMD) d) p,
+    is_linear_system_solution (p_to_linsys p) sol ->
+    in_convex_polyhedron (colvec_concat (linsys_solution_to_colvec sol) (linsys_solution_to_colvec sol)) p.
+Proof.
+Admitted.
+
+Lemma solution_p_to_linsys:
+  forall d (x: colvec (RSOPM:=RSOPMD) d) p,
+    in_convex_polyhedron (colvec_concat x x) p ->
+    is_linear_system_solution (p_to_linsys p) (colvec_to_linsys_solution x).
+Proof.
+Admitted.  
+
+Definition af_to_linsys {d : nat} 
+  (af: AffineFunction (RSOPM:=RSOPMD) (d + d) 1) 
+  : LinearSystem (RSOPM:=RSOPMD) d :=
+      match af with
+      | Affine C b =>
+          map (fun i =>
+                  fun j =>
+                    if j=? 0 then (- coeff_colvec 0 b i) 
+                    else (coeff_mat 0 C i (j - 1)) + (coeff_mat 0 C i (j - 1 + d))) 
+              (seq 0 (d + d)) 
+      end.
+
+Lemma af_to_linsys_solution:
+  forall d (sol: LinearSystemSolution (RSOPM:=RSOPMD) d) af,
+    is_linear_system_solution (af_to_linsys af) sol ->
+    forall val,
+      is_affine_f_value af (colvec_concat (linsys_solution_to_colvec sol) (linsys_solution_to_colvec sol)) val ->
+      (toRS val <= 0) = true.
+Proof.
+Admitted.
+
+Lemma solution_af_to_linsys:
+  forall d (x: colvec (RSOPM:=RSOPMD) d) af val,
+    is_affine_f_value af (colvec_concat x x) val ->
+    (toRS val <= 0) = true ->
+    is_linear_system_solution (af_to_linsys af) (colvec_to_linsys_solution x).
+Proof.
+Admitted.
+
+Definition satisfaction_as_linear_system {d: nat}
     (affine_el: AffineElement (RSOPM:=RSOPMD) (d + d) 1)
     (W: ConvexPolyhedron (RSOPM:=RSOPMD) d)
     : LinearSystem (RSOPM:=RSOPMD) d := (*Maybe not d*)
       match affine_el with
-        | Element _ af => af_to_linSys af
+        | Element p af => (W_to_linsys W) ++ (p_to_linsys p) ++ (af_to_linsys af)
       end.
 
-Lemma colvec_satisfies_inequalities :
-  forall (d: nat) (af: AffineFunction (RSOPM:=RSOPMD) (d + d) 1),
-    match af with
-      | Affine C b =>
-          (forall (x: colvec (d+d)),
-            ((toRS ((Mmult (T:=RSOPMD) C x) + b)%M) <= 0) = true ->
-            interpret_inequalities (af_to_linSys af) ((fun i => coeff_colvec 0 x i)))
-    end.
-Proof.
-  intros d af.
-  destruct af.
-  intros x H.
-  simpl.
-  split.
-    + unfold interpret_inequality.
-      unfold interpret_inequality_helper.
-Admitted.
-
-
-
-Theorem convert_to_fme_correct {d: nat}:
+Theorem satisfaction_as_linear_system_correct {d: nat}:
     forall affine_el (W: ConvexPolyhedron (RSOPM:=RSOPMD) d),
         satisfaction_over_element affine_el W <-> 
-        fme_solve (convert_to_fme affine_el W) = None.
-
+        fme_solve (satisfaction_as_linear_system affine_el W) = None.
 Proof.
-  intros af W.
-  specialize (fme_correct (d + d) (convert_to_fme af W)).
-  split.
-    - intro.
-      admit.
-    - intro.
-      unfold satisfaction_over_element.
-      intros x HxinW.
-Admitted.
-
+  intros el W; destruct el as [el_p el_af].
+  pose proof (fme_correct _ (satisfaction_as_linear_system (Element _ _ el_p el_af) W)) as Hfme.
+  split; intro H.
+  * destruct (fme_solve (satisfaction_as_linear_system (Element _ _ el_p el_af) W)) as [sol|]; last reflexivity.
+    unfold satisfaction_as_linear_system in Hfme.
+    do 2 rewrite <- is_linear_system_solution_app in Hfme.
+    destruct Hfme as [HW_sys [Hp_sys Haf_sys]].
+    unfold satisfaction_over_element in H.
+    specialize (H (linsys_solution_to_colvec sol)).
+    apply W_to_linsys_solution in HW_sys.
+    specialize (H HW_sys).
+    remember (affine_element_eval (Element _ _ el_p el_af) _) as eval_res.
+    destruct eval_res as [eval_res|].
+    - symmetry in Heqeval_res.
+      apply affine_element_eval_correct in Heqeval_res.
+      unfold is_affine_element_value in Heqeval_res.
+      destruct Heqeval_res as [Hdel Hf]; clear Hdel.
+      pose proof (af_to_linsys_solution _ _ _ Haf_sys eval_res Hf) as Haf_sol.
+      rewrite Haf_sol in H.
+      discriminate H.
+    - unfold affine_element_eval in Heqeval_res.
+      apply p_to_linsys_solution in Hp_sys.
+      apply polyhedron_eval_correct in Hp_sys.
+      rewrite Hp_sys in Heqeval_res.
+      discriminate Heqeval_res. 
+  * rewrite H in Hfme.
+    unfold satisfaction_as_linear_system in Hfme.
+    unfold satisfaction_over_element; intros x HxW.
+    remember (affine_element_eval (Element _ _ el_p el_af) _) as eval_res.
+    destruct eval_res as [eval_res|]; last (exact I).
+    symmetry in Heqeval_res; apply affine_element_eval_correct in Heqeval_res.
+    unfold is_affine_element_value in Heqeval_res.
+    destruct Heqeval_res as [Hel_dom Hel_val].
+    remember (toRS eval_res <= 0)%RS as cmp_res.
+    destruct cmp_res; last reflexivity.
+    exfalso; apply Hfme.
+    exists (colvec_to_linsys_solution x).
+    do 2 rewrite <- is_linear_system_solution_app.
+    split; try split.
+    - apply solution_W_to_linsys.
+      apply HxW. 
+    - apply solution_p_to_linsys.
+      unfold in_affine_element_domain in Hel_dom.
+      apply Hel_dom.
+    - apply (solution_af_to_linsys _ _ _ eval_res).
+      * apply Hel_val.
+      * symmetry in Heqcmp_res.
+        apply Heqcmp_res.
+Qed.
 
 End NNDHAffineElementToFME.
 
@@ -96,7 +221,7 @@ Fixpoint verify_hyperporperty_helper {d: nat}
     match body with
     | nil => true
     | body_el :: tail => 
-        match fme_solve (convert_to_fme body_el W) with
+        match fme_solve (satisfaction_as_linear_system body_el W) with
         | Some counterexample => false
         | None => verify_hyperporperty_helper W tail
         end
@@ -141,7 +266,7 @@ Proof.
         fold (verify_hyperporperty_helper W l) in H.
         destruct HIn as [HIn|HIn].
         * symmetry in Heqfme_sol.
-          apply convert_to_fme_correct.
+          apply satisfaction_as_linear_system_correct.
           rewrite HIn in Heqfme_sol.
           apply Heqfme_sol.
         * apply IHl.
@@ -159,7 +284,7 @@ Proof.
         * specialize (H a).
           pose proof (in_eq a l) as HIn_el.
           specialize (H HIn_el).
-          apply convert_to_fme_correct in H.
+          apply satisfaction_as_linear_system_correct in H.
           rewrite H in Heqfme_sol.
           inversion Heqfme_sol.
         * fold (verify_hyperporperty_helper W l).
@@ -168,5 +293,7 @@ Proof.
           apply H.
           right; apply Hel.
 Qed.
+
+Print Assumptions verify_hyperporperty_correct.
 
 End NNHyperpropertyVerification.
