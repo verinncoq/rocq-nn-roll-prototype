@@ -24,12 +24,12 @@ Open Scope RSOPM_scope.
 Definition linsys_solution_to_colvec {d}
   (sol: LinearSystemSolution (RSOPM:=RSOPMD) d)
   : colvec d :=
-  mk_colvec d sol.
+  mk_colvec d (fun i => sol (S i)).
 
 Definition colvec_to_linsys_solution {d}
   (v: colvec (RSOPM:=RSOPMD) d)
   : LinearSystemSolution d :=
-  coeff_colvec 0 v.
+  (fun i => if i =? 0 then 0 else coeff_colvec 0 v i).
 
 Definition W_to_linsys {d}
   (W: ConvexPolyhedron d)
@@ -43,14 +43,95 @@ Definition W_to_linsys {d}
     ) lincons
   end.
 
+Lemma interpret_inequality_sum_n:
+  forall d1 d2 (sol: LinearSystemSolution d1) (c: colvec d2) b,
+    (d1 <= d2)%nat ->
+    interpret_inequality_helper (fun i => if i =? 0 then (- b) else coeff_colvec 0 c (i - 1)) sol =
+    sum_n (G:=RSOPMD) (fun i => if i =? 0 then (- b) else coeff_colvec 0 c (i - 1) * sol i) d1.
+Proof.
+  intros d1.
+  induction d1; intros d2 sol c b Hleq.
+  * unfold interpret_inequality_helper.
+    rewrite Nat.eqb_refl.
+    simpl; unfold sum_n, sum_n_m, Iter.iter_nat; simpl.
+    rewrite plus_zero_r.
+    reflexivity.
+  * unfold interpret_inequality_helper.
+    fold (interpret_inequality_helper (RSOPM:=RSOPMD) (n:=d1)).
+    rewrite sum_Sn.
+    rewrite IHd1; try lia.
+    unfold plus; simpl.
+    RSOPM_realize_eq.
+    lra.
+Qed.
+
+Lemma sum_n_case_Sn:
+  forall n r f,
+    sum_n (G:=RSOPMD) (fun i => if i =? 0 then r else (f i)) (S n) =
+    plus (sum_n (fun i => f (S i)%nat) n) r.
+Proof.
+  induction n; intros r f.
+  * unfold sum_n, sum_n_m, Iter.iter_nat; simpl.
+    rewrite plus_zero_r.
+    rewrite plus_comm.
+    unfold plus; simpl; reflexivity.
+  * repeat rewrite sum_Sn.
+    rewrite (plus_comm (sum_n _ n) (f (S (S n)))).
+    rewrite <- (plus_assoc (f (S (S n)))).
+    rewrite <- IHn; simpl.
+    rewrite sum_Sn; simpl.
+    unfold plus; simpl.
+    RSOPM_realize_eq; lra.
+Qed.
+
+Lemma interpret_inequality_helper_W_to_linsys_eq:
+  forall d (sol: LinearSystemSolution d) c b,
+    interpret_inequality_helper (fun i => if i =? 0 then (- b) else coeff_colvec 0 c (i - 1)) sol =
+    (c * linsys_solution_to_colvec sol)%v + (- b).
+Proof.
+  intros d sol c b.
+  unfold dot, Mmult.
+  rewrite coeff_mat_bij; try lia.
+  rewrite interpret_inequality_sum_n; try lia.
+  destruct d.
+  * unfold sum_n, sum_n_m, Iter.iter_nat; simpl.
+    do 2 (rewrite coeff_mat_default; try lia).
+    rewrite mult_zero_l.
+    rewrite plus_zero_r.
+    rewrite plus_zero_l.
+    RSOPM_realize_eq.
+    lra.
+  * simpl.
+    rewrite sum_n_case_Sn.
+    unfold plus; simpl.
+    RSOPM_realize_eq.
+    apply (Rplus_eq_compat_r (- INJ_RSOPM RSOPMD b)).
+    f_equal.
+    apply sum_n_ext_loc.
+    intros i H.
+    unfold linsys_solution_to_colvec.
+    unfold mk_colvec, transpose.
+    repeat (rewrite coeff_mat_bij; try lia).
+    simpl; rewrite Nat.sub_0_r.
+    unfold mult; simpl.
+    reflexivity.
+Qed.
+
 Lemma interpret_inequality_W_to_linsys_solution:
   forall d (sol: LinearSystemSolution d) c b,
     interpret_inequality (fun i => if i =? 0 then (- b) else coeff_colvec 0 c (i - 1)) sol ->
     (c * linsys_solution_to_colvec sol)%v <= b = true.
 Proof.
-  intros d sol c b Hinterpret.
-  
-Admitted. 
+  unfold interpret_inequality.
+  intros d sol c b H.
+  rewrite interpret_inequality_helper_W_to_linsys_eq in H.
+  apply ax_real_leq_true in H.
+  apply ax_real_leq_true.
+  rewrite ax_real_plus in H.
+  rewrite ax_opp_is_opp in H.
+  rewrite ax_zero_is_zero in H.
+  lra.
+Qed.
 
 Lemma W_to_linsys_solution:
   forall d (sol: LinearSystemSolution (RSOPM:=RSOPMD) d) W,
@@ -85,6 +166,10 @@ Lemma solution_W_to_linsys:
     in_convex_polyhedron x W ->
     is_linear_system_solution (W_to_linsys W) (colvec_to_linsys_solution x).
 Proof.
+  intros d x W H.
+  unfold in_convex_polyhedron in H.
+  destruct W as [lcs].
+  unfold W_to_linsys.
 Admitted.
 
 Definition p_to_linsys {d}
