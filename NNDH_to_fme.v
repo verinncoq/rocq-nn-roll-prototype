@@ -29,7 +29,23 @@ Definition linsys_solution_to_colvec {d}
 Definition colvec_to_linsys_solution {d}
   (v: colvec (RSOPM:=RSOPMD) d)
   : LinearSystemSolution d :=
-  (fun i => if i =? 0 then 0 else coeff_colvec 0 v i).
+  (fun i => match i with 0 => 0 | S p => coeff_colvec 0 v p end).
+
+Lemma linsys_solution_colvec_inverse:
+  forall n (x: colvec n),
+    linsys_solution_to_colvec (colvec_to_linsys_solution x) = x.
+Proof.
+  intros n x.
+  unfold linsys_solution_to_colvec.
+  unfold colvec_to_linsys_solution.
+  rewrite <- (mk_matrix_bij 0 x).
+  apply mk_matrix_ext.
+  intros i j Hi Hj; simpl.
+  unfold coeff_colvec.
+  rewrite coeff_mat_bij; try lia.
+  induction j; last lia.
+  reflexivity.
+Qed.
 
 Definition W_to_linsys {d}
   (W: ConvexPolyhedron d)
@@ -44,22 +60,21 @@ Definition W_to_linsys {d}
   end.
 
 Lemma interpret_inequality_sum_n:
-  forall d1 d2 (sol: LinearSystemSolution d1) (c: colvec d2) b,
-    (d1 <= d2)%nat ->
-    interpret_inequality_helper (fun i => if i =? 0 then (- b) else coeff_colvec 0 c (i - 1)) sol =
-    sum_n (G:=RSOPMD) (fun i => if i =? 0 then (- b) else coeff_colvec 0 c (i - 1) * sol i) d1.
+  forall d (sol: LinearSystemSolution d) b f,
+    interpret_inequality_helper (fun i => if i =? 0 then (- b) else f i) sol =
+    sum_n (G:=RSOPMD) (fun i => if i =? 0 then (- b) else f i * sol i) d.
 Proof.
-  intros d1.
-  induction d1; intros d2 sol c b Hleq.
+  intros d.
+  induction d; intros sol b f.
   * unfold interpret_inequality_helper.
     rewrite Nat.eqb_refl.
     simpl; unfold sum_n, sum_n_m, Iter.iter_nat; simpl.
     rewrite plus_zero_r.
     reflexivity.
   * unfold interpret_inequality_helper.
-    fold (interpret_inequality_helper (RSOPM:=RSOPMD) (n:=d1)).
+    fold (interpret_inequality_helper (RSOPM:=RSOPMD) (n:=d)); simpl.
     rewrite sum_Sn.
-    rewrite IHd1; try lia.
+    rewrite IHd; try lia.
     unfold plus; simpl.
     RSOPM_realize_eq.
     lra.
@@ -169,8 +184,24 @@ Proof.
   intros d x W H.
   unfold in_convex_polyhedron in H.
   destruct W as [lcs].
+  induction lcs; first (exact I).
   unfold W_to_linsys.
-Admitted.
+  unfold W_to_linsys in IHlcs.
+  rewrite map_cons.
+  rewrite <- is_linear_system_solution_cons; split.
+  * specialize (H a (in_eq a lcs)).
+    destruct a as [c b].
+    unfold is_linear_system_solution, interpret_inequalities, interpret_inequality; split; last exact I.
+    unfold satisfies_lc in H.
+    rewrite interpret_inequality_helper_W_to_linsys_eq.
+    rewrite linsys_solution_colvec_inverse.
+    apply ax_real_leq_true.
+    apply ax_real_leq_true in H.
+    RSOPM_realize; lra.
+  * apply IHlcs.
+    intros constraint HIn.
+    apply H, in_cons, HIn.
+Qed.
 
 Definition p_to_linsys {d}
   (p: ConvexPolyhedron (d + d))
@@ -185,19 +216,125 @@ Definition p_to_linsys {d}
     ) lincons
   end.
 
+Lemma interpret_inequality_helper_p_to_linsys_eq:
+  forall d (sol: LinearSystemSolution d) c b,
+    interpret_inequality_helper (fun i => if i =? 0 then (- b) 
+                                  else (coeff_colvec 0 c (i - 1)) + (coeff_colvec 0 c (i - 1 + d))
+                                ) sol =
+    (c * colvec_concat (linsys_solution_to_colvec sol) (linsys_solution_to_colvec sol))%v + (- b).
+Proof.
+  intros d sol c b.
+  pose proof (colvec_split _ _ c) as Hsplit.
+  destruct Hsplit as [c1 [c2 [Hc1 [Hc2 Hc]]]].
+  rewrite Hc.
+  rewrite dot_concat.
+  unfold dot, Mmult.
+  rewrite coeff_mat_bij; try lia.
+  rewrite interpret_inequality_sum_n; try lia.
+  destruct d.
+  * unfold sum_n, sum_n_m, Iter.iter_nat; simpl.
+    do 2 (rewrite coeff_mat_default; try lia).
+    rewrite coeff_mat_bij; try lia.
+    do 2 (rewrite coeff_mat_default; try lia).
+    unfold plus, mult, zero; simpl.
+    RSOPM_realize_eq.
+    lra.
+  * rewrite coeff_mat_bij; try lia.
+    rewrite sum_n_case_Sn.
+    unfold plus; simpl.
+    RSOPM_realize_eq.
+    apply (Rplus_eq_compat_r (- INJ_RSOPM RSOPMD b)).
+    rewrite <- ax_real_plus.
+    f_equal.
+    pose proof (sum_n_plus (G:=RSOPMD)) as Hhelp.
+    unfold plus in Hhelp; simpl in Hhelp.
+    rewrite <- Hhelp; clear Hhelp.
+    apply sum_n_ext_loc.
+    intros i H.
+    unfold linsys_solution_to_colvec, mk_colvec.
+    repeat (rewrite coeff_mat_bij; try lia).
+    rewrite <- Hc.
+    rewrite Hc1, Hc2.
+    unfold transpose, mk_colvec.
+    repeat rewrite coeff_mat_bij; try lia.
+    rewrite Nat.sub_0_r.
+    unfold mult; simpl.
+    RSOPM_realize_eq.
+    lra.
+Qed.
+
+Lemma interpret_inequality_p_to_linsys_solution:
+  forall d (sol: LinearSystemSolution d) c b,
+    interpret_inequality (fun i => if i =? 0 then (- b) 
+                                  else (coeff_colvec 0 c (i - 1)) + (coeff_colvec 0 c (i - 1 + d))
+                          ) sol ->
+    ((c * colvec_concat (linsys_solution_to_colvec sol) (linsys_solution_to_colvec sol))%v <= b) = true.
+Proof.
+  unfold interpret_inequality.
+  intros d sol c b H.
+  rewrite interpret_inequality_helper_p_to_linsys_eq in H.
+  apply ax_real_leq_true in H.
+  apply ax_real_leq_true.
+  rewrite ax_real_plus in H.
+  rewrite ax_opp_is_opp in H.
+  rewrite ax_zero_is_zero in H.
+  lra.
+Qed.
+
 Lemma p_to_linsys_solution:
   forall d (sol: LinearSystemSolution (RSOPM:=RSOPMD) d) p,
     is_linear_system_solution (p_to_linsys p) sol ->
     in_convex_polyhedron (colvec_concat (linsys_solution_to_colvec sol) (linsys_solution_to_colvec sol)) p.
 Proof.
-Admitted.
+  intros d sol p Hsol.
+  unfold in_convex_polyhedron.
+  destruct p as [lcs]; intros constraint Hconstraint.
+  induction lcs; first contradiction Hconstraint.
+  unfold p_to_linsys in Hsol.
+  rewrite map_cons in Hsol.
+  rewrite <- is_linear_system_solution_cons in Hsol.
+  destruct Hsol as [Ha Hsol].
+  apply in_inv in Hconstraint.
+  destruct Hconstraint as [Hconstraint|Hconstraint].
+  * rewrite Hconstraint in Ha.
+    unfold satisfies_lc.
+    destruct constraint as [c b].
+    unfold is_linear_system_solution,interpret_inequalities in Ha.
+    destruct Ha as [Ha Hclear]; clear Hclear.
+    apply interpret_inequality_p_to_linsys_solution.
+    apply Ha.
+  * apply IHlcs.
+    - unfold W_to_linsys.
+      apply Hsol.
+    - apply Hconstraint.  
+Qed.
 
 Lemma solution_p_to_linsys:
   forall d (x: colvec (RSOPM:=RSOPMD) d) p,
     in_convex_polyhedron (colvec_concat x x) p ->
     is_linear_system_solution (p_to_linsys p) (colvec_to_linsys_solution x).
 Proof.
-Admitted.  
+  intros d x W H.
+  unfold in_convex_polyhedron in H.
+  destruct W as [lcs].
+  induction lcs; first (exact I).
+  unfold p_to_linsys.
+  unfold p_to_linsys in IHlcs.
+  rewrite map_cons.
+  rewrite <- is_linear_system_solution_cons; split.
+  * specialize (H a (in_eq a lcs)).
+    destruct a as [c b].
+    unfold is_linear_system_solution, interpret_inequalities, interpret_inequality; split; last exact I.
+    unfold satisfies_lc in H.
+    rewrite interpret_inequality_helper_p_to_linsys_eq.
+    rewrite linsys_solution_colvec_inverse.
+    apply ax_real_leq_true.
+    apply ax_real_leq_true in H.
+    RSOPM_realize; lra.
+  * apply IHlcs.
+    intros constraint HIn.
+    apply H, in_cons, HIn.  
+Qed.  
 
 Definition af_to_linsys {d : nat} 
   (af: AffineFunction (RSOPM:=RSOPMD) (d + d) 1) 
