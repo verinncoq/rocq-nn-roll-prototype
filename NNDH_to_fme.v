@@ -341,12 +341,49 @@ Definition af_to_linsys {d : nat}
   : LinearSystem (RSOPM:=RSOPMD) d :=
       match af with
       | Affine C b =>
-          map (fun i =>
-                  fun j =>
-                    if j=? 0 then (- coeff_colvec 0 b i) 
-                    else (coeff_mat 0 C i (j - 1)) + (coeff_mat 0 C i (j - 1 + d))) 
-              (seq 0 (d + d)) 
+        cons (fun i =>
+          if i =? 0 then coeff_colvec 0 b 0
+            else (coeff_mat 0 C 0 (i - 1)) + (coeff_mat 0 C 0 (i - 1 + d))) nil
       end.
+
+Lemma interpret_inequality_helper_af_to_linsys_eq:
+  forall d (sol: LinearSystemSolution d) (M_af: matrix (T:=RSOPMD) 1 (d + d)) (b_af: matrix (T:=RSOPMD) 1 1),
+    interpret_inequality_helper
+     (fun i : nat => if i =? 0 then 
+                        coeff_mat 0 b_af 0 0 
+                     else 
+                        coeff_mat 0 M_af 0 (i - 1) + coeff_mat 0 M_af 0 (i - 1 + d)) sol =
+    plus
+      (coeff_mat zero (M_af * colvec_concat (linsys_solution_to_colvec sol) (linsys_solution_to_colvec sol))%M 0 0)
+      (coeff_mat zero b_af 0 0).
+Proof.
+  intros d sol M_af b_af.
+  assert (Hhelp: 
+          coeff_mat zero (M_af * colvec_concat (linsys_solution_to_colvec sol) (linsys_solution_to_colvec sol))%M 0 0 =
+          dot (transpose M_af) (colvec_concat (linsys_solution_to_colvec sol) (linsys_solution_to_colvec sol))).
+          unfold dot. rewrite transpose_transpose. reflexivity.
+  rewrite Hhelp; clear Hhelp.
+  assert (Hhelp: forall (r:T RSOPMD), r = - - r). intros r; RSOPM_realize_eq; lra.
+  rewrite (Hhelp (coeff_mat zero b_af 0 0)).
+  unfold plus; simpl; fold (RSplus (RSOPM:=RSOPMD)).
+  rewrite <- interpret_inequality_helper_p_to_linsys_eq.
+  rewrite <- Hhelp.
+  unfold zero, coeff_colvec; simpl.
+  unfold transpose.
+  fold (RSzero (RSOPM:=RSOPMD)).
+  f_equal. apply FunctionalExtensionality.functional_extensionality_dep; intro x.
+  destruct (Nat.lt_ge_cases (x - 1 + d) (d + d)); destruct (Nat.lt_ge_cases (x - 1) (d + d)).
+  * repeat (rewrite coeff_mat_bij; try lia).
+    reflexivity.
+  * rewrite coeff_mat_bij; try lia.
+  * rewrite coeff_mat_bij; try lia.
+    rewrite (coeff_mat_default _ _ _ _ (mk_matrix (d + d) 1 _)); try lia.
+    rewrite (coeff_mat_default _ _ _ _ M_af 0 (x - 1 + d)); try lia.
+    reflexivity.
+  * repeat (rewrite (coeff_mat_default _ _ _ _ (mk_matrix (d + d) 1 _)); try lia).
+    repeat rewrite (coeff_mat_default _ _ _ _ M_af); try lia.
+    reflexivity.
+Qed.
 
 Lemma af_to_linsys_solution:
   forall d (sol: LinearSystemSolution (RSOPM:=RSOPMD) d) af,
@@ -355,7 +392,18 @@ Lemma af_to_linsys_solution:
       is_affine_f_value af (colvec_concat (linsys_solution_to_colvec sol) (linsys_solution_to_colvec sol)) val ->
       (toRS val <= 0) = true.
 Proof.
-Admitted.
+  intros d sol af Haf_sol val Hval.
+  unfold is_affine_f_value in Hval.
+  destruct af as [M_af b_af].
+  rewrite <- Hval.
+  unfold Mplus, toRS, coeff_colvec.
+  repeat (rewrite coeff_mat_bij; try lia).
+  unfold af_to_linsys,is_linear_system_solution, interpret_inequalities, interpret_inequality in Haf_sol.
+  destruct Haf_sol as [Haf_sol Hclear]; clear Hclear.
+  unfold coeff_colvec in Haf_sol.
+  rewrite interpret_inequality_helper_af_to_linsys_eq in Haf_sol.
+  apply Haf_sol.
+Qed.
 
 Lemma solution_af_to_linsys:
   forall d (x: colvec (RSOPM:=RSOPMD) d) af val,
@@ -363,7 +411,18 @@ Lemma solution_af_to_linsys:
     (toRS val <= 0) = true ->
     is_linear_system_solution (af_to_linsys af) (colvec_to_linsys_solution x).
 Proof.
-Admitted.
+  intros d x af val Hval Haf.
+  unfold is_affine_f_value in Hval.
+  destruct af as [M_af b_af].
+  rewrite <- Hval in Haf.
+  unfold Mplus, toRS, coeff_colvec in Haf.
+  repeat (rewrite coeff_mat_bij in Haf; try lia).
+  unfold af_to_linsys,is_linear_system_solution, interpret_inequalities, interpret_inequality; split; last (exact I).
+  unfold coeff_colvec.
+  rewrite interpret_inequality_helper_af_to_linsys_eq.
+  rewrite linsys_solution_colvec_inverse.
+  apply Haf.
+Qed.
 
 Definition satisfaction_as_linear_system {d: nat}
     (affine_el: AffineElement (RSOPM:=RSOPMD) (d + d) 1)
@@ -515,7 +574,5 @@ Proof.
           apply H.
           right; apply Hel.
 Qed.
-
-Print Assumptions verify_hyperporperty_correct.
 
 End NNHyperpropertyVerification.
