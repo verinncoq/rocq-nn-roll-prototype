@@ -56,7 +56,7 @@ Definition nn_satisfies_nndh {nn_in_dim nn_out_dim: nat}
     forall (x: colvec (RSOPM:=RSOPM) w), in_convex_polyhedron x W -> 
       let input_set := tpwaf_eval netIn x in 
       let output_set := eval_nn_multiple nn input_set in
-        toRS (tpwaf_eval netSat (colvec_concat input_set output_set)) <= 0 = false
+        0 <= toRS (tpwaf_eval netSat (colvec_concat input_set output_set)) = true
   end.
 
 (** Semantics over a PWAF *)
@@ -99,7 +99,7 @@ Definition pwaf_satisfies_nndh {pwaf_in_dim pwaf_out_dim: nat}
           (pwaf_concat netIn
             (pwaf_compose (repeat_concat r pwaf) netIn)) in
       match pwaf_eval full_pwaf (colvec_concat x x) with
-      | Some r => toRS r <= 0 = false
+      | Some r => 0 <= toRS r = true
       | None => True
       end
   end.
@@ -286,7 +286,7 @@ Definition satisfaction_over_element {w: nat}
   := 
   forall x, in_convex_polyhedron x W ->
     match affine_element_eval affine_el (colvec_concat x x) with
-    | Some r => toRS r <= 0 = false
+    | Some r => 0 <= toRS r = true
     | None => True
     end.
 

@@ -36,7 +36,8 @@ VERINNCOQ_FILES = [
     (".", "neural_networks", False),
     (".", "NNDH", False),
     (".", "fourier_motzkin", False),
-    (".", "NNDH_to_fme", False)
+    (".", "NNDH_to_fme", False),
+    (".", "fm_q_support", False)
 ]
 
 VERINNCOQ_COQ_PROJECT_FILE = "-R " + VERINNCOQ_ROOT.replace(os.sep, "/") + "/target Verinncoq"

@@ -81,7 +81,7 @@ Definition interpret_inequality {n: nat}
     (ineq: LinearInequality n) 
     (sol: LinearSystemSolution n)
     : Prop :=
-    ((interpret_inequality_helper (n:=n) ineq sol <= 0) = true).
+    ((0 <= interpret_inequality_helper (n:=n) ineq sol) = false).
 
 Lemma interpret_inequality_first_zero:
   forall n (ineq: LinearInequality (S n)) sol,
@@ -92,10 +92,10 @@ Proof.
   intros n ineq sol H0 H.
   unfold interpret_inequality, interpret_inequality_helper in H; fold (interpret_inequality_helper (n:=n)) in H.
   rewrite H0 in H.
-  apply ax_real_leq_true in H.
+  apply ax_real_leq_false in H.
   rewrite ax_real_plus, ax_real_mult, ax_zero_is_zero in H.
   rewrite Rmult_0_l, Rplus_0_l in H.
-  apply ax_real_leq_true; rewrite ax_zero_is_zero.
+  apply ax_real_leq_false; rewrite ax_zero_is_zero.
   apply H.
 Qed.
 
@@ -108,7 +108,7 @@ Proof.
   intros n ineq1 ineq2 sol Hineq1 Hineq2.
   unfold interpret_inequality. unfold interpret_inequality in Hineq1, Hineq2.
   rewrite <- interpret_inequality_helper_plus.
-  apply ax_real_leq_true; apply ax_real_leq_true in Hineq1, Hineq2.
+  apply ax_real_leq_false; apply ax_real_leq_false in Hineq1, Hineq2.
   rewrite ax_zero_is_zero; rewrite ax_zero_is_zero in Hineq1, Hineq2.
   rewrite ax_real_plus; lra.
 Qed.
@@ -123,14 +123,11 @@ Proof.
   unfold interpret_inequality.
   rewrite <- interpret_inequality_helper_div.
   unfold interpret_inequality in H.
-  apply ax_real_leq_true. rewrite ax_real_div.
+  apply ax_real_leq_false. rewrite ax_real_div.
   apply ax_real_leq_false in Hc.
-  apply ax_real_leq_true in H.
+  apply ax_real_leq_false in H.
   rewrite ax_zero_is_zero; rewrite ax_zero_is_zero in Hc, H.
-  unfold Rle. unfold Rle in H.
-  destruct H as [H|H].
-  - left. apply Rdiv_neg_pos; lra.
-  - right. nra.
+  apply Rdiv_neg_pos; lra.
 Qed.
 
 Lemma interpret_inequality_compose:
@@ -258,7 +255,7 @@ Qed.
 Fixpoint trivial_consistency (sys: LinearSystem 0): bool :=
 match sys with
 | nil => true
-| ineq :: tail => andb (ineq 0%nat <= 0) (trivial_consistency tail) 
+| ineq :: tail => andb (negb (0 <= ineq 0%nat)) (trivial_consistency tail) 
 end.
 
 Lemma trivial_consistency_cons:
@@ -302,8 +299,9 @@ Proof.
     unfold trivial_consistency,
         is_linear_system_solution,interpret_inequalities,
         interpret_inequality,interpret_inequality_helper.
-    rewrite Bool.andb_true_r.
-    split; easy.
+    rewrite Bool.andb_true_r; split; intro H.
+    * apply negb_true_iff in H; easy. 
+    * apply negb_true_iff; easy.
 Qed.
 
 Lemma trivial_consistency_correct:
@@ -936,11 +934,12 @@ Proof.
         * unfold is_linear_system_solution, interpret_inequalities,
           interpret_inequality, interpret_inequality_helper; split; last easy.
           apply ax_real_leq_true in Ha_le0, Ha_ge0.
-          apply ax_real_leq_true; RSOPM_realize.
+          apply ax_real_leq_false; RSOPM_realize.
           rewrite ax_zero_is_zero in Ha_le0, Ha_ge0.
           assert (INJ_RSOPM RSOPM (a 1%nat) = 0%R) as Hhelp. lra.
           rewrite Hhelp. field_simplify.
-          apply ax_real_leq_true in Ha_cons.
+          apply negb_true_iff in Ha_cons.
+          apply ax_real_leq_false in Ha_cons.
           rewrite ax_zero_is_zero in Ha_cons.
           apply Ha_cons.
         * specialize (IHsys lt0_sys eq0_sys gt0_sys sol).
@@ -1077,7 +1076,7 @@ Lemma compute_lb_correct:
   forall sys sol lt0 eq0 gt0,
       (lt0, eq0, gt0) = partition_inequalities sys ->
       match (compute_lb lt0) with
-      | Some lb => lb <= sol 1%nat = true
+      | Some lb => sol 1%nat <= lb = false
       | None => True 
       end ->
       is_linear_system_solution lt0 sol.
@@ -1119,18 +1118,18 @@ Proof.
         - specialize (IHsys H).
           split; last apply IHsys.
           unfold interpret_inequality, interpret_inequality_helper.
-          rewrite ax_real_leq_true.
+          rewrite ax_real_leq_false.
           RSOPM_realize.
           symmetry in Heqle_res.
           rewrite ax_real_leq_false in Ha2.
           rewrite ax_zero_is_zero in Ha2.
           rewrite ax_real_leq_true in Heqle_res.
           rewrite ax_opp_is_opp, ax_real_div in Heqle_res.
-          rewrite ax_real_leq_true in H.
-          pose proof (Rle_trans _ _ _ Heqle_res H) as Hfinal.
+          rewrite ax_real_leq_false in H.
+          pose proof (Rle_lt_trans _ _ _ Heqle_res H) as Hfinal.
           rewrite <- Rdiv_opp_r in Hfinal.
-          rewrite Rcomplements.Rle_div_l in Hfinal; last lra.
-          apply Rle_minus in Hfinal.
+          rewrite Rcomplements.Rlt_div_l in Hfinal; last lra.
+          apply Rlt_minus in Hfinal.
           rewrite Ropp_mult_distr_r_reverse in Hfinal.
           unfold Rminus in Hfinal.
           rewrite Ropp_involutive in Hfinal.
@@ -1139,24 +1138,18 @@ Proof.
           apply Hfinal.
         - symmetry in Heqle_res.
           rewrite ax_real_leq_false in Heqle_res.
-          rewrite ax_real_leq_true in H.
-          assert (Hhelp: (forall r1 r2 r3, r1 < r2 -> r2 <= r3 -> r1 <= r3)%R). {
-            intros r1 r2 r3 H1 H2.
-            apply (Rle_trans r1 r2 r3).
-            * apply Rlt_le, H1.
-            * apply H2.
-          }
-          specialize (Hhelp _ _ _ Heqle_res H).
-          rewrite <- ax_real_leq_true in Hhelp.
+          rewrite ax_real_leq_false in H.
+          pose proof (Rlt_trans _ _ _ Heqle_res H) as Hhelp.
+          rewrite <- ax_real_leq_false in Hhelp.
           specialize (IHsys Hhelp).
           split; last apply (IHsys).
           unfold interpret_inequality, interpret_inequality_helper.
-          rewrite ax_real_leq_true; RSOPM_realize.
+          rewrite ax_real_leq_false; RSOPM_realize.
           rewrite ax_opp_is_opp, ax_real_div in H.
           rewrite ax_real_leq_false, ax_zero_is_zero in Ha2.
           rewrite <- Rdiv_opp_r in H.
-          rewrite Rcomplements.Rle_div_l in H; last lra.
-          apply Rle_minus in H.
+          rewrite Rcomplements.Rlt_div_l in H; last lra.
+          apply Rlt_minus in H.
           rewrite Ropp_mult_distr_r_reverse in H.
           unfold Rminus in H.
           rewrite Ropp_involutive in H.
@@ -1166,16 +1159,16 @@ Proof.
       * specialize (IHsys I).
         split; last apply IHsys.
         unfold interpret_inequality, interpret_inequality_helper.
-        rewrite ax_real_leq_true.
+        rewrite ax_real_leq_false.
         RSOPM_realize.
-        rewrite ax_real_leq_true in H.
+        rewrite ax_real_leq_false in H.
         rewrite ax_opp_is_opp in H.
         rewrite ax_real_div in H.
         rewrite ax_real_leq_false in Ha2.
         rewrite ax_zero_is_zero in Ha2.
         rewrite <- Rdiv_opp_r in H.
-        rewrite Rcomplements.Rle_div_l in H; last lra.
-        apply Rle_minus in H.
+        rewrite Rcomplements.Rlt_div_l in H; last lra.
+        apply Rlt_minus in H.
         rewrite Ropp_mult_distr_r_reverse in H.
         unfold Rminus in H.
         rewrite Ropp_involutive in H.
@@ -1373,7 +1366,7 @@ Lemma compute_ub_correct:
     forall sys sol lt0 eq0 gt0,
         (lt0, eq0, gt0) = partition_inequalities sys ->
         match (compute_ub gt0) with
-        | Some ub => sol 1%nat <= ub = true
+        | Some ub => ub <= sol 1%nat = false
         | None => True 
         end ->
         is_linear_system_solution gt0 sol.
@@ -1418,18 +1411,18 @@ Proof.
         destruct le_res.
         - symmetry in Heqle_res.
           rewrite ax_real_leq_true in Heqle_res.
-          rewrite ax_real_leq_true in H.
-          pose proof (Rle_trans _ _ _ H Heqle_res) as Hhelp.
-          rewrite <- ax_real_leq_true in Hhelp.
+          rewrite ax_real_leq_false in H.
+          pose proof (Rlt_le_trans _ _ _ H Heqle_res) as Hhelp.
+          rewrite <- ax_real_leq_false in Hhelp.
           specialize (IHsys Hhelp).
           split; last apply (IHsys).
           unfold interpret_inequality, interpret_inequality_helper.
-          rewrite ax_real_leq_true; RSOPM_realize.
+          rewrite ax_real_leq_false; RSOPM_realize.
           rewrite ax_opp_is_opp, ax_real_div in H.
           rewrite ax_real_leq_false, ax_zero_is_zero in Ha1.
           rewrite Ropp_div_distr_l in H.
-          apply Rcomplements.Rle_div_r in H; last lra.
-          apply Rle_minus in H.
+          apply Rcomplements.Rlt_div_r in H; last lra.
+          apply Rlt_minus in H.
           unfold Rminus in H.
           rewrite Ropp_involutive in H.
           rewrite Rmult_comm in H.
@@ -1437,19 +1430,19 @@ Proof.
         - specialize (IHsys H).
           split; last apply IHsys.
           unfold interpret_inequality, interpret_inequality_helper.
-          rewrite ax_real_leq_true.
+          rewrite ax_real_leq_false.
           RSOPM_realize.
           symmetry in Heqle_res.
           rewrite ax_real_leq_false in Ha1.
           rewrite ax_zero_is_zero in Ha1.
           rewrite ax_real_leq_false in Heqle_res.
           rewrite ax_opp_is_opp, ax_real_div in Heqle_res.
-          rewrite ax_real_leq_true in H.
+          rewrite ax_real_leq_false in H.
           apply Rlt_le in Heqle_res.
-          pose proof (Rle_trans _ _ _ H Heqle_res) as Hfinal.
+          pose proof (Rlt_le_trans _ _ _ H Heqle_res) as Hfinal.
           rewrite Ropp_div_distr_l in Hfinal.
-          apply Rcomplements.Rle_div_r in Hfinal; last lra.
-          apply Rle_minus in Hfinal.
+          apply Rcomplements.Rlt_div_r in Hfinal; last lra.
+          apply Rlt_minus in Hfinal.
           unfold Rminus in Hfinal.
           rewrite Ropp_involutive in Hfinal.
           rewrite Rmult_comm in Hfinal.
@@ -1457,16 +1450,16 @@ Proof.
       * specialize (IHsys I).
         split; last apply IHsys.
         unfold interpret_inequality, interpret_inequality_helper.
-        rewrite ax_real_leq_true.
+        rewrite ax_real_leq_false.
         RSOPM_realize.
-        rewrite ax_real_leq_true in H.
+        rewrite ax_real_leq_false in H.
         rewrite ax_opp_is_opp in H.
         rewrite ax_real_div in H.
         rewrite ax_real_leq_false in Ha1.
         rewrite ax_zero_is_zero in Ha1.
         rewrite Ropp_div_distr_l in H.
-        apply Rcomplements.Rle_div_r in H; last lra.
-        apply Rle_minus in H.
+        apply Rcomplements.Rlt_div_r in H; last lra.
+        apply Rlt_minus in H.
         unfold Rminus in H.
         rewrite Ropp_involutive in H.
         rewrite Rmult_comm in H.
@@ -1484,7 +1477,7 @@ Qed.
 Lemma compute_lb_none : forall sys sol lt0 eq0 gt0,
         (lt0, eq0, gt0) = partition_inequalities sys ->
         match (compute_lb lt0) with
-        | Some lb => (lb <= sol 1%nat = false) ->
+        | Some lb => (sol 1%nat <= lb = true) ->
         (~ is_linear_system_solution lt0 sol)
         | None => True 
         end.
@@ -1538,25 +1531,24 @@ Proof.
           intro.
           unfold interpret_inequality in H0.
           unfold interpret_inequality_helper in H0.
-          rewrite ax_real_leq_false in H.
+          rewrite ax_real_leq_true in H.
           rewrite ax_opp_is_opp in H.
           rewrite ax_real_div in H.
           rewrite ax_real_leq_false in Ha2.
           rewrite ax_zero_is_zero in Ha2.
           rewrite <- Ropp_div_distr_r in H.
-          apply Rcomplements.Rlt_div_r in H.
-          apply (Rplus_gt_compat_r (- INJ_RSOPM RSOPM (a 0%nat))) in H.
+          apply Rcomplements.Rle_div_r in H.
+          apply (Rplus_le_compat_r (- INJ_RSOPM RSOPM (a 0%nat))) in H.
           rewrite Rplus_opp_r in H.
           rewrite Ropp_mult_distr_r_reverse in H.
           rewrite <- Ropp_plus_distr in H.
           rewrite <- Ropp_0 in H.
-          apply Ropp_lt_cancel in H.
+          apply Ropp_le_cancel in H.
           rewrite <- ax_real_mult in H.
           rewrite <- ax_real_plus in H.
-          apply Rgt_lt in H.
           rewrite <- (ax_zero_is_zero RSOPM) in H.
           rewrite RSOPM_plus_comm in H.
-          rewrite <- (ax_real_leq_false RSOPM (RSOPM_plus RSOPM (a 0%nat) (RSOPM_mult RSOPM (sol 1%nat) (a 1%nat))) 0) in H.
+          rewrite <- (ax_real_leq_true RSOPM 0 (RSOPM_plus RSOPM (a 0%nat) (RSOPM_mult RSOPM (sol 1%nat) (a 1%nat)))) in H.
           rewrite RSOPM_plus_comm in H.
           rewrite RSOPM_mult_comm in H.
           unfold "<=" in H0.
@@ -1565,7 +1557,7 @@ Proof.
           rewrite <- Ropp_0.
           apply Ropp_lt_cancel.
           repeat rewrite Ropp_involutive.
-          exact Ha2.
+          apply Ha2.
         + intro.
           symmetry in Hlb_eq.
         apply compute_lb_none_for_empty in Hlb_eq.
@@ -1574,25 +1566,24 @@ Proof.
         unfold interpret_inequality.
         unfold interpret_inequality_helper.
         intro.
-        rewrite ax_real_leq_false in H.
+        rewrite ax_real_leq_true in H.
           rewrite ax_opp_is_opp in H.
           rewrite ax_real_div in H.
           rewrite ax_real_leq_false in Ha2.
           rewrite ax_zero_is_zero in Ha2.
           rewrite <- Ropp_div_distr_r in H.
-          apply Rcomplements.Rlt_div_r in H.
-          apply (Rplus_gt_compat_r (- INJ_RSOPM RSOPM (a 0%nat))) in H.
+          apply Rcomplements.Rle_div_r in H.
+          apply (Rplus_le_compat_r (- INJ_RSOPM RSOPM (a 0%nat))) in H.
           rewrite Rplus_opp_r in H.
           rewrite Ropp_mult_distr_r_reverse in H.
           rewrite <- Ropp_plus_distr in H.
           rewrite <- Ropp_0 in H.
-          apply Ropp_lt_cancel in H.
+          apply Ropp_le_cancel in H.
           rewrite <- ax_real_mult in H.
           rewrite <- ax_real_plus in H.
-          apply Rgt_lt in H.
           rewrite <- (ax_zero_is_zero RSOPM) in H.
           rewrite RSOPM_plus_comm in H.
-          rewrite <- (ax_real_leq_false RSOPM (RSOPM_plus RSOPM (a 0%nat) (RSOPM_mult RSOPM (sol 1%nat) (a 1%nat))) 0) in H.
+          rewrite <- (ax_real_leq_true RSOPM 0 (RSOPM_plus RSOPM (a 0%nat) (RSOPM_mult RSOPM (sol 1%nat) (a 1%nat)))) in H.
           rewrite RSOPM_plus_comm in H.
           rewrite RSOPM_mult_comm in H.
           unfold "<=" in H0.
@@ -1610,7 +1601,7 @@ Qed.
 Lemma compute_ub_none : forall sys sol lt0 eq0 gt0,
         (lt0, eq0, gt0) = partition_inequalities sys ->
         match (compute_ub gt0) with
-        | Some ub => (sol 1%nat <= ub = false) ->
+        | Some ub => (ub <= sol 1%nat = true) ->
         (~ is_linear_system_solution gt0 sol)
         | None => True 
         end.
@@ -1659,31 +1650,30 @@ Proof.
           intro.
           unfold interpret_inequality in H0.
           unfold interpret_inequality_helper in H0.
-          rewrite ax_real_leq_false in H.
+          rewrite ax_real_leq_true in H.
           rewrite ax_opp_is_opp in H.
           rewrite ax_real_div in H.
           rewrite ax_real_leq_false in Ha1.
           rewrite ax_zero_is_zero in Ha1.
           rewrite Ropp_div_distr_l in H.
-          apply Rcomplements.Rlt_div_l in H.
-          apply (Rplus_gt_compat_l (INJ_RSOPM RSOPM (a 0%nat))) in H.
+          apply Rcomplements.Rle_div_l in H.
+          apply (Rplus_le_compat_l (INJ_RSOPM RSOPM (a 0%nat))) in H.
           rewrite Rplus_opp_r in H.
           rewrite <- ax_real_mult in H.
           rewrite <- ax_real_plus in H.
-          apply Rgt_lt in H.
           rewrite <- (ax_zero_is_zero RSOPM) in H.
-          rewrite <- (ax_real_leq_false RSOPM (RSOPM_plus RSOPM (a 0%nat) (RSOPM_mult RSOPM (sol 1%nat) (a 1%nat))) 0) in H.
+          rewrite <- (ax_real_leq_true RSOPM 0 (RSOPM_plus RSOPM (a 0%nat) (RSOPM_mult RSOPM (sol 1%nat) (a 1%nat)))) in H.
           rewrite RSOPM_plus_comm in H.
           rewrite RSOPM_mult_comm in H.
           unfold "<=" in H0.
           rewrite H in H0.
           discriminate.
-          exact Ha1.
+          apply Ha1.
         * intro.
           rewrite <- Hub_eq in IHsys.
           apply IHsys in H.
           unfold "~".
-           unfold interpret_inequalities. fold (interpret_inequalities (n:=1)).
+          unfold interpret_inequalities. fold (interpret_inequalities (n:=1)).
           intro. 
           destruct H0 as [H1 H2].
           unfold is_linear_system_solution in H.
@@ -1695,20 +1685,19 @@ Proof.
         unfold interpret_inequality.
         unfold interpret_inequality_helper.
         intro.
-        rewrite ax_real_leq_false in H.
+        rewrite ax_real_leq_true in H.
         rewrite ax_opp_is_opp in H.
         rewrite ax_real_div in H.
         rewrite ax_real_leq_false in Ha1.
         rewrite ax_zero_is_zero in Ha1.
         rewrite Ropp_div_distr_l in H.
-        apply Rcomplements.Rlt_div_l in H.
-        apply (Rplus_gt_compat_l (INJ_RSOPM RSOPM (a 0%nat))) in H.
+        apply Rcomplements.Rle_div_l in H.
+        apply (Rplus_le_compat_l (INJ_RSOPM RSOPM (a 0%nat))) in H.
         rewrite Rplus_opp_r in H.
         rewrite <- ax_real_mult in H.
         rewrite <- ax_real_plus in H.
-        apply Rgt_lt in H.
         rewrite <- (ax_zero_is_zero RSOPM) in H.
-        rewrite <- (ax_real_leq_false RSOPM (RSOPM_plus RSOPM (a 0%nat) (RSOPM_mult RSOPM (sol 1%nat) (a 1%nat))) 0) in H.
+        rewrite <- (ax_real_leq_true RSOPM 0 (RSOPM_plus RSOPM (a 0%nat) (RSOPM_mult RSOPM (sol 1%nat) (a 1%nat)))) in H.
         rewrite RSOPM_plus_comm in H.
         rewrite RSOPM_mult_comm in H.
         unfold "<=".
@@ -1716,7 +1705,7 @@ Proof.
         intro.
         destruct H0 as [H1 H2].
         inversion H1.
-        exact Ha1.
+        apply Ha1.
 Qed.
 
 Definition satisfy_bounds 
@@ -1725,10 +1714,10 @@ Definition satisfy_bounds
     : option (T RSOPM) :=
     match lbo, ubo with
     | None, None => Some 0
-    | None, Some ub => Some ub
-    | Some lb, None => Some lb
+    | None, Some ub => Some (ub + - (1))
+    | Some lb, None => Some (lb + 1)
     | Some lb, Some ub =>
-        if lb <= ub then Some lb else None
+        if ub <= lb then None else Some ((lb + ub) / (1 + 1))
     end.
 
 Lemma satisfy_bounds_none_preservation:
@@ -1741,18 +1730,18 @@ Proof.
     unfold satisfy_bounds.
     destruct (compute_lb tail) eqn:Htail.
     * destruct v2 eqn:Hv2.
-      - destruct (t <= t0) eqn:Hcmp.
-        * discriminate H.
+      - destruct (t0 <= t) eqn:Hcmp.
         * apply (compute_lb_monotone head tail t) in Htail.
           destruct Htail as [lb2 [Hlb2_1 Hlb2_2]].
           rewrite Hlb2_1.
-          assert (Hhelp: lb2 <= t0 = false). {
-            apply ax_real_leq_false.
+          assert (Hhelp: t0 <= lb2 = true). {
+            apply ax_real_leq_true.
             apply ax_real_leq_true in Hlb2_2.
-            apply ax_real_leq_false in Hcmp.
+            apply ax_real_leq_true in Hcmp.
             lra.
           }
-          rewrite Hhelp; reflexivity. 
+          rewrite Hhelp; reflexivity.
+        * discriminate H.
       - discriminate H.
     * destruct v2; discriminate H.
 Qed.
@@ -1802,13 +1791,17 @@ Proof.
        * unfold satisfy_bounds in Hextract.
          destruct (compute_lb lt0_sys) eqn:Hlb; try easy.
          - destruct (compute_ub gt0_sys) eqn:Hub.
-           * destruct (t0 <= t1) eqn:Hcmp; try discriminate.
+           * destruct (t1 <= t0) eqn:Hcmp; try discriminate.
              injection Hextract; intro Hinject.
-             rewrite Hinject. rewrite Hsol.
-             apply ax_real_leq_true. lra.
+             rewrite Hsol, <- Hinject.
+             apply ax_real_leq_false.
+             apply ax_real_leq_false in Hcmp.
+             pose proof (Rlt_half_plus (INJ_RSOPM _ t0) (INJ_RSOPM _ t1) Hcmp) as Hhalf.
+             rewrite ax_real_div; RSOPM_realize.
+             apply Hhalf. 
            * injection Hextract; intro Hinject.
-             rewrite Hinject. rewrite Hsol.
-             apply ax_real_leq_true. lra.
+             rewrite Hsol, <- Hinject.
+             apply ax_real_leq_false; RSOPM_realize; lra.
      - apply (trivial_consistency_partition_solution 
                     sys lt0_sys eq0_sys gt0_sys sol).
        * symmetry; apply Hpart_sys.
@@ -1818,69 +1811,52 @@ Proof.
        * unfold satisfy_bounds in Hextract.
          destruct (compute_lb lt0_sys) eqn:Hlb.
          - destruct (compute_ub gt0_sys) eqn:Hub; try easy.
-           destruct (t0 <= t1) eqn:Hcmp; try discriminate.
+           destruct (t1 <= t0) eqn:Hcmp; try discriminate.
            injection Hextract; intro Hinject.
            rewrite Hsol. rewrite <- Hinject.
-           apply Hcmp.
+           apply ax_real_leq_false.
+           apply ax_real_leq_false in Hcmp.
+           pose proof (Rlt_half_plus (INJ_RSOPM _ t0) (INJ_RSOPM _ t1) Hcmp) as Hhalf.
+           rewrite ax_real_div; RSOPM_realize.
+           apply Hhalf. 
          - destruct (compute_ub gt0_sys) eqn:Hub; try easy.
            injection Hextract; intro Hinject.
            rewrite Hsol. rewrite <- Hinject.
-           apply ax_real_leq_true. lra.
-           apply all_not_not_ex.
-           intro sol.
-           unfold trivial_extract in Hextract.
-           remember (partition_inequalities (sys)) as part eqn:Hpart.
-            destruct part as ((lt0, eq0), gt0).
-            destruct trivial_consistency eqn:Htriv_cons; try discriminate.
-            unfold satisfy_bounds in Hextract.
-            destruct compute_lb eqn:Hlb; try easy.
-            destruct compute_ub eqn:Hub; try easy.
-            destruct (t <= t0) eqn:Hcmp; try discriminate.
-            unfold is_linear_system_solution.
-            destruct (t <= sol 1%nat) eqn:Hsol; try easy.
-            + destruct (sol 1%nat <= t0) eqn:Hsol2; try easy.
-              * rewrite ax_real_leq_false in Hcmp.
-                rewrite ax_real_leq_true in Hsol.
-                rewrite ax_real_leq_true in Hsol2.
-                lra.
-              * apply (partition_inequalities_solutions_contraposition sys lt0 eq0 gt0).
-                exact Hpart.
-                right. right.
-                pose proof (compute_ub_none sys sol lt0 eq0 gt0) as Hub_correct.
-                rewrite Hub in Hub_correct.
-                apply Hub_correct.
-                exact Hpart.
-                exact Hsol2.
-            + destruct (sol 1%nat <= t0) eqn:Hsol2; try easy.
-              * apply (partition_inequalities_solutions_contraposition sys lt0 eq0 gt0).
-                exact Hpart.
-                left.
-                pose proof (compute_lb_none sys sol lt0 eq0 gt0) as Hlb_correct.
-                rewrite Hlb in Hlb_correct.
-                apply Hlb_correct.
-                exact Hpart.
-                exact Hsol.
-              * apply (partition_inequalities_solutions_contraposition sys lt0 eq0 gt0).
-                exact Hpart.
-                left.
-                pose proof (compute_lb_none sys sol lt0 eq0 gt0) as Hlb_correct.
-                rewrite Hlb in Hlb_correct.
-                apply Hlb_correct.
-                exact Hpart.
-                exact Hsol.
-            destruct compute_ub eqn:Hub; try easy.
-            apply (partition_inequalities_solutions_contraposition sys lt0 eq0 gt0).
-            exact Hpart.
-            right. left.
-            rewrite (trivial_remove_var_eq0_sol 0 sys lt0 eq0 gt0).
-            pose proof trivial_consistency_correct as Hcons.
-            specialize (Hcons eq0).
-            rewrite Htriv_cons in Hcons.
-            assert (forall n0 : LinearSystemSolution 0, ~ is_linear_system_solution (n:=0) eq0 n0).
-            apply not_ex_all_not.
-            exact Hcons.
-            apply H.
-            exact Hpart.
+           apply ax_real_leq_false; RSOPM_realize; lra.
+    (* Case: no solution *)
+    apply all_not_not_ex.
+    intro sol.
+    unfold trivial_extract in Hextract.
+    remember (partition_inequalities (sys)) as part eqn:Hpart.
+    destruct part as ((lt0, eq0), gt0).
+    destruct trivial_consistency eqn:Htriv_cons; try discriminate.
+    * unfold satisfy_bounds in Hextract.
+      destruct compute_lb eqn:Hlb; try easy.
+      - destruct compute_ub eqn:Hub; try easy.
+        destruct (t0 <= t) eqn:Hcmp; try discriminate.
+        apply (partition_inequalities_solutions_contraposition sys lt0 eq0 gt0 _ Hpart).
+        pose proof (compute_ub_none sys sol lt0 eq0 gt0 Hpart) as Hub_correct.
+        pose proof (compute_lb_none sys sol lt0 eq0 gt0 Hpart) as Hlb_correct.
+        rewrite Hub in Hub_correct; rewrite Hlb in Hlb_correct.
+        destruct (sol 1%nat <= t) eqn:Hsol; try easy.
+        * left; apply Hlb_correct; reflexivity.
+        * destruct (t0 <= sol 1%nat) eqn:Hsol2; try easy.
+          - right; right; apply Hub_correct; reflexivity.
+          - apply ax_real_leq_false in Hsol2.
+            apply ax_real_leq_false in Hsol.
+            apply ax_real_leq_true in Hcmp.
+            lra.
+      - destruct compute_ub eqn:Hub; try easy.
+    * apply (partition_inequalities_solutions_contraposition sys lt0 eq0 gt0 _ Hpart).
+      right; left.
+      rewrite (trivial_remove_var_eq0_sol 0 sys lt0 eq0 gt0 Hpart).
+      pose proof trivial_consistency_correct as Hcons.
+      specialize (Hcons eq0).
+      rewrite Htriv_cons in Hcons.
+      assert (forall n0 : LinearSystemSolution 0, ~ is_linear_system_solution (n:=0) eq0 n0).
+      apply not_ex_all_not.
+      exact Hcons.
+      apply H.
 Qed.
  
 Definition compose_inequalities {n: nat} (sys1 sys2: LinearSystem (S n)): LinearSystem n :=
@@ -2253,6 +2229,7 @@ Proof.
     unfold interpret_inequalities in Ha.
     unfold insert_solution_ineq.
     unfold interpret_inequality in Ha.
+    rewrite negb_true_iff.
     apply Ha. 
   * apply IHsys_eq0.
     apply Hsol. 
@@ -2434,17 +2411,17 @@ Qed.
 
 Lemma reconstruction_algebra_helper:
   forall n (lb_ineq ub_ineq: LinearInequality (S (S n))) sol,
-    ((interpret_inequality_helper 
-    (fun i : nat => lb_ineq i / - lb_ineq (S (S n)) + ub_ineq i / ub_ineq (S (S n))) sol) <= 0) = true ->
-    (- (insert_solution_ineq lb_ineq sol 0%nat / insert_solution_ineq lb_ineq sol 1%nat) <=
-    - (insert_solution_ineq ub_ineq sol 0%nat / insert_solution_ineq ub_ineq sol 1%nat)) = true.
+    (0 <= (interpret_inequality_helper 
+    (fun i : nat => lb_ineq i / - lb_ineq (S (S n)) + ub_ineq i / ub_ineq (S (S n))) sol)) = false ->
+    ( - (insert_solution_ineq ub_ineq sol 0%nat / insert_solution_ineq ub_ineq sol 1%nat) <=
+    - (insert_solution_ineq lb_ineq sol 0%nat / insert_solution_ineq lb_ineq sol 1%nat)) = false.
 Proof.
   intros n lb_ineq ub_ineq sol H.
   unfold insert_solution_ineq.
   do 2 rewrite interpret_inequality_helper_div.
-  assert (Hhelp: (forall (r1: T RSOPM) r2, (r1 + r2 <= 0) = true -> (r1 <= - r2) = true )%RS). {
+  assert (Hhelp: (forall (r1: T RSOPM) r2, (0 <= r1 + r2) = false -> (- r2 <= r1) = false)%RS). {
     intros r1 r2.
-    do 2 rewrite ax_real_leq_true.
+    do 2 rewrite ax_real_leq_false.
     RSOPM_realize.
     lra.
   }
@@ -2460,7 +2437,7 @@ Lemma reconstruction_bounds:
     is_linear_system_solution (compose_inequalities sys_lt0 sys_gt0) sol ->
     Some lb = compute_lb (insert_solution sys_lt0 sol) ->
     Some ub = compute_ub (insert_solution sys_gt0 sol) ->
-    lb <= ub = true.
+    ub <= lb = false.
 Proof.
   intros n sys sol sys_lt0 sys_eq0 sys_gt0 lb ub Hpart Hcompose Hlb Hub.
   apply compute_lb_exists in Hlb.
@@ -2504,7 +2481,7 @@ Proof.
   * rewrite (reconstruction_bounds n sys sol sys_lt0 sys_eq0 sys_gt0 t t0) in Heqext_res.
     - rewrite Heqext_res.
       rewrite Heqext_res in H.
-      specialize (H (fun _ => t) eq_refl).
+      specialize (H (fun _ => (t + t0) / (1 + 1)) eq_refl).
       apply H. 
     - apply Heqsys_p.
     - apply Hcompose.
@@ -2514,11 +2491,11 @@ Proof.
       apply Heqsys1_ubo.
   * rewrite Heqext_res.
     rewrite Heqext_res in H.
-    specialize (H (fun _ => t) eq_refl).
+    specialize (H (fun _ => t + 1) eq_refl).
     apply H. 
   * rewrite Heqext_res.
     rewrite Heqext_res in H.
-    specialize (H (fun _ => t) eq_refl).
+    specialize (H (fun _ => t + - (1)) eq_refl).
     apply H. 
   * rewrite Heqext_res.
     rewrite Heqext_res in H.
@@ -2600,7 +2577,6 @@ Proof.
           contradiction.
       - apply remove_var_no_solution.
         apply IHn.  
-Qed.     
-
+Qed.
 
 End FourierMotzkinImplementation.

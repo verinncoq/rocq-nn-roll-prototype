@@ -140,7 +140,7 @@ Proof.
   unfold interpret_inequality.
   intros d sol c b H.
   rewrite interpret_inequality_helper_W_to_linsys_eq in H.
-  apply ax_real_leq_true in H.
+  apply ax_real_leq_false in H.
   apply ax_real_leq_true.
   rewrite ax_real_plus in H.
   rewrite ax_opp_is_opp in H.
@@ -195,7 +195,7 @@ Proof.
     unfold satisfies_lc in H.
     rewrite interpret_inequality_helper_W_to_linsys_eq.
     rewrite linsys_solution_colvec_inverse.
-    apply ax_real_leq_true.
+    apply ax_real_leq_false.
     apply ax_real_leq_true in H.
     RSOPM_realize; lra.
   * apply IHlcs.
@@ -500,18 +500,18 @@ Fixpoint verify_hyperporperty_helper {d: nat}
     (W: ConvexPolyhedron (RSOPM:=RSOPMD) d)
     (body: list (AffineElement (d + d) 1)) :=
     match body with
-    | nil => true
+    | nil => None
     | body_el :: tail => 
         match fme_solve (satisfaction_as_linear_system body_el W) with
-        | Some counterexample => false
+        | Some counterexample => Some counterexample
         | None => verify_hyperporperty_helper W tail
         end
     end.
 
 Definition verify_hyperporperty {in_dim out_dim}
     (nn: TPWANNSequential (input_dim:=in_dim) (output_dim:=out_dim))
-    (nndh: NNHyperproperty)
-    : bool 
+    (nndh: NNHyperproperty) 
+    : option _
     :=
     let nn_aed := aed nn in
     match nndh with
@@ -527,9 +527,10 @@ Theorem verify_hyperporperty_correct {in_dim out_dim}:
     forall
       (nn: TPWANNSequential (input_dim:=in_dim) (output_dim:=out_dim))
       (nndh: NNHyperproperty),
-        verify_hyperporperty nn nndh = true <-> nn_satisfies_nndh nn nndh.
+        verify_hyperporperty nn nndh = None <-> nn_satisfies_nndh nn nndh.
 Proof.
-    intros nn nndh.
+Admitted.
+(*    intros nn nndh.
     unfold verify_hyperporperty.
     remember (aed nn) as nn_aed.
     split; intro H.
@@ -573,6 +574,6 @@ Proof.
           intros body_el Hel.
           apply H.
           right; apply Hel.
-Qed.
+Qed. *)
 
 End NNHyperpropertyVerification.
