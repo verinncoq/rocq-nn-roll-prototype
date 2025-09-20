@@ -54,14 +54,14 @@ Definition W_to_linsys {d}
   | Polyhedron lincons => map (fun lincon => 
     match lincon with
     | Constraint c b =>
-        (fun i => if i =? 0 then (- b) else coeff_colvec 0 c (i - 1))
+        Inclusive _ (fun i => if i =? 0 then (- b) else coeff_colvec 0 c (i - 1))
     end
     ) lincons
   end.
 
 Lemma interpret_inequality_sum_n:
   forall d (sol: LinearSystemSolution d) b f,
-    interpret_inequality_helper (fun i => if i =? 0 then (- b) else f i) sol =
+    interpret_inequality_helper d (fun i => if i =? 0 then (- b) else f i) sol =
     sum_n (G:=RSOPMD) (fun i => if i =? 0 then (- b) else f i * sol i) d.
 Proof.
   intros d.
@@ -72,7 +72,7 @@ Proof.
     rewrite plus_zero_r.
     reflexivity.
   * unfold interpret_inequality_helper.
-    fold (interpret_inequality_helper (RSOPM:=RSOPMD) (n:=d)); simpl.
+    fold (interpret_inequality_helper (RSOPM:=RSOPMD) d); simpl.
     rewrite sum_Sn.
     rewrite IHd; try lia.
     unfold plus; simpl.
@@ -101,7 +101,7 @@ Qed.
 
 Lemma interpret_inequality_helper_W_to_linsys_eq:
   forall d (sol: LinearSystemSolution d) c b,
-    interpret_inequality_helper (fun i => if i =? 0 then (- b) else coeff_colvec 0 c (i - 1)) sol =
+    interpret_inequality_helper d (fun i => if i =? 0 then (- b) else coeff_colvec 0 c (i - 1)) sol =
     (c * linsys_solution_to_colvec sol)%v + (- b).
 Proof.
   intros d sol c b.
@@ -134,13 +134,13 @@ Qed.
 
 Lemma interpret_inequality_W_to_linsys_solution:
   forall d (sol: LinearSystemSolution d) c b,
-    interpret_inequality (fun i => if i =? 0 then (- b) else coeff_colvec 0 c (i - 1)) sol ->
+    interpret_inequality (Inclusive _ (fun i => if i =? 0 then (- b) else coeff_colvec 0 c (i - 1))) sol ->
     (c * linsys_solution_to_colvec sol)%v <= b = true.
 Proof.
   unfold interpret_inequality.
   intros d sol c b H.
   rewrite interpret_inequality_helper_W_to_linsys_eq in H.
-  apply ax_real_leq_false in H.
+  apply ax_real_leq_true in H.
   apply ax_real_leq_true.
   rewrite ax_real_plus in H.
   rewrite ax_opp_is_opp in H.
@@ -195,7 +195,7 @@ Proof.
     unfold satisfies_lc in H.
     rewrite interpret_inequality_helper_W_to_linsys_eq.
     rewrite linsys_solution_colvec_inverse.
-    apply ax_real_leq_false.
+    apply ax_real_leq_true.
     apply ax_real_leq_true in H.
     RSOPM_realize; lra.
   * apply IHlcs.
@@ -210,7 +210,7 @@ Definition p_to_linsys {d}
   | Polyhedron lincons => map (fun lincon => 
     match lincon with
     | Constraint c b =>
-        (fun i => if i =? 0 then (- b) 
+        Inclusive _ (fun i => if i =? 0 then (- b) 
                   else (coeff_colvec 0 c (i - 1)) + (coeff_colvec 0 c (i - 1 + d)))
     end
     ) lincons
@@ -218,7 +218,7 @@ Definition p_to_linsys {d}
 
 Lemma interpret_inequality_helper_p_to_linsys_eq:
   forall d (sol: LinearSystemSolution d) c b,
-    interpret_inequality_helper (fun i => if i =? 0 then (- b) 
+    interpret_inequality_helper _ (fun i => if i =? 0 then (- b) 
                                   else (coeff_colvec 0 c (i - 1)) + (coeff_colvec 0 c (i - 1 + d))
                                 ) sol =
     (c * colvec_concat (linsys_solution_to_colvec sol) (linsys_solution_to_colvec sol))%v + (- b).
@@ -265,9 +265,9 @@ Qed.
 
 Lemma interpret_inequality_p_to_linsys_solution:
   forall d (sol: LinearSystemSolution d) c b,
-    interpret_inequality (fun i => if i =? 0 then (- b) 
+    interpret_inequality (Inclusive _ (fun i => if i =? 0 then (- b) 
                                   else (coeff_colvec 0 c (i - 1)) + (coeff_colvec 0 c (i - 1 + d))
-                          ) sol ->
+                          )) sol ->
     ((c * colvec_concat (linsys_solution_to_colvec sol) (linsys_solution_to_colvec sol))%v <= b) = true.
 Proof.
   unfold interpret_inequality.
@@ -341,14 +341,14 @@ Definition af_to_linsys {d : nat}
   : LinearSystem (RSOPM:=RSOPMD) d :=
       match af with
       | Affine C b =>
-        cons (fun i =>
+        cons (Strict _ (fun i =>
           if i =? 0 then coeff_colvec 0 b 0
-            else (coeff_mat 0 C 0 (i - 1)) + (coeff_mat 0 C 0 (i - 1 + d))) nil
+            else (coeff_mat 0 C 0 (i - 1)) + (coeff_mat 0 C 0 (i - 1 + d)))) nil
       end.
 
 Lemma interpret_inequality_helper_af_to_linsys_eq:
   forall d (sol: LinearSystemSolution d) (M_af: matrix (T:=RSOPMD) 1 (d + d)) (b_af: matrix (T:=RSOPMD) 1 1),
-    interpret_inequality_helper
+    interpret_inequality_helper _
      (fun i : nat => if i =? 0 then 
                         coeff_mat 0 b_af 0 0 
                      else 
@@ -390,7 +390,7 @@ Lemma af_to_linsys_solution:
     is_linear_system_solution (af_to_linsys af) sol ->
     forall val,
       is_affine_f_value af (colvec_concat (linsys_solution_to_colvec sol) (linsys_solution_to_colvec sol)) val ->
-      (toRS val <= 0) = true.
+      (0 <= toRS val) = false.
 Proof.
   intros d sol af Haf_sol val Hval.
   unfold is_affine_f_value in Hval.
@@ -408,7 +408,7 @@ Qed.
 Lemma solution_af_to_linsys:
   forall d (x: colvec (RSOPM:=RSOPMD) d) af val,
     is_affine_f_value af (colvec_concat x x) val ->
-    (toRS val <= 0) = true ->
+    (0 <= toRS val) = false ->
     is_linear_system_solution (af_to_linsys af) (colvec_to_linsys_solution x).
 Proof.
   intros d x af val Hval Haf.
@@ -470,8 +470,8 @@ Proof.
     symmetry in Heqeval_res; apply affine_element_eval_correct in Heqeval_res.
     unfold is_affine_element_value in Heqeval_res.
     destruct Heqeval_res as [Hel_dom Hel_val].
-    remember (toRS eval_res <= 0)%RS as cmp_res.
-    destruct cmp_res; last reflexivity.
+    remember (0 <= toRS eval_res )%RS as cmp_res.
+    destruct cmp_res; first reflexivity.
     exfalso; apply Hfme.
     exists (colvec_to_linsys_solution x).
     do 2 rewrite <- is_linear_system_solution_app.
@@ -508,7 +508,7 @@ Fixpoint verify_hyperporperty_helper {d: nat}
         end
     end.
 
-Definition verify_hyperporperty {in_dim out_dim}
+Definition verify_hyperporperty_witness {in_dim out_dim}
     (nn: TPWANNSequential (input_dim:=in_dim) (output_dim:=out_dim))
     (nndh: NNHyperproperty) 
     : option _
@@ -523,15 +523,24 @@ Definition verify_hyperporperty {in_dim out_dim}
         verify_hyperporperty_helper W (body full_pwaf)
     end.
 
+Definition verify_hyperporperty {in_dim out_dim}
+    (nn: TPWANNSequential (input_dim:=in_dim) (output_dim:=out_dim))
+    (nndh: NNHyperproperty) 
+    : bool 
+    :=
+    match verify_hyperporperty_witness nn nndh with
+    | Some _ => false
+    | None => true
+    end.
+
 Theorem verify_hyperporperty_correct {in_dim out_dim}:
     forall
       (nn: TPWANNSequential (input_dim:=in_dim) (output_dim:=out_dim))
       (nndh: NNHyperproperty),
-        verify_hyperporperty nn nndh = None <-> nn_satisfies_nndh nn nndh.
+        verify_hyperporperty nn nndh = true <-> nn_satisfies_nndh nn nndh.
 Proof.
-Admitted.
-(*    intros nn nndh.
-    unfold verify_hyperporperty.
+    intros nn nndh.
+    unfold verify_hyperporperty, verify_hyperporperty_witness.
     remember (aed nn) as nn_aed.
     split; intro H.
     * apply (aed_preserves_satisfiability _ _ nn_aed); first apply Heqnn_aed.
@@ -574,6 +583,6 @@ Admitted.
           intros body_el Hel.
           apply H.
           right; apply Hel.
-Qed. *)
+Qed.
 
 End NNHyperpropertyVerification.

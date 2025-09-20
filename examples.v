@@ -53,9 +53,6 @@ Definition example_nn1 :=
     (NNReLU
     (NNOutput (output_dim:=1)))).
 
-Compute match verify_hyperporperty example_nn1 NNDH_monotonicity with None => 0%Q | Some w => QDEP2Q (w 5%nat) end.
-
-Compute QDEP2Q (toRS (nn_eval example_nn1 [[toQDEP (-0.1)%Q]])).
-    
+Compute verify_hyperporperty example_nn1 NNDH_monotonicity.
 
 End ExampleVerification1.
