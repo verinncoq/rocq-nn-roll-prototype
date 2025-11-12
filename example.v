@@ -319,3 +319,34 @@ Qed.
 
 End ExampleVerification3.
 
+Section ExampleVerification4.
+(*negative example*)
+
+Definition example4_weights1: matrix (T:=Q_RSOPMD) 1 1 :=
+    [[toQDEP (-1)%Q]].
+
+Definition example4_biases1: matrix 1 1 :=
+    [[toQDEP (0.1)%Q]].
+
+Definition example_nn4 := 
+    (NNLinear example4_weights1 example4_biases1 
+    (NNReLU
+    (NNOutput (output_dim:=1)))).
+
+(*give counterexample x1=0, x2=1*)
+Theorem example4_not_monotone :
+  ~ is_monotone_1d example_nn4.
+Proof.
+unfold not.
+intros H.
+set (x1 := mk_colvec (RSOPM:= Q_RSOPMD) 1 (fun _ => 0%RS)).
+set (x2 := mk_colvec (RSOPM:= Q_RSOPMD) 1 (fun _ => 1%RS)).
+specialize (H x1 x2).
+compute in H.
+discriminate H.
+reflexivity.
+Qed.
+
+End ExampleVerification4. 
+
+
