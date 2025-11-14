@@ -215,12 +215,12 @@ Qed.
 
 Lemma is_monotone_1d_verification:
   forall nn,
-    verify_hyperporperty nn NNDH_monotonicity_1d = true -> is_monotone_1d nn.
+    verify_hyperporperty nn NNDH_monotonicity_1d = true <-> is_monotone_1d nn.
 Proof.
-  intros nn H.
-  apply monotonicity_1d_correct.
-  apply verify_hyperporperty_correct.
-  apply H.
+  intro nn.
+  rewrite monotonicity_1d_correct.
+  rewrite verify_hyperporperty_correct.
+  apply iff_refl.
 Qed.
 
 End Monotonicity1DHyperpropery.
@@ -309,13 +309,46 @@ Definition example_nn3 :=
     (NNReLU
     (NNOutput (output_dim:=1)))))))).
 
-(* Takes around 20 minutes *)
+(* Takes around 20 minutes 
 Theorem example3: 
   is_monotone_1d example_nn3.
 Proof.
   apply is_monotone_1d_verification.
   compute; reflexivity.
-Qed.
+Qed. *)
 
 End ExampleVerification3.
+
+Section ExampleVerification4.
+
+Definition example4_weights1: matrix (T:=Q_RSOPMD) 3 1 :=
+    [[toQDEP (-1)%Q], [toQDEP 1%Q], [toQDEP 0.7%Q]].
+
+Definition example4_biases1: matrix 3 1 :=
+    [[toQDEP 0.1%Q], [toQDEP 0.25%Q], [toQDEP 0%Q]].
+
+Definition example4_weights2: matrix (T:=Q_RSOPMD) 1 3 :=
+    [[toQDEP 0.66%Q, toQDEP (-0.3)%Q, toQDEP 0.99%Q]].
+
+Definition example4_biases2: matrix 1 1 :=
+    [[toQDEP 0.1%Q]].
+
+Definition example_nn4 := 
+    (NNLinear example4_weights1 example4_biases1 
+    (NNReLU
+    (NNLinear example4_weights2 example4_biases2
+    (NNReLU
+    (NNOutput (output_dim:=1)))))).
+
+Theorem example4_not_monotone :
+  ~ is_monotone_1d example_nn4.
+Proof.
+  intro Hcontra.
+  apply is_monotone_1d_verification in Hcontra.
+  compute in Hcontra.
+  discriminate.
+Qed.
+
+End ExampleVerification4. 
+
 
