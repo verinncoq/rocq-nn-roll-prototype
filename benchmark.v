@@ -194,7 +194,7 @@ Definition example_nn6 :=
     (NNReLU
     (NNOutput (output_dim:=1)))))))).
 
-(* Time Compute (verify_hyperporperty example_nn6 NNDH_monotonicity_1d). *)
+(* ime Compute (verify_hyperporperty example_nn6 NNDH_monotonicity_1d). *)
 
 End SixActivations.
 
@@ -268,7 +268,7 @@ Definition example_nn8 :=
     (NNReLU
     (NNOutput (output_dim:=1)))))))).
 
-(* Time Compute (verify_hyperporperty example_nn8 NNDH_monotonicity_1d).*) 
+(* Time Compute (verify_hyperporperty example_nn8 NNDH_monotonicity_1d). *)
 
 End EightActivations.
 
@@ -306,44 +306,6 @@ Definition example_nn9 :=
     (NNReLU
     (NNOutput (output_dim:=1)))))))).
 
-(* Time Compute (verify_hyperporperty example_nn9 NNDH_monotonicity_1d).*) 
+(* Time Compute (verify_hyperporperty example_nn9 NNDH_monotonicity_1d). *)
 
 End NineActivations.
-
-(* -------------------------------------------------------------------------------- *)
-
-Section TenActivations.
-
-Definition example10_weights1: matrix (T:=Q_RSOPMD) 5 1 :=
-    [[toQDEP 1.855%Q], [toQDEP 1.711%Q], [toQDEP 1.750%Q], [toQDEP 1.048%Q], [toQDEP 1.598%Q]].
-
-Definition example10_biases1: matrix 5 1 :=
-    [[toQDEP 0.782%Q], [toQDEP 0.02%Q], [toQDEP 0.996%Q], [toQDEP 0.001%Q], [toQDEP 0.479%Q]].
-
-Definition example10_weights2: matrix (T:=Q_RSOPMD) 4 5 :=
-    [[toQDEP 1.564%Q, toQDEP 1.928%Q, toQDEP 1.881%Q, toQDEP 1.258%Q, toQDEP 1.866%Q],
-     [toQDEP 1.896%Q, toQDEP 1.173%Q, toQDEP 1.337%Q, toQDEP 1.183%Q, toQDEP 1.562%Q],
-     [toQDEP 1.235%Q, toQDEP 1.918%Q, toQDEP 1.151%Q, toQDEP 1.421%Q, toQDEP 1.272%Q],
-     [toQDEP 1.348%Q, toQDEP 1.551%Q, toQDEP 1.505%Q, toQDEP 1.349%Q, toQDEP 1.265%Q]].
-
-Definition example10_biases2: matrix 4 1 :=
-    [[toQDEP 0.776%Q], [toQDEP 0.236%Q], [toQDEP 0.645%Q], [toQDEP 0.612%Q]].
-
-Definition example10_weights3: matrix (T:=Q_RSOPMD) 1 4 :=
-    [[toQDEP 1.962%Q, toQDEP 1.955%Q, toQDEP 1.630%Q, toQDEP 1.377%Q]].
-
-Definition example10_biases3: matrix 1 1 :=
-    [[toQDEP 0.437%Q]].
-
-Definition example_nn10 := 
-    (NNLinear example10_weights1 example10_biases1 
-    (NNReLU
-    (NNLinear example10_weights2 example10_biases2
-    (NNReLU
-    (NNLinear example10_weights3 example10_biases3 
-    (NNReLU
-    (NNOutput (output_dim:=1)))))))).
-
-Time Eval vm_compute in (verify_hyperporperty example_nn10 NNDH_monotonicity_1d).
-
-End TenActivations.
