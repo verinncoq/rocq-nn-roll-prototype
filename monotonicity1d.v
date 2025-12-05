@@ -225,41 +225,49 @@ Qed.
 
 End Monotonicity1DHyperpropery.
 
-Section ExampleVerification1.
-    
-Definition example1_weights1: matrix (T:=Q_RSOPMD) 1 1 :=
-    [[toQDEP 1%Q]].
+Section SatisfactionExample.
+ 
+Definition example1_weights1: matrix (T:=Q_RSOPMD) 2 1 :=
+    [[toQDEP 1%Q], [toQDEP 2%Q]].
 
-Definition example1_biases1: matrix 1 1 :=
-    [[toQDEP 0.1%Q]].
+Definition example1_biases1: matrix 2 1 :=
+    [[toQDEP 0.5%Q], [toQDEP 0.3%Q]].
+
+Definition example1_weights2: matrix (T:=Q_RSOPMD) 1 2 :=
+    [[toQDEP 1%Q, toQDEP 2%Q]].
+
+Definition example1_biases2: matrix 1 1 :=
+    [[toQDEP 0.3%Q]].
 
 Definition example_nn1 := 
     (NNLinear example1_weights1 example1_biases1 
     (NNReLU
-    (NNOutput (output_dim:=1)))).
+    (NNLinear example1_weights2 example1_biases2
+    (NNReLU
+    (NNOutput (output_dim:=1)))))).
 
 Theorem example1: 
   is_monotone_1d example_nn1.
 Proof.
   apply is_monotone_1d_verification.
-  compute; reflexivity.
+  vm_compute; reflexivity.
 Qed.
 
-End ExampleVerification1. 
+End SatisfactionExample.
 
-Section ExampleVerification2.
-    
-Definition example2_weights1: matrix (T:=Q_RSOPMD) 2 1 :=
-    [[toQDEP 1%Q], [toQDEP 2%Q]].
+Section ViolationExample.
 
-Definition example2_biases1: matrix 2 1 :=
-    [[toQDEP 0.5%Q], [toQDEP 0.3%Q]].
+Definition example2_weights1: matrix (T:=Q_RSOPMD) 3 1 :=
+    [[toQDEP (-1)%Q], [toQDEP 1%Q], [toQDEP 0.7%Q]].
 
-Definition example2_weights2: matrix (T:=Q_RSOPMD) 1 2 :=
-    [[toQDEP 1%Q, toQDEP 2%Q]].
+Definition example2_biases1: matrix 3 1 :=
+    [[toQDEP 0.1%Q], [toQDEP 0.25%Q], [toQDEP 0%Q]].
+
+Definition example2_weights2: matrix (T:=Q_RSOPMD) 1 3 :=
+    [[toQDEP 0.66%Q, toQDEP (-0.3)%Q, toQDEP 0.99%Q]].
 
 Definition example2_biases2: matrix 1 1 :=
-    [[toQDEP 0.3%Q]].
+    [[toQDEP 0.1%Q]].
 
 Definition example_nn2 := 
     (NNLinear example2_weights1 example2_biases1 
@@ -268,87 +276,14 @@ Definition example_nn2 :=
     (NNReLU
     (NNOutput (output_dim:=1)))))).
 
-Theorem example2: 
-  is_monotone_1d example_nn2.
-Proof.
-  apply is_monotone_1d_verification.
-  compute; reflexivity.
-Qed.
-
-End ExampleVerification2.
-
-Section ExampleVerification3.
-    
-Definition example3_weights1: matrix (T:=Q_RSOPMD) 3 1 :=
-    [[toQDEP 1%Q], [toQDEP 2%Q], [toQDEP 3%Q]].
-
-Definition example3_biases1: matrix 3 1 :=
-    [[toQDEP 0.1%Q], [toQDEP 0.2%Q], [toQDEP 0.3%Q]].
-
-Definition example3_weights2: matrix (T:=Q_RSOPMD) 4 3 :=
-    [[toQDEP 11%Q, toQDEP 12%Q, toQDEP 13%Q],
-     [toQDEP 21%Q, toQDEP 22%Q, toQDEP 23%Q],
-     [toQDEP 31%Q, toQDEP 32%Q, toQDEP 33%Q],
-     [toQDEP 41%Q, toQDEP 42%Q, toQDEP 43%Q]].
-
-Definition example3_biases2: matrix 4 1 :=
-    [[toQDEP 0.2%Q], [toQDEP 0.3%Q], [toQDEP 0.4%Q], [toQDEP 0.5%Q]].
-
-Definition example3_weights3: matrix (T:=Q_RSOPMD) 1 4 :=
-    [[toQDEP 10%Q, toQDEP 20%Q, toQDEP 30%Q, toQDEP 40%Q]].
-
-Definition example3_biases3: matrix 1 1 :=
-    [[toQDEP 0.1%Q]].
-
-Definition example_nn3 := 
-    (NNLinear example3_weights1 example3_biases1 
-    (NNReLU
-    (NNLinear example3_weights2 example3_biases2
-    (NNReLU
-    (NNLinear example3_weights3 example3_biases3 
-    (NNReLU
-    (NNOutput (output_dim:=1)))))))).
-
-(* Takes around 20 minutes 
-Theorem example3: 
-  is_monotone_1d example_nn3.
-Proof.
-  apply is_monotone_1d_verification.
-  compute; reflexivity.
-Qed. *)
-
-End ExampleVerification3.
-
-Section ExampleVerification4.
-
-Definition example4_weights1: matrix (T:=Q_RSOPMD) 3 1 :=
-    [[toQDEP (-1)%Q], [toQDEP 1%Q], [toQDEP 0.7%Q]].
-
-Definition example4_biases1: matrix 3 1 :=
-    [[toQDEP 0.1%Q], [toQDEP 0.25%Q], [toQDEP 0%Q]].
-
-Definition example4_weights2: matrix (T:=Q_RSOPMD) 1 3 :=
-    [[toQDEP 0.66%Q, toQDEP (-0.3)%Q, toQDEP 0.99%Q]].
-
-Definition example4_biases2: matrix 1 1 :=
-    [[toQDEP 0.1%Q]].
-
-Definition example_nn4 := 
-    (NNLinear example4_weights1 example4_biases1 
-    (NNReLU
-    (NNLinear example4_weights2 example4_biases2
-    (NNReLU
-    (NNOutput (output_dim:=1)))))).
-
 Theorem example4_not_monotone :
-  ~ is_monotone_1d example_nn4.
+  ~ is_monotone_1d example_nn2.
 Proof.
   intro Hcontra.
   apply is_monotone_1d_verification in Hcontra.
-  compute in Hcontra.
+  vm_compute in Hcontra.
   discriminate.
 Qed.
-
-End ExampleVerification4. 
-
+  
+End ViolationExample.
 
