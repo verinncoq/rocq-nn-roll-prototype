@@ -277,20 +277,20 @@ Section NNHyperpropertyComponentSplit.
 Context {RSOPM : RealSubsetOPM}.
 Open Scope RSOPM_scope.
 
-(** Verification of a hypeproperty over individual affine elements *)
+(** Verification of a hypeproperty over individual affine segments *)
 
-Definition satisfaction_over_element {w: nat}
-  (affine_el: AffineElement (RSOPM:=RSOPM) (w + w) 1)
+Definition satisfaction_over_segment {w: nat}
+  (affine_el: AffineSegment (RSOPM:=RSOPM) (w + w) 1)
   (W: ConvexPolyhedron w)
   : Prop
   := 
   forall x, in_convex_polyhedron x W ->
-    match affine_element_eval affine_el (colvec_concat x x) with
+    match affine_segment_eval affine_el (colvec_concat x x) with
     | Some r => 0 <= toRS r = true
     | None => True
     end.
 
-Definition nndh_pwaf_element_split {pwaf_in_dim pwaf_out_dim: nat}
+Definition nndh_pwaf_segment_split {pwaf_in_dim pwaf_out_dim: nat}
   (pwaf: PWAF (in_dim:=pwaf_in_dim) (out_dim:=pwaf_out_dim))
   (nndh: NNHyperproperty)
   : Prop 
@@ -302,19 +302,19 @@ Definition nndh_pwaf_element_split {pwaf_in_dim pwaf_out_dim: nat}
           (pwaf_concat netIn
             (pwaf_compose (repeat_concat r pwaf) netIn)) in
       forall body_el, In body_el (body full_pwaf) ->
-        satisfaction_over_element body_el W
+        satisfaction_over_segment body_el W
   end.
 
-Theorem pwaf_satisfiability_elements_split {in_dim out_dim}:
+Theorem pwaf_satisfiability_segments_split {in_dim out_dim}:
   forall nndh (pwaf: PWAF (RSOPM:=RSOPM) (in_dim:=in_dim) (out_dim:=out_dim)),
-    pwaf_satisfies_nndh pwaf nndh <-> nndh_pwaf_element_split pwaf nndh.
+    pwaf_satisfies_nndh pwaf nndh <-> nndh_pwaf_segment_split pwaf nndh.
 Proof.
   intros nndh pwaf.
   destruct nndh as [r w W netIn netSat].
-  unfold nndh_pwaf_element_split, pwaf_satisfies_nndh.
+  unfold nndh_pwaf_segment_split, pwaf_satisfies_nndh.
   split; intro H.
   * intros body_el Hbody_el.
-    unfold satisfaction_over_element.
+    unfold satisfaction_over_segment.
     intros x Hx.
     specialize (H x Hx).
     pose proof ((prop (pwaf_compose netSat
@@ -323,32 +323,32 @@ Proof.
     destruct (pwaf_eval _ _) eqn:Heval.
     - apply pwaf_eval_correct in Heval.
       unfold is_pwaf_value in Heval.
-      destruct Heval as [eval_body_el [Heval_body_el Hel_val]].
+      destruct Heval as [eval_body_el [Heval_body_el Hseg_val]].
       unfold pwaf_univalence, ForallPairs in Huni.
       specialize (Huni body_el eval_body_el Hbody_el Heval_body_el
                   (colvec_concat x x)).
-      remember (affine_element_eval body_el _) as body_el_val.
-      destruct body_el_val as [val|]; last (exact I).
-      symmetry in Heqbody_el_val. 
-      apply affine_element_eval_correct in Heqbody_el_val.
+      remember (affine_segment_eval body_el _) as body_seg_val.
+      destruct body_seg_val as [val|]; last (exact I).
+      symmetry in Heqbody_seg_val. 
+      apply affine_segment_eval_correct in Heqbody_seg_val.
       assert (Hdomains: 
-                in_affine_element_domain body_el (colvec_concat x x) /\
-                in_affine_element_domain eval_body_el (colvec_concat x x)). {
+                in_affine_segment_domain body_el (colvec_concat x x) /\
+                in_affine_segment_domain eval_body_el (colvec_concat x x)). {
                   split.
-                  * unfold is_affine_element_value in Heqbody_el_val.
-                    destruct Heqbody_el_val as [Hdom _].
+                  * unfold is_affine_segment_value in Heqbody_seg_val.
+                    destruct Heqbody_seg_val as [Hdom _].
                     apply Hdom.
-                  * unfold is_affine_element_value in Hel_val.
-                    destruct Hel_val as [Hdom _].
+                  * unfold is_affine_segment_value in Hseg_val.
+                    destruct Hseg_val as [Hdom _].
                     apply Hdom.
                 }
       specialize (Huni Hdomains).
-      apply affine_element_eval_correct in Hel_val.
-      rewrite Hel_val in Huni.
+      apply affine_segment_eval_correct in Hseg_val.
+      rewrite Hseg_val in Huni.
       inversion Huni.
       apply H.
-    - remember (affine_element_eval body_el _) as body_el_val.
-      destruct body_el_val as [val|]; last (exact I).
+    - remember (affine_segment_eval body_el _) as body_seg_val.
+      destruct body_seg_val as [val|]; last (exact I).
       assert (Hcontra: is_pwaf_value 
                         (pwaf_compose netSat 
                           (pwaf_concat netIn 
@@ -358,8 +358,8 @@ Proof.
                           exists body_el.
                           split.
                           * apply Hbody_el.
-                          * apply affine_element_eval_correct.
-                            rewrite Heqbody_el_val; reflexivity.
+                          * apply affine_segment_eval_correct.
+                            rewrite Heqbody_seg_val; reflexivity.
                         }
       apply pwaf_eval_correct in Hcontra.
       rewrite Hcontra in Heval.
@@ -370,9 +370,9 @@ Proof.
     unfold is_pwaf_value in Heval.
     destruct Heval as [body_el [Hbody_el Hval]].
     specialize (H body_el Hbody_el).
-    unfold satisfaction_over_element in H.
+    unfold satisfaction_over_segment in H.
     specialize (H x Hx).
-    apply affine_element_eval_correct in Hval.
+    apply affine_segment_eval_correct in Hval.
     rewrite Hval in H.
     apply H.
 Qed.

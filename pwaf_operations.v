@@ -420,55 +420,55 @@ Proof.
   - apply Haf2_value.
 Qed.
 
-Definition concat_affine_elements
+Definition concat_affine_segments
   {in_dim1 in_dim2 out_dim1 out_dim2: nat}  
-  (el1: AffineElement in_dim1 out_dim1)
-  (el2: AffineElement in_dim2 out_dim2)
-  : AffineElement (RSOPM:=RSOPM) (in_dim1 + in_dim2) (out_dim1 + out_dim2) 
+  (el1: AffineSegment in_dim1 out_dim1)
+  (el2: AffineSegment in_dim2 out_dim2)
+  : AffineSegment (RSOPM:=RSOPM) (in_dim1 + in_dim2) (out_dim1 + out_dim2) 
   := 
   match el1, el2 with 
-  | Element p1 af1, Element p2 af2 =>
-      Element _ _ (concat_polyhedra p1 p2) (concat_affine_functions af1 af2)
+  | Segment p1 af1, Segment p2 af2 =>
+      Segment _ _ (concat_polyhedra p1 p2) (concat_affine_functions af1 af2)
   end.
 
-Lemma concat_affine_elements_domain:
+Lemma concat_affine_segments_domain:
   forall in_dim1 in_dim2 out_dim1 out_dim2 x1 x2
-    (el1: AffineElement in_dim1 out_dim1)
-    (el2: AffineElement in_dim2 out_dim2),
-    in_affine_element_domain el1 x1 ->
-    in_affine_element_domain el2 x2 ->
-    in_affine_element_domain (concat_affine_elements el1 el2) (colvec_concat x1 x2).
+    (el1: AffineSegment in_dim1 out_dim1)
+    (el2: AffineSegment in_dim2 out_dim2),
+    in_affine_segment_domain el1 x1 ->
+    in_affine_segment_domain el2 x2 ->
+    in_affine_segment_domain (concat_affine_segments el1 el2) (colvec_concat x1 x2).
 Proof.
   intros in_dim1 in_dim2 out_dim1 out_dim2 x1 x2 el1 el2 Hel1 Hel2.
-  unfold in_affine_element_domain.
-  unfold concat_affine_elements.
+  unfold in_affine_segment_domain.
+  unfold concat_affine_segments.
   destruct el1 as [p1 af1].
   destruct el2 as [p2 af2].
-  unfold in_affine_element_domain in Hel1.
-  unfold in_affine_element_domain in Hel2.
+  unfold in_affine_segment_domain in Hel1.
+  unfold in_affine_segment_domain in Hel2.
   apply in_concat_polyhedra_inv.
   split; easy.
 Qed.
 
-Lemma concat_affine_elements_value:
+Lemma concat_affine_segments_value:
   forall in_dim1 in_dim2 out_dim1 out_dim2 x1 x2 el1_x1 el2_x2
-    (el1: AffineElement in_dim1 out_dim1)
-    (el2: AffineElement in_dim2 out_dim2),
-    is_affine_element_value el1 x1 el1_x1 ->
-    is_affine_element_value el2 x2 el2_x2 ->
-    is_affine_element_value (concat_affine_elements el1 el2) (colvec_concat x1 x2) (colvec_concat el1_x1 el2_x2).
+    (el1: AffineSegment in_dim1 out_dim1)
+    (el2: AffineSegment in_dim2 out_dim2),
+    is_affine_segment_value el1 x1 el1_x1 ->
+    is_affine_segment_value el2 x2 el2_x2 ->
+    is_affine_segment_value (concat_affine_segments el1 el2) (colvec_concat x1 x2) (colvec_concat el1_x1 el2_x2).
 Proof.
   intros in_dim1 in_dim2 out_dim1 out_dim2 x1 x2 el1_x1 el2_x2 el1 el2 Hel1_value Hel2_value.
-  unfold is_affine_element_value.
-  unfold is_affine_element_value in Hel1_value.
-  unfold is_affine_element_value in Hel2_value.
+  unfold is_affine_segment_value.
+  unfold is_affine_segment_value in Hel1_value.
+  unfold is_affine_segment_value in Hel2_value.
   destruct Hel1_value as [Hel1_domain Hel1_value].
   destruct Hel2_value as [Hel2_domain Hel2_value].
   split.
-  - apply concat_affine_elements_domain; easy.
+  - apply concat_affine_segments_domain; easy.
   - destruct el1 as [p1 f_el1].
     destruct el2 as [p2 f_el2].
-    unfold concat_affine_elements.
+    unfold concat_affine_segments.
     unfold is_affine_f_value.
     apply concat_affine_functions_value.
     apply Hel1_value.
@@ -479,50 +479,50 @@ Definition pwaf_concat_body
   {in_dim1 in_dim2 out_dim1 out_dim2: nat} 
   (f: PWAF (in_dim:=in_dim1) (out_dim:=out_dim1))
   (g: PWAF (in_dim:=in_dim2) (out_dim:=out_dim2)):  
-    list (AffineElement (in_dim1 + in_dim2) (out_dim1 + out_dim2))
+    list (AffineSegment (in_dim1 + in_dim2) (out_dim1 + out_dim2))
   :=
   map (fun els => 
         match els with 
-        | (el_f, el_g) => concat_affine_elements el_f el_g
+        | (seg_f, seg_g) => concat_affine_segments seg_f seg_g
         end)
     (list_prod (body f) (body g)).
 
 Lemma pwaf_concat_body_inv:
-    forall in_dim1 out_dim1 in_dim2 out_dim2 el_f el_g 
+    forall in_dim1 out_dim1 in_dim2 out_dim2 seg_f seg_g 
       (f: PWAF (in_dim:=in_dim1) (out_dim:=out_dim1)) 
       (g: PWAF (in_dim:=in_dim2) (out_dim:=out_dim2)),
-        In el_f (body f) -> In el_g (body g) ->
-        In (concat_affine_elements el_f el_g) (pwaf_concat_body f g).
+        In seg_f (body f) -> In seg_g (body g) ->
+        In (concat_affine_segments seg_f seg_g) (pwaf_concat_body f g).
 Proof.
-    intros in_dim1 out_dim1 in_dim2 out_dim2 el_f el_g f g.
+    intros in_dim1 out_dim1 in_dim2 out_dim2 seg_f seg_g f g.
     intros Hbody_f Hbody_g.
     unfold pwaf_concat_body.
     apply in_map_iff.
-    exists (el_f, el_g).
+    exists (seg_f, seg_g).
     split. reflexivity.
     apply in_prod_iff.
     split. apply Hbody_f. apply Hbody_g.
 Qed.
 
 Lemma pwaf_concat_body_inverse:
-    forall in_dim1 out_dim1 in_dim2 out_dim2 el_fg
+    forall in_dim1 out_dim1 in_dim2 out_dim2 seg_fg
         (f: PWAF (in_dim:=in_dim1) (out_dim:=out_dim1)) 
         (g: PWAF (in_dim:=in_dim2) (out_dim:=out_dim2)),
-        In el_fg (pwaf_concat_body f g) ->
-        exists el_f el_g,
-            In el_f (body f) /\
-            In el_g (body g) /\
-            el_fg = concat_affine_elements el_f el_g.
+        In seg_fg (pwaf_concat_body f g) ->
+        exists seg_f seg_g,
+            In seg_f (body f) /\
+            In seg_g (body g) /\
+            seg_fg = concat_affine_segments seg_f seg_g.
 Proof.
-    intros in_dim1 out_dim1 in_dim2 out_dim2 el_fg f g HIn.
+    intros in_dim1 out_dim1 in_dim2 out_dim2 seg_fg f g HIn.
     unfold pwaf_concat_body in HIn.
     apply in_map_iff in HIn.
     destruct HIn as [x HIn].
     destruct HIn as [Hx HIn].
-    induction x as [body_el_f body_el_g].
+    induction x as [body_seg_f body_seg_g].
     apply in_prod_iff in HIn.
     destruct HIn as [HInf HIng].
-    exists body_el_f. exists body_el_g.
+    exists body_seg_f. exists body_seg_g.
     split. apply HInf.
     split. apply HIng.
     symmetry. apply Hx.
@@ -543,19 +543,19 @@ Proof.
     specialize (H2 in_dim1 out_dim1 in_dim2 out_dim2).
     specialize (H1 a f g HaIn).
     specialize (H2 b f g HbIn).
-    destruct H1 as [el_f_1 H1].
-    destruct H1 as [el_g_1 H1].
-    destruct H1 as [HIn_body_el_f_1 H1].
-    destruct H1 as [HIn_body_el_g_1 H1].
-    destruct H2 as [el_f_2 H2].
-    destruct H2 as [el_g_2 H2].
-    destruct H2 as [HIn_body_el_f_2 H2].
-    destruct H2 as [HIn_body_el_g_2 H2].
+    destruct H1 as [seg_f_1 H1].
+    destruct H1 as [seg_g_1 H1].
+    destruct H1 as [HIn_body_seg_f_1 H1].
+    destruct H1 as [HIn_body_seg_g_1 H1].
+    destruct H2 as [seg_f_2 H2].
+    destruct H2 as [seg_g_2 H2].
+    destruct H2 as [HIn_body_seg_f_2 H2].
+    destruct H2 as [HIn_body_seg_g_2 H2].
     destruct a as [p_fg1 af_fg1].
     destruct b as [p_fg2 af_fg2].
     destruct af_fg1 as [M_fg1 b_fg1].
     destruct af_fg2 as [M_fg2 b_fg2].
-    unfold affine_element_eval.
+    unfold affine_segment_eval.
     unfold affine_f_eval.
     pose proof (colvec_split (RSOPM:=RSOPM)) as Hx.
     specialize (Hx _ _ x).
@@ -564,17 +564,17 @@ Proof.
     destruct Hx as [Hx1def Hx].
     destruct Hx as [Hx2def Hx].
     rewrite Hx.
-    unfold concat_affine_elements in H1.
-    destruct el_f_1 as [p_f_1 af_f_1].
-    destruct el_g_1 as [p_g_1 af_g_1].
+    unfold concat_affine_segments in H1.
+    destruct seg_f_1 as [p_f_1 af_f_1].
+    destruct seg_g_1 as [p_g_1 af_g_1].
     inversion H1.
     unfold concat_affine_functions in H3.
     destruct af_f_1 as [M_f_1 b_f_1].
     destruct af_g_1 as [M_g_1 b_g_1].
     inversion H3.
-    unfold concat_affine_elements in H2.
-    destruct el_f_2 as [p_f_2 af_f_2].
-    destruct el_g_2 as [p_g_2 af_g_2].
+    unfold concat_affine_segments in H2.
+    destruct seg_f_2 as [p_f_2 af_f_2].
+    destruct seg_g_2 as [p_g_2 af_g_2].
     inversion H2.
     unfold concat_affine_functions in H7.
     destruct af_f_2 as [M_f_2 b_f_2].
@@ -582,7 +582,7 @@ Proof.
     inversion H7.
     repeat rewrite MMmult_block_diag_matrix. 
     repeat rewrite Mplus_colvec_concat.
-    unfold in_affine_element_domain in HxIntersect.
+    unfold in_affine_segment_domain in HxIntersect.
     rewrite H0 in HxIntersect.
     rewrite H6 in HxIntersect.
     destruct HxIntersect as [HxIn1 HxIn2].
@@ -605,9 +605,9 @@ Proof.
       unfold pwaf_univalence in Hpwaf_f_cp.
       unfold ForallPairs in Hpwaf_f_cp.
       specialize (Hpwaf_f_cp 
-        (Element _ _ p_f_1 (Affine _ _ M_f_1 b_f_1)) 
-        (Element _ _ p_f_2 (Affine _ _ M_f_2 b_f_2))).
-      specialize (Hpwaf_f_cp HIn_body_el_f_1 HIn_body_el_f_2).
+        (Segment _ _ p_f_1 (Affine _ _ M_f_1 b_f_1)) 
+        (Segment _ _ p_f_2 (Affine _ _ M_f_2 b_f_2))).
+      specialize (Hpwaf_f_cp HIn_body_seg_f_1 HIn_body_seg_f_2).
       specialize (Hpwaf_f_cp x1); simpl in Hpwaf_f_cp.
       assert (Hhelp: in_convex_polyhedron x1 p_f_1 /\ 
                      in_convex_polyhedron x1 p_f_2 ). auto.
@@ -623,9 +623,9 @@ Proof.
       unfold pwaf_univalence in Hpwaf_g_cp.
       unfold ForallPairs in Hpwaf_g_cp.
       specialize (Hpwaf_g_cp 
-          (Element _ _ p_g_1 (Affine _ _ M_g_1 b_g_1)) 
-          (Element _ _ p_g_2 (Affine _ _ M_g_2 b_g_2))).
-      specialize (Hpwaf_g_cp HIn_body_el_g_1 HIn_body_el_g_2).
+          (Segment _ _ p_g_1 (Affine _ _ M_g_1 b_g_1)) 
+          (Segment _ _ p_g_2 (Affine _ _ M_g_2 b_g_2))).
+      specialize (Hpwaf_g_cp HIn_body_seg_g_1 HIn_body_seg_g_2).
       specialize (Hpwaf_g_cp x2); simpl in Hpwaf_g_cp.
       assert (Hhelp: in_convex_polyhedron x2 p_g_1 /\ 
                      in_convex_polyhedron x2 p_g_2 ). auto.
@@ -662,18 +662,18 @@ Proof.
     unfold is_pwaf_value.
     unfold is_pwaf_value in Hvalue_f.
     unfold is_pwaf_value in Hvalue_g.
-    destruct Hvalue_f as [body_el_f Hbody_el_f].
-    destruct Hvalue_g as [body_el_g Hbody_el_g].
-    exists (concat_affine_elements body_el_f body_el_g).
+    destruct Hvalue_f as [body_seg_f Hbody_seg_f].
+    destruct Hvalue_g as [body_seg_g Hbody_seg_g].
+    exists (concat_affine_segments body_seg_f body_seg_g).
     split.
     - apply pwaf_concat_body_inv.
-      apply Hbody_el_f.
-      apply Hbody_el_g.
+      apply Hbody_seg_f.
+      apply Hbody_seg_g.
     - unfold fg_x.
       unfold x.
-      apply concat_affine_elements_value.
-      apply Hbody_el_f.
-      apply Hbody_el_g.
+      apply concat_affine_segments_value.
+      apply Hbody_seg_f.
+      apply Hbody_seg_g.
 Qed.
 
 End PWAFConcatenation.
@@ -831,77 +831,77 @@ Proof.
   reflexivity.
 Qed.
   
-Definition compose_affine_elements
+Definition compose_affine_segments
     {in_dim hidden_dim out_dim: nat} 
-    (el_f: AffineElement hidden_dim out_dim)
-    (el_g: AffineElement in_dim hidden_dim)
-    : AffineElement in_dim out_dim
+    (seg_f: AffineSegment hidden_dim out_dim)
+    (seg_g: AffineSegment in_dim hidden_dim)
+    : AffineSegment in_dim out_dim
     :=
-    match el_f, el_g with
-    | Element p_f af_f, Element p_g af_g =>
-        Element in_dim out_dim 
+    match seg_f, seg_g with
+    | Segment p_f af_f, Segment p_g af_g =>
+        Segment in_dim out_dim 
           (polyhedra_intersect p_g (affine_f_polyhedron_preimage af_g p_f)) 
           (compose_affine_functions af_f af_g)
     end.    
 
-Lemma compose_affine_elements_in_domain_g:
+Lemma compose_affine_segments_in_domain_g:
   forall in_dim hidden_dim out_dim x
-    (el_f: AffineElement hidden_dim out_dim)
-    (el_g: AffineElement in_dim hidden_dim),  
-    in_affine_element_domain (compose_affine_elements el_f el_g) x ->
-    in_affine_element_domain el_g x.
+    (seg_f: AffineSegment hidden_dim out_dim)
+    (seg_g: AffineSegment in_dim hidden_dim),  
+    in_affine_segment_domain (compose_affine_segments seg_f seg_g) x ->
+    in_affine_segment_domain seg_g x.
 Proof.
-  intros in_dim hidden_dim out_dim x el_f el_g H.
-  unfold compose_affine_elements in H.
-  destruct el_f as [p_f af_f].
-  destruct el_g as [p_g af_g].
-  unfold in_affine_element_domain.
-  unfold in_affine_element_domain in H.
+  intros in_dim hidden_dim out_dim x seg_f seg_g H.
+  unfold compose_affine_segments in H.
+  destruct seg_f as [p_f af_f].
+  destruct seg_g as [p_g af_g].
+  unfold in_affine_segment_domain.
+  unfold in_affine_segment_domain in H.
   apply in_polyhedra_intersect1 in H.
   apply H.
 Qed.
 
-Lemma compose_affine_elements_in_domain_f:
+Lemma compose_affine_segments_in_domain_f:
   forall in_dim hidden_dim out_dim x g_x
-    (el_f: AffineElement hidden_dim out_dim)
-    (el_g: AffineElement in_dim hidden_dim),  
-    in_affine_element_domain (compose_affine_elements el_f el_g) x ->
-    is_affine_element_value el_g x g_x ->
-    in_affine_element_domain el_f g_x.
+    (seg_f: AffineSegment hidden_dim out_dim)
+    (seg_g: AffineSegment in_dim hidden_dim),  
+    in_affine_segment_domain (compose_affine_segments seg_f seg_g) x ->
+    is_affine_segment_value seg_g x g_x ->
+    in_affine_segment_domain seg_f g_x.
 Proof.
-  intros in_dim hidden_dim out_dim x g_x el_f el_g Hdomain Heval.
-  unfold compose_affine_elements in Hdomain.
-  destruct el_f as [p_f af_f].
-  destruct el_g as [p_g af_g].
-  unfold in_affine_element_domain in Hdomain.
+  intros in_dim hidden_dim out_dim x g_x seg_f seg_g Hdomain Heval.
+  unfold compose_affine_segments in Hdomain.
+  destruct seg_f as [p_f af_f].
+  destruct seg_g as [p_g af_g].
+  unfold in_affine_segment_domain in Hdomain.
   apply in_polyhedra_intersect2 in Hdomain.
-  unfold is_affine_element_value in Heval.
+  unfold is_affine_segment_value in Heval.
   destruct Heval as [Hxdom Hvalue].
-  unfold in_affine_element_domain.
+  unfold in_affine_segment_domain.
   apply affine_f_eval_correct in Hvalue.
   rewrite <- Hvalue.
   apply in_affine_f_polyhedron_preimage.
   apply Hdomain.
 Qed.
 
-Lemma compose_affine_elements_in_domain:
+Lemma compose_affine_segments_in_domain:
   forall in_dim hidden_dim out_dim x g_x
-    (el_f: AffineElement hidden_dim out_dim)
-    (el_g: AffineElement in_dim hidden_dim),  
-    is_affine_element_value el_g x g_x ->
-    in_affine_element_domain el_f g_x ->
-    in_affine_element_domain (compose_affine_elements el_f el_g) x.
+    (seg_f: AffineSegment hidden_dim out_dim)
+    (seg_g: AffineSegment in_dim hidden_dim),  
+    is_affine_segment_value seg_g x g_x ->
+    in_affine_segment_domain seg_f g_x ->
+    in_affine_segment_domain (compose_affine_segments seg_f seg_g) x.
 Proof.
-  intros in_dim hidden_dim out_dim x g_x el_f el_g Hg_x Hf_x.
-  destruct el_g as [p_g af_g].
-  destruct el_f as [p_f af_f].
-  unfold is_affine_element_value in Hg_x.
+  intros in_dim hidden_dim out_dim x g_x seg_f seg_g Hg_x Hf_x.
+  destruct seg_g as [p_g af_g].
+  destruct seg_f as [p_f af_f].
+  unfold is_affine_segment_value in Hg_x.
   destruct Hg_x as [Hx_dom Hg_x].
-  unfold is_affine_element_value in Hf_x.
-  unfold in_affine_element_domain.
-  unfold compose_affine_elements.
-  unfold in_affine_element_domain in Hx_dom.
-  unfold in_affine_element_domain in Hf_x.
+  unfold is_affine_segment_value in Hf_x.
+  unfold in_affine_segment_domain.
+  unfold compose_affine_segments.
+  unfold in_affine_segment_domain in Hx_dom.
+  unfold in_affine_segment_domain in Hf_x.
   apply polyhedra_intersect_correct; split.
   - apply Hx_dom.
   - apply in_affine_f_polyhedron_preimage_reverse.
@@ -910,34 +910,34 @@ Proof.
     apply Hf_x.  
 Qed.
 
-Lemma is_compose_affine_elements_value:
+Lemma is_compose_affine_segments_value:
   forall in_dim hidden_dim out_dim x g_x f_x
-    (el_f: AffineElement hidden_dim out_dim)
-    (el_g: AffineElement in_dim hidden_dim),
-    is_affine_element_value el_g x g_x ->
-    is_affine_element_value el_f g_x f_x ->
-    is_affine_element_value (compose_affine_elements el_f el_g) x f_x.
+    (seg_f: AffineSegment hidden_dim out_dim)
+    (seg_g: AffineSegment in_dim hidden_dim),
+    is_affine_segment_value seg_g x g_x ->
+    is_affine_segment_value seg_f g_x f_x ->
+    is_affine_segment_value (compose_affine_segments seg_f seg_g) x f_x.
 Proof.
-  intros in_dim hidden_dim out_dim x g_x f_x el_f el_g Hg_x Hf_x.
-  destruct el_g as [p_g af_g].
-  destruct el_f as [p_f af_f].
-  unfold is_affine_element_value in Hg_x.
+  intros in_dim hidden_dim out_dim x g_x f_x seg_f seg_g Hg_x Hf_x.
+  destruct seg_g as [p_g af_g].
+  destruct seg_f as [p_f af_f].
+  unfold is_affine_segment_value in Hg_x.
   destruct Hg_x as [Hx_dom Hg_x].
-  unfold is_affine_element_value in Hf_x.
+  unfold is_affine_segment_value in Hf_x.
   destruct Hf_x as [Hg_xdom Hf_x].
-  unfold is_affine_element_value.
+  unfold is_affine_segment_value.
   split.
-  * unfold in_affine_element_domain.
-    unfold compose_affine_elements.
-    unfold in_affine_element_domain in Hx_dom.
-    unfold in_affine_element_domain in Hg_xdom.
+  * unfold in_affine_segment_domain.
+    unfold compose_affine_segments.
+    unfold in_affine_segment_domain in Hx_dom.
+    unfold in_affine_segment_domain in Hg_xdom.
     apply polyhedra_intersect_correct; split.
     - apply Hx_dom.
     - apply in_affine_f_polyhedron_preimage_reverse.
       apply affine_f_eval_correct in Hg_x.
       rewrite <- Hg_x in Hg_xdom.
       apply Hg_xdom.
-  * unfold compose_affine_elements.
+  * unfold compose_affine_segments.
     apply affine_f_eval_correct in Hf_x.
     rewrite <- Hf_x.
     apply affine_f_eval_correct in Hg_x.
@@ -945,61 +945,61 @@ Proof.
     apply compose_affine_functions_correct.
 Qed.
 
-Lemma compose_affine_elements_eval_in_domain:
+Lemma compose_affine_segments_eval_in_domain:
   forall in_dim hidden_dim out_dim x
-    (el_f: AffineElement hidden_dim out_dim)
-    (el_g: AffineElement in_dim hidden_dim),
-      in_affine_element_domain (compose_affine_elements el_f el_g) x ->
-      affine_element_eval (compose_affine_elements el_f el_g) x =
-      match affine_element_eval el_g x with
+    (seg_f: AffineSegment hidden_dim out_dim)
+    (seg_g: AffineSegment in_dim hidden_dim),
+      in_affine_segment_domain (compose_affine_segments seg_f seg_g) x ->
+      affine_segment_eval (compose_affine_segments seg_f seg_g) x =
+      match affine_segment_eval seg_g x with
       | None => None
-      | Some g_x => affine_element_eval el_f g_x
+      | Some g_x => affine_segment_eval seg_f g_x
       end.
 Proof.
-  intros in_dim hidden_dim out_dim x el_f el_g Hdomain.
-  remember (affine_element_eval el_g x) as g_x.
+  intros in_dim hidden_dim out_dim x seg_f seg_g Hdomain.
+  remember (affine_segment_eval seg_g x) as g_x.
   destruct g_x as [g_x|].
-  * remember (affine_element_eval el_f g_x) as f_x.
+  * remember (affine_segment_eval seg_f g_x) as f_x.
     destruct f_x as [f_x|].
-    - symmetry in Heqg_x; apply affine_element_eval_correct in Heqg_x.
-      symmetry in Heqf_x; apply affine_element_eval_correct in Heqf_x.
-      apply affine_element_eval_correct.
-      apply (is_compose_affine_elements_value _ _ _ _ g_x); easy.
-    - apply (compose_affine_elements_in_domain_f _ _ _ _ g_x) in Hdomain.
-      apply affine_el_in_domain_has_value in Hdomain.
+    - symmetry in Heqg_x; apply affine_segment_eval_correct in Heqg_x.
+      symmetry in Heqf_x; apply affine_segment_eval_correct in Heqf_x.
+      apply affine_segment_eval_correct.
+      apply (is_compose_affine_segments_value _ _ _ _ g_x); easy.
+    - apply (compose_affine_segments_in_domain_f _ _ _ _ g_x) in Hdomain.
+      apply affine_seg_in_domain_has_value in Hdomain.
       destruct Hdomain as [fg_x Hvalue].
-      apply affine_element_eval_correct in Hvalue.
+      apply affine_segment_eval_correct in Hvalue.
       rewrite Hvalue in Heqf_x.
       discriminate.
-      apply affine_element_eval_correct; easy.
-  * apply compose_affine_elements_in_domain_g in Hdomain.
-    apply affine_el_in_domain_has_value in Hdomain.
+      apply affine_segment_eval_correct; easy.
+  * apply compose_affine_segments_in_domain_g in Hdomain.
+    apply affine_seg_in_domain_has_value in Hdomain.
     destruct Hdomain as [g_x Hvalue].
-    apply affine_element_eval_correct in Hvalue.
+    apply affine_segment_eval_correct in Hvalue.
     rewrite Hvalue in Heqg_x.
     discriminate.
 Qed.
 
-Lemma compose_affine_elements_value_reverse_f:
+Lemma compose_affine_segments_value_reverse_f:
   forall in_dim hid_dim out_dim x g_x f_x
-    (el_f: AffineElement (RSOPM:=RSOPM) hid_dim out_dim)
-    (el_g: AffineElement (RSOPM:=RSOPM) in_dim hid_dim),
-    is_affine_element_value (compose_affine_elements el_f el_g) x f_x ->
-    is_affine_element_value el_g x g_x ->
-    is_affine_element_value el_f g_x f_x.
+    (seg_f: AffineSegment (RSOPM:=RSOPM) hid_dim out_dim)
+    (seg_g: AffineSegment (RSOPM:=RSOPM) in_dim hid_dim),
+    is_affine_segment_value (compose_affine_segments seg_f seg_g) x f_x ->
+    is_affine_segment_value seg_g x g_x ->
+    is_affine_segment_value seg_f g_x f_x.
 Proof.
-  intros in_dim hid_dim out_dim x g_x f_x el_f el_g Hfg Hg.
-  unfold compose_affine_elements in Hfg.
-  destruct el_f as [p_f af_f].
-  destruct el_g as [p_g af_g].
-  unfold is_affine_element_value in Hfg.
-  unfold is_affine_element_value in Hg.
+  intros in_dim hid_dim out_dim x g_x f_x seg_f seg_g Hfg Hg.
+  unfold compose_affine_segments in Hfg.
+  destruct seg_f as [p_f af_f].
+  destruct seg_g as [p_g af_g].
+  unfold is_affine_segment_value in Hfg.
+  unfold is_affine_segment_value in Hg.
   destruct Hfg as [Hdom_fg Hval_fg].
   destruct Hg as [Hdom_g Hval_g].
-  unfold is_affine_element_value; split.
-  * apply (compose_affine_elements_in_domain_f in_dim hid_dim out_dim x g_x (Element _ _ p_f af_f) (Element _ _ p_g af_g)).
+  unfold is_affine_segment_value; split.
+  * apply (compose_affine_segments_in_domain_f in_dim hid_dim out_dim x g_x (Segment _ _ p_f af_f) (Segment _ _ p_g af_g)).
     - apply Hdom_fg.
-    - unfold is_affine_element_value; split.
+    - unfold is_affine_segment_value; split.
       * apply Hdom_g.
       * apply Hval_g.
   * apply (compose_affine_functions_reverse_f in_dim hid_dim out_dim x _ _ _ af_g).
@@ -1011,13 +1011,13 @@ Definition pwaf_compose_body
     {in_dim hidden_dim out_dim: nat} 
     (f: PWAF (in_dim:=hidden_dim) (out_dim:=out_dim))
     (g: PWAF (in_dim:=in_dim) (out_dim:=hidden_dim)):  
-    list (AffineElement in_dim out_dim)
+    list (AffineSegment in_dim out_dim)
     :=
     map (
         fun pair =>
             match pair with 
-            | (body_el_f, body_el_g) => 
-                  compose_affine_elements body_el_f body_el_g
+            | (body_seg_f, body_seg_g) => 
+                  compose_affine_segments body_seg_f body_seg_g
             end
     ) (list_prod (body f) (body g)).
 
@@ -1031,65 +1031,65 @@ Proof.
     destruct g as [body_g ax_g].
     unfold pwaf_univalence.
     unfold ForallPairs.
-    intros body_el_13 body_el_24.
-    intros HIn_el_13 HIn_el_24 x HIndomain.
-    unfold pwaf_compose_body in HIn_el_13.
-    unfold pwaf_compose_body in HIn_el_24.
-    apply in_map_iff in HIn_el_13.
-    apply in_map_iff in HIn_el_24.
-    destruct HIn_el_13 as [pair13_exists HInp13].
-    destruct HIn_el_24 as [pair24_exists HInp24].
-    destruct pair13_exists as [body_el_f3 body_el_g1].
-    destruct pair24_exists as [body_el_f4 body_el_g2].
+    intros body_seg_13 body_seg_24.
+    intros HIn_seg_13 HIn_seg_24 x HIndomain.
+    unfold pwaf_compose_body in HIn_seg_13.
+    unfold pwaf_compose_body in HIn_seg_24.
+    apply in_map_iff in HIn_seg_13.
+    apply in_map_iff in HIn_seg_24.
+    destruct HIn_seg_13 as [pair13_exists HInp13].
+    destruct HIn_seg_24 as [pair24_exists HInp24].
+    destruct pair13_exists as [body_seg_f3 body_seg_g1].
+    destruct pair24_exists as [body_seg_f4 body_seg_g2].
     destruct HInp13 as [H13_def H1and3In].
     destruct HInp24 as [H24_def H2and4In].
     apply in_prod_iff in H1and3In.
     apply in_prod_iff in H2and4In.                
-    destruct H1and3In as [HIn_el_3 HIn_el_1].
-    destruct H2and4In as [HIn_el_4 HIn_el_2].
+    destruct H1and3In as [HIn_seg_3 HIn_seg_1].
+    destruct H2and4In as [HIn_seg_4 HIn_seg_2].
     rewrite <- H13_def.
     rewrite <- H24_def.
     destruct HIndomain as [Hx_dom13 Hx_dom24].
     rewrite <- H13_def in Hx_dom13.
     rewrite <- H24_def in Hx_dom24.
-    rewrite compose_affine_elements_eval_in_domain; try apply Hx_dom13.
-    rewrite compose_affine_elements_eval_in_domain; try apply Hx_dom24.
+    rewrite compose_affine_segments_eval_in_domain; try apply Hx_dom13.
+    rewrite compose_affine_segments_eval_in_domain; try apply Hx_dom24.
     unfold pwaf_univalence in ax_g.
     unfold pwaf_univalence in ax_f.
     unfold ForallPairs in ax_g.
     unfold ForallPairs in ax_f.
-    rewrite (ax_g body_el_g1 body_el_g2); try easy.
-    remember (affine_element_eval body_el_g2 x) as g_x.
+    rewrite (ax_g body_seg_g1 body_seg_g2); try easy.
+    remember (affine_segment_eval body_seg_g2 x) as g_x.
     destruct g_x as [g_x|]; try reflexivity.
-    remember (affine_element_eval body_el_f4 g_x) as f_g_x.
+    remember (affine_segment_eval body_seg_f4 g_x) as f_g_x.
     destruct f_g_x as [f_g_x|]; try reflexivity.
-    rewrite (ax_f body_el_f3 body_el_f4); try easy.
+    rewrite (ax_f body_seg_f3 body_seg_f4); try easy.
     * split.
-      - apply (compose_affine_elements_in_domain_f _ _ _ x g_x _ body_el_g1).
+      - apply (compose_affine_segments_in_domain_f _ _ _ x g_x _ body_seg_g1).
         * apply Hx_dom13.
-        * apply affine_element_eval_correct.
-          rewrite (ax_g body_el_g1 body_el_g2); try easy.
+        * apply affine_segment_eval_correct.
+          rewrite (ax_g body_seg_g1 body_seg_g2); try easy.
           - split.
-            * apply compose_affine_elements_in_domain_g in Hx_dom13.
+            * apply compose_affine_segments_in_domain_g in Hx_dom13.
               apply Hx_dom13.
-            * apply compose_affine_elements_in_domain_g in Hx_dom24.
+            * apply compose_affine_segments_in_domain_g in Hx_dom24.
               apply Hx_dom24.
       - symmetry in Heqf_g_x.
-        apply affine_element_eval_correct in Heqf_g_x.
-        unfold is_affine_element_value in Heqf_g_x.
+        apply affine_segment_eval_correct in Heqf_g_x.
+        unfold is_affine_segment_value in Heqf_g_x.
         apply Heqf_g_x.
-    * apply (compose_affine_elements_in_domain_f _ _ _ _ g_x) in Hx_dom24.
-      apply affine_el_in_domain_has_value in Hx_dom24.
+    * apply (compose_affine_segments_in_domain_f _ _ _ _ g_x) in Hx_dom24.
+      apply affine_seg_in_domain_has_value in Hx_dom24.
       destruct Hx_dom24 as [f_x Hx_value].
-      apply affine_element_eval_correct in Hx_value.
+      apply affine_segment_eval_correct in Hx_value.
       rewrite Hx_value in Heqf_g_x.
       discriminate Heqf_g_x.
-      apply affine_element_eval_correct.
+      apply affine_segment_eval_correct.
       symmetry; apply Heqg_x.
     * split.
-      - apply compose_affine_elements_in_domain_g in Hx_dom13.
+      - apply compose_affine_segments_in_domain_g in Hx_dom13.
         apply Hx_dom13.
-      - apply compose_affine_elements_in_domain_g in Hx_dom24.
+      - apply compose_affine_segments_in_domain_g in Hx_dom24.
         apply Hx_dom24.
 Qed.
 
@@ -1113,21 +1113,21 @@ Proof.
     unfold is_pwaf_value.
     unfold is_pwaf_value in Hval_g.
     unfold is_pwaf_value in Hval_f.
-    destruct Hval_g as [body_el_g Hbody_el_g].
-    destruct Hval_f as [body_el_f Hbody_el_f].
-    destruct Hbody_el_g as [Hel_gIn Hvalel_g].
-    destruct Hbody_el_f as [Hel_fIn Hvalel_f].
-    exists (compose_affine_elements body_el_f body_el_g).
+    destruct Hval_g as [body_seg_g Hbody_seg_g].
+    destruct Hval_f as [body_seg_f Hbody_seg_f].
+    destruct Hbody_seg_g as [Hseg_gIn Hvalseg_g].
+    destruct Hbody_seg_f as [Hseg_fIn Hvalseg_f].
+    exists (compose_affine_segments body_seg_f body_seg_g).
     split.
     * unfold pwaf_compose; simpl.
       unfold pwaf_compose_body.
       apply in_map_iff.
-      exists ((body_el_f, body_el_g)).
+      exists ((body_seg_f, body_seg_g)).
       split.
       - reflexivity.
       - apply in_prod_iff.
         split; easy. 
-    * apply (is_compose_affine_elements_value _ _ _ _ g_x); easy.
+    * apply (is_compose_affine_segments_value _ _ _ _ g_x); easy.
 Qed.
     
 End PWAFComposition.
@@ -1164,17 +1164,17 @@ Proof.
   specialize (Hgtotal_cp x2).
   unfold in_pwaf_domain in Hftotal_cp.
   unfold in_pwaf_domain in Hgtotal_cp.
-  destruct Hftotal_cp as [body_el_f Hbody_el_f].
-  destruct Hgtotal_cp as [body_el_g Hbody_el_g].
-  destruct Hbody_el_f as [HfIn Hfdomain].
-  destruct Hbody_el_g as [HgIn Hgdomain].
-  exists (concat_affine_elements body_el_f body_el_g).
+  destruct Hftotal_cp as [body_seg_f Hbody_seg_f].
+  destruct Hgtotal_cp as [body_seg_g Hbody_seg_g].
+  destruct Hbody_seg_f as [HfIn Hfdomain].
+  destruct Hbody_seg_g as [HgIn Hgdomain].
+  exists (concat_affine_segments body_seg_f body_seg_g).
   split.
   * apply pwaf_concat_body_inv.
     - apply HfIn. 
     - apply HgIn.
   * rewrite Hsplit.
-    apply concat_affine_elements_domain.
+    apply concat_affine_segments_domain.
     - apply Hfdomain.
     - apply Hgdomain.
 Qed.
@@ -1218,23 +1218,23 @@ Proof.
   specialize (Hgtotal_cp x).
   unfold is_total in Hgtotal_cp.
   unfold in_pwaf_domain in Hgtotal_cp.
-  destruct Hgtotal_cp as [body_el_g Hbody_el_g].
-  destruct Hbody_el_g as [HgIn Hgdomain].
-  destruct body_el_g as [p_g af_g].
+  destruct Hgtotal_cp as [body_seg_g Hbody_seg_g].
+  destruct Hbody_seg_g as [HgIn Hgdomain].
+  destruct body_seg_g as [p_g af_g].
   specialize (Hftotal_cp (affine_f_eval af_g x)).
   unfold in_pwaf_domain in Hftotal_cp.
-  destruct Hftotal_cp as [body_el_f Hbody_el_f].
-  destruct Hbody_el_f as [HfIn Hfdomain].
-  exists (compose_affine_elements body_el_f (Element _ _ p_g af_g)).
+  destruct Hftotal_cp as [body_seg_f Hbody_seg_f].
+  destruct Hbody_seg_f as [HfIn Hfdomain].
+  exists (compose_affine_segments body_seg_f (Segment _ _ p_g af_g)).
   split.
   * simpl. unfold pwaf_compose_body.
     apply in_map_iff.
-    exists ((body_el_f, Element _ _ p_g af_g)).
+    exists ((body_seg_f, Segment _ _ p_g af_g)).
     split; try easy.
     apply in_prod_iff.
     split; try easy.
-  * apply (compose_affine_elements_in_domain _ _ _ x (affine_f_eval af_g x)).
-    - unfold is_affine_element_value.
+  * apply (compose_affine_segments_in_domain _ _ _ x (affine_f_eval af_g x)).
+    - unfold is_affine_segment_value.
       split.
       * apply Hgdomain.
       * apply affine_f_eval_correct; reflexivity.
@@ -1282,37 +1282,37 @@ Proof.
   intros in_dim hid_dim out_dim x g_x fg_x f g Hval_fg Hval_g.
   unfold is_pwaf_value.
   unfold is_pwaf_value in Hval_fg.
-  destruct Hval_fg as [body_el_fg [Hel_fg Hval_fg]].
-  unfold pwaf_compose in Hel_fg; simpl in Hel_fg.
-  unfold pwaf_compose_body in Hel_fg.
-  apply in_map_iff in Hel_fg.
-  destruct Hel_fg as [body_x [Hcompose HIn_prod]].
-  destruct body_x as [body_el_f body_el_g].
+  destruct Hval_fg as [body_seg_fg [Hseg_fg Hval_fg]].
+  unfold pwaf_compose in Hseg_fg; simpl in Hseg_fg.
+  unfold pwaf_compose_body in Hseg_fg.
+  apply in_map_iff in Hseg_fg.
+  destruct Hseg_fg as [body_x [Hcompose HIn_prod]].
+  destruct body_x as [body_seg_f body_seg_g].
   apply in_prod_iff in HIn_prod.
-  destruct HIn_prod as [Hel_f Hel_g].
-  exists body_el_f.
-  split; first apply Hel_f.
+  destruct HIn_prod as [Hseg_f Hseg_g].
+  exists body_seg_f.
+  split; first apply Hseg_f.
   rewrite <- Hcompose in Hval_fg.
-  apply (compose_affine_elements_value_reverse_f in_dim hid_dim out_dim x g_x fg_x body_el_f body_el_g).
+  apply (compose_affine_segments_value_reverse_f in_dim hid_dim out_dim x g_x fg_x body_seg_f body_seg_g).
   - apply Hval_fg.
   - unfold is_pwaf_value in Hval_g.
-    destruct Hval_g as [body_el_g2 [HIn_elg2 Hval_elg2]].
+    destruct Hval_g as [body_seg_g2 [HIn_elg2 Hval_elg2]].
     destruct g as [body_g ax_g].
     unfold pwaf_univalence in ax_g.
     unfold ForallPairs in ax_g.
     pose proof ax_g as ax_g_cp.
-    specialize (ax_g_cp body_el_g body_el_g2 Hel_g HIn_elg2 x).
-    apply affine_element_eval_correct.
-    apply affine_element_eval_correct in Hval_elg2.
+    specialize (ax_g_cp body_seg_g body_seg_g2 Hseg_g HIn_elg2 x).
+    apply affine_segment_eval_correct.
+    apply affine_segment_eval_correct in Hval_elg2.
     rewrite <- Hval_elg2.
     apply ax_g_cp.
     split.
-    * unfold is_affine_element_value in Hval_fg.
+    * unfold is_affine_segment_value in Hval_fg.
       destruct Hval_fg as [Hdom_fg Hval_fg].
-      apply compose_affine_elements_in_domain_g in Hdom_fg.
+      apply compose_affine_segments_in_domain_g in Hdom_fg.
       apply Hdom_fg.
-    * apply affine_element_eval_correct in Hval_elg2.
-      unfold is_affine_element_value in Hval_elg2.
+    * apply affine_segment_eval_correct in Hval_elg2.
+      unfold is_affine_segment_value in Hval_elg2.
       apply Hval_elg2.
 Qed.
 

@@ -241,60 +241,60 @@ Proof.
   split; intros H; apply H.
 Qed.
 
-(* Affine element *)
-Inductive AffineElement (in_dim out_dim: nat) :=
-| Element (p: ConvexPolyhedron (RSOPM:=RSOPM) in_dim) 
+(* Affine segment *)
+Inductive AffineSegment (in_dim out_dim: nat) :=
+| Segment (p: ConvexPolyhedron (RSOPM:=RSOPM) in_dim) 
     (f: AffineFunction in_dim out_dim).
 
-Definition in_affine_element_domain {in_dim out_dim: nat}
-  (f: AffineElement in_dim out_dim)
+Definition in_affine_segment_domain {in_dim out_dim: nat}
+  (f: AffineSegment in_dim out_dim)
   (x: colvec in_dim) := 
   match f with
-  | Element p af => in_convex_polyhedron x p
+  | Segment p af => in_convex_polyhedron x p
   end.
 
-Definition is_affine_element_value {in_dim out_dim: nat} 
-  (f: AffineElement in_dim out_dim) 
+Definition is_affine_segment_value {in_dim out_dim: nat} 
+  (f: AffineSegment in_dim out_dim) 
   (x: colvec in_dim) 
   (f_x: colvec out_dim) :=
-  in_affine_element_domain f x /\ 
+  in_affine_segment_domain f x /\ 
   match f with
-  | Element p af => is_affine_f_value af x f_x
+  | Segment p af => is_affine_f_value af x f_x
   end.
 
-Lemma affine_el_in_domain_has_value:
-  forall in_dim out_dim (f: AffineElement in_dim out_dim) x,
-    in_affine_element_domain f x ->
-      exists f_x, is_affine_element_value f x f_x.
+Lemma affine_seg_in_domain_has_value:
+  forall in_dim out_dim (f: AffineSegment in_dim out_dim) x,
+    in_affine_segment_domain f x ->
+      exists f_x, is_affine_segment_value f x f_x.
 Proof.
   intros in_dim out_dim f x Hdomain.
   destruct f as [p af].
   exists (affine_f_eval af x).
-  unfold is_affine_element_value.
+  unfold is_affine_segment_value.
   split; try apply Hdomain.
   apply affine_f_eval_correct.
   reflexivity.
 Qed.
 
-Definition affine_element_eval {in_dim out_dim: nat}
-  (f: AffineElement in_dim out_dim)
+Definition affine_segment_eval {in_dim out_dim: nat}
+  (f: AffineSegment in_dim out_dim)
   (x: colvec in_dim) : option (colvec out_dim)
   :=
   match f with
-  | Element p af => 
+  | Segment p af => 
       match polyhedron_eval x p with
       | true => Some (affine_f_eval af x)
       | false => None
       end
   end.
 
-Theorem affine_element_eval_correct:
-  forall in_dim out_dim (f: AffineElement in_dim out_dim) x f_x,
-    affine_element_eval f x = Some f_x <-> is_affine_element_value f x f_x.
+Theorem affine_segment_eval_correct:
+  forall in_dim out_dim (f: AffineSegment in_dim out_dim) x f_x,
+    affine_segment_eval f x = Some f_x <-> is_affine_segment_value f x f_x.
 Proof.
   intros in_dim out_dim f x f_x.
-  unfold affine_element_eval. 
-  unfold is_affine_element_value.
+  unfold affine_segment_eval. 
+  unfold is_affine_segment_value.
   destruct f; simpl.
   split; intros H.
   * destruct (polyhedron_eval x p) eqn:Heval; try inversion H as [Hf_x].
@@ -330,13 +330,13 @@ This guarantees that the output of PWAF is unique
 *)
 Definition pwaf_univalence 
     {in_dim out_dim: nat}
-    (l: list (AffineElement in_dim out_dim))
+    (l: list (AffineSegment in_dim out_dim))
     :=
     ForallPairs (
         fun e1 e2 =>
           forall x,
-            in_affine_element_domain e1 x /\ in_affine_element_domain e2 x ->
-            affine_element_eval e1 x = affine_element_eval e2 x
+            in_affine_segment_domain e1 x /\ in_affine_segment_domain e2 x ->
+            affine_segment_eval e1 x = affine_segment_eval e2 x
     ) l. 
 
 (**
@@ -360,7 +360,7 @@ Hypothesis: this is a class of functions that can be
 defined using a SMT solver.
 *)
 Record PWAF {in_dim out_dim: nat}: Type := mkPLF {
-    body: list (AffineElement in_dim out_dim);
+    body: list (AffineSegment in_dim out_dim);
     prop: pwaf_univalence body;
 }.
 
@@ -398,7 +398,7 @@ Definition in_pwaf_domain {in_dim out_dim: nat}
     (x: colvec in_dim) :=  
         exists body_el, 
             In body_el (body f) 
-                /\ in_affine_element_domain body_el x.
+                /\ in_affine_segment_domain body_el x.
 
 (** 
 A predicate that describes the value of PWAF f
@@ -411,7 +411,7 @@ Definition is_pwaf_value {in_dim out_dim: nat}
     :=
     exists body_el,
         In body_el (body f) 
-            /\ is_affine_element_value body_el x f_x.
+            /\ is_affine_segment_value body_el x f_x.
 
 Theorem pwaf_value_always_in_domain: 
     forall in_dim out_dim f (x: colvec in_dim) (f_x: colvec out_dim),
@@ -420,20 +420,20 @@ Proof.
   intros in_dim out_dim f x f_x Hval.
   unfold in_pwaf_domain.
   unfold is_pwaf_value in Hval.
-  destruct Hval as [el_val Hval].
-  exists el_val.
+  destruct Hval as [seg_val Hval].
+  exists seg_val.
   split; try apply Hval.
 Qed.
 
 Fixpoint pwaf_eval_helper 
     {in_dim out_dim: nat}
-    (body: list (AffineElement in_dim out_dim))
+    (body: list (AffineSegment in_dim out_dim))
     (x: colvec in_dim) 
     :=
     match body with
     | nil => None
     | body_el :: next => 
-        match affine_element_eval body_el x with
+        match affine_segment_eval body_el x with
         | Some f_x => Some f_x
         | None => pwaf_eval_helper next x
         end
@@ -459,52 +459,52 @@ Proof.
     * split.
       - intros H; inversion H.
       - intros Hvalue.
-        destruct Hvalue as [el_for_x Hel_x].
-        simpl in Hel_x; destruct Hel_x; contradiction.    
+        destruct Hvalue as [seg_for_x Hseg_x].
+        simpl in Hseg_x; destruct Hseg_x; contradiction.    
     * unfold pwaf_eval_helper; simpl.
-      remember (affine_element_eval last_el x) as el_eval.
-      destruct el_eval.
+      remember (affine_segment_eval last_el x) as seg_eval.
+      destruct seg_eval.
       {
-        destruct last_el as [last_el_p last_el_af] eqn:Hlast_el.
+        destruct last_el as [last_seg_p last_seg_af] eqn:Hlast_el.
         split; intro H.
         * inversion H as [Hc].
-          symmetry in Heqel_eval.
-          apply affine_element_eval_correct in Heqel_eval.
-          unfold is_affine_element_value in Heqel_eval.
-          destruct Heqel_eval as [Hel_domain Hel_value].
+          symmetry in Heqseg_eval.
+          apply affine_segment_eval_correct in Heqseg_eval.
+          unfold is_affine_segment_value in Heqseg_eval.
+          destruct Heqseg_eval as [Hseg_domain Hseg_value].
           unfold is_pwaf_value.
           exists last_el.
           split.
           - rewrite Hlast_el; apply in_eq.
-          - unfold is_affine_element_value; rewrite Hlast_el.
-            split; try apply Hel_domain.  
-            rewrite <- Hc. apply Hel_value.
-        * rewrite Heqel_eval.
-          apply affine_element_eval_correct.
-          destruct H as [body_el_x Hbody_el_x].
-          destruct Hbody_el_x as [Hbody_el_x_in_body Hbody_el_val_x].
-          symmetry in Heqel_eval. 
-          apply affine_element_eval_correct in Heqel_eval.
-          destruct Heqel_eval as [H_in_last_el_x Hlast_el_x_val].
+          - unfold is_affine_segment_value; rewrite Hlast_el.
+            split; try apply Hseg_domain.  
+            rewrite <- Hc. apply Hseg_value.
+        * rewrite Heqseg_eval.
+          apply affine_segment_eval_correct.
+          destruct H as [body_seg_x Hbody_seg_x].
+          destruct Hbody_seg_x as [Hbody_seg_x_in_body Hbody_seg_val_x].
+          symmetry in Heqseg_eval. 
+          apply affine_segment_eval_correct in Heqseg_eval.
+          destruct Heqseg_eval as [H_in_last_seg_x Hlast_seg_x_val].
           unfold pwaf_univalence in ax.
           unfold ForallPairs in ax.
           pose proof ax as ax2.
-          specialize (ax2 last_el body_el_x).
+          specialize (ax2 last_el body_seg_x).
           rewrite Hlast_el in ax2.
           specialize (ax2 (in_eq _ _)).
-          specialize (ax2 Hbody_el_x_in_body x).
-          unfold is_affine_element_value in Hbody_el_val_x.
-          destruct body_el_x as [body_el_x_p body_el_x_ax] eqn:Hbody_el.
-          destruct Hbody_el_val_x as [Hdom_body_x Hvalue_body_x].
-          assert (Hintersect: in_affine_element_domain last_el x /\
-                              in_affine_element_domain body_el_x x). 
+          specialize (ax2 Hbody_seg_x_in_body x).
+          unfold is_affine_segment_value in Hbody_seg_val_x.
+          destruct body_seg_x as [body_seg_x_p body_seg_x_ax] eqn:Hbody_el.
+          destruct Hbody_seg_val_x as [Hdom_body_x Hvalue_body_x].
+          assert (Hintersect: in_affine_segment_domain last_el x /\
+                              in_affine_segment_domain body_seg_x x). 
           { split. rewrite Hlast_el. auto. rewrite Hbody_el. auto.  }
           rewrite Hlast_el in Hintersect. rewrite Hbody_el in Hintersect.
           specialize (ax2 Hintersect).
-          apply affine_element_eval_correct.
+          apply affine_segment_eval_correct.
           rewrite ax2. rewrite <- Hbody_el. 
-          apply affine_element_eval_correct.
-          unfold is_affine_element_value.
+          apply affine_segment_eval_correct.
+          unfold is_affine_segment_value.
           rewrite Hbody_el.
           auto.
       }
@@ -521,23 +521,23 @@ Proof.
           unfold is_pwaf_value.
           unfold is_pwaf_value in IHnext1.
           destruct IHnext1 as [body_el Hbody_el]. 
-          exists body_el; destruct Hbody_el as [Hbody_el_1 Hbody_el_2]; split.
-          * apply in_cons; apply Hbody_el_1. 
-          * apply Hbody_el_2.
+          exists body_el; destruct Hbody_el as [Hbody_seg_1 Hbody_seg_2]; split.
+          * apply in_cons; apply Hbody_seg_1. 
+          * apply Hbody_seg_2.
         - intros Hvalue.
           apply IHnext2.
           unfold is_pwaf_value in Hvalue; destruct Hvalue as [body_el Hbody_el].
-          destruct Hbody_el as [Hbody_el_1 Hbody_el_2].
-          apply in_inv in Hbody_el_1.
-          destruct Hbody_el_1 as [Hbody_el_1_l | Hbody_el_1_r].
-          * rewrite <- affine_element_eval_correct in Hbody_el_2. 
-            rewrite <- Hbody_el_1_l in Hbody_el_2.
-            rewrite <- Heqel_eval in Hbody_el_2.
-            inversion Hbody_el_2.
+          destruct Hbody_el as [Hbody_seg_1 Hbody_seg_2].
+          apply in_inv in Hbody_seg_1.
+          destruct Hbody_seg_1 as [Hbody_seg_1_l | Hbody_seg_1_r].
+          * rewrite <- affine_segment_eval_correct in Hbody_seg_2. 
+            rewrite <- Hbody_seg_1_l in Hbody_seg_2.
+            rewrite <- Heqseg_eval in Hbody_seg_2.
+            inversion Hbody_seg_2.
           * unfold is_pwaf_value.
             exists body_el; split.
-            - apply Hbody_el_1_r.
-            - apply Hbody_el_2. 
+            - apply Hbody_seg_1_r.
+            - apply Hbody_seg_2. 
       }
 Qed.
         
@@ -586,17 +586,17 @@ Proof.
   unfold is_total in Htotal.
   specialize (Htotal x).
   unfold in_pwaf_domain in Htotal.
-  destruct Htotal as [body_el_x Hbody_el_x].
+  destruct Htotal as [body_seg_x Hbody_seg_x].
   assert (Hmain: exists f_x, is_pwaf_value f x f_x). {
-    destruct Hbody_el_x as [HIn Hdomain].
-    apply affine_el_in_domain_has_value in Hdomain.
-    destruct Hdomain as [f_x Hel_val].
+    destruct Hbody_seg_x as [HIn Hdomain].
+    apply affine_seg_in_domain_has_value in Hdomain.
+    destruct Hdomain as [f_x Hseg_val].
     exists f_x.
     unfold is_pwaf_value.
-    exists body_el_x.
+    exists body_seg_x.
     split.
     * apply HIn.
-    * apply Hel_val.
+    * apply Hseg_val.
   }
   destruct Hmain as [f_x Hvalue].
   apply pwaf_eval_correct in Hvalue.
@@ -718,10 +718,10 @@ Definition matrix2: matrix 2 2 :=
     [0, 1]]%Z.
 Definition affine_f_2: AffineFunction 2 2 := Affine 2 2 matrix2 (null_vector 2).
 
-Definition affine_el_1: AffineElement 2 2 := Element 2 2 polyhedra1 affine_f_1.
-Definition affine_el_2: AffineElement 2 2 := Element 2 2 polyhedra2 affine_f_2.
+Definition affine_seg_1: AffineSegment 2 2 := Segment 2 2 polyhedra1 affine_f_1.
+Definition affine_seg_2: AffineSegment 2 2 := Segment 2 2 polyhedra2 affine_f_2.
 
-Definition simpleReLU_body := (cons affine_el_1 (cons affine_el_2 nil)).
+Definition simpleReLU_body := (cons affine_seg_1 (cons affine_seg_2 nil)).
 
 (**
 Lemma: two polyhedra intersect at exactly 2*x1 + x2 = 0
@@ -773,15 +773,15 @@ Proof.
     unfold In. simpl.
     intros Ha Hb x Hintersect.
     assert (Hmain: 
-        in_affine_element_domain affine_el_1 x /\ 
-        in_affine_element_domain affine_el_2 x ->
-            affine_element_eval affine_el_1 x = 
-            affine_element_eval affine_el_2 x). {
+        in_affine_segment_domain affine_seg_1 x /\ 
+        in_affine_segment_domain affine_seg_2 x ->
+            affine_segment_eval affine_seg_1 x = 
+            affine_segment_eval affine_seg_2 x). {
         intros Hinboth.
-        unfold in_affine_element_domain in Hinboth.
-        unfold affine_el_1 in Hinboth; unfold affine_el_2 in Hinboth.
-        unfold affine_element_eval.
-        unfold affine_el_1; unfold affine_el_2.
+        unfold in_affine_segment_domain in Hinboth.
+        unfold affine_seg_1 in Hinboth; unfold affine_seg_2 in Hinboth.
+        unfold affine_segment_eval.
+        unfold affine_seg_1; unfold affine_seg_2.
         unfold affine_f_eval.
         unfold affine_f_1; unfold affine_f_2.
         pose proof Hinboth as Hinboth2.
@@ -870,11 +870,11 @@ Proof.
     intros x.
     unfold is_pwaf_value.
     destruct (Z_le_dec (dot c_vector x) 0) as [r|n].
-    * exists affine_el_1.
+    * exists affine_seg_1.
       split.
       * simpl. left. reflexivity.  
       * split.
-        - unfold in_affine_element_domain. simpl.  
+        - unfold in_affine_segment_domain. simpl.  
           intros constraint Hconstraint.
           destruct Hconstraint.
           rewrite <- H.
@@ -884,7 +884,7 @@ Proof.
         - unfold is_affine_f_value. 
           unfold affine_f_1.
           unfold simpleReLU.
-          unfold affine_el_1. unfold affine_f_1.
+          unfold affine_seg_1. unfold affine_f_1.
           rewrite Mplus_null_vector.
           fold c_vector.
           apply Zle_is_le_bool in r; rewrite r.
@@ -904,7 +904,7 @@ Proof.
             rewrite (mult_one_l (K:=Z_RSOPM)).
             rewrite (plus_zero_r (G:=Z_RSOPM)).
             reflexivity.
-    * exists affine_el_2.
+    * exists affine_seg_2.
       split.
       * simpl. right. left. reflexivity. 
       * apply Znot_le_gt in n. 
@@ -926,7 +926,7 @@ Proof.
           unfold affine_f_2.
           unfold simpleReLU.
           fold c_vector.
-          unfold affine_el_2. unfold affine_f_2.
+          unfold affine_seg_2. unfold affine_f_2.
           rewrite Mplus_null_vector.
           destruct (Z_le_dec (dot c_vector x) 0%Z); try lia.
           unfold matrix2.
@@ -1001,14 +1001,14 @@ Proof.
     intros x.
     pose proof (simpleReLU_full_R_split x).
     destruct H.
-    - exists affine_el_1. split.
+    - exists affine_seg_1. split.
       * simpl. left. reflexivity.
       * simpl.
         intros constraint Hconstraint.
         destruct Hconstraint.
         rewrite <- H0. apply H.
         contradiction.
-    - exists affine_el_2. split.
+    - exists affine_seg_2. split.
       * simpl. right. left. reflexivity.
       * simpl.
         intros constraint Hconstraint.

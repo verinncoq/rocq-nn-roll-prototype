@@ -16,7 +16,7 @@ Import MatrixNotations.
 Open Scope colvec_scope.
 Open Scope matrix_scope.
 
-Section NNDHAffineElementToFME.
+Section NNDHAffineSegmentToFME.
 
 Context {RSOPMD : RSOPMWithDiv}.
 Open Scope RSOPM_scope.
@@ -425,51 +425,51 @@ Proof.
 Qed.
 
 Definition satisfaction_as_linear_system {d: nat}
-    (affine_el: AffineElement (RSOPM:=RSOPMD) (d + d) 1)
+    (affine_el: AffineSegment (RSOPM:=RSOPMD) (d + d) 1)
     (W: ConvexPolyhedron (RSOPM:=RSOPMD) d)
     : LinearSystem (RSOPM:=RSOPMD) d := (*Maybe not d*)
       match affine_el with
-        | Element p af => (W_to_linsys W) ++ (p_to_linsys p) ++ (af_to_linsys af)
+        | Segment p af => (W_to_linsys W) ++ (p_to_linsys p) ++ (af_to_linsys af)
       end.
 
 Theorem satisfaction_as_linear_system_correct {d: nat}:
     forall affine_el (W: ConvexPolyhedron (RSOPM:=RSOPMD) d),
-        satisfaction_over_element affine_el W <-> 
+        satisfaction_over_segment affine_el W <-> 
         fme_solve (satisfaction_as_linear_system affine_el W) = None.
 Proof.
-  intros el W; destruct el as [el_p el_af].
-  pose proof (fme_correct _ (satisfaction_as_linear_system (Element _ _ el_p el_af) W)) as Hfme.
+  intros el W; destruct el as [seg_p seg_af].
+  pose proof (fme_correct _ (satisfaction_as_linear_system (Segment _ _ seg_p seg_af) W)) as Hfme.
   split; intro H.
-  * destruct (fme_solve (satisfaction_as_linear_system (Element _ _ el_p el_af) W)) as [sol|]; last reflexivity.
+  * destruct (fme_solve (satisfaction_as_linear_system (Segment _ _ seg_p seg_af) W)) as [sol|]; last reflexivity.
     unfold satisfaction_as_linear_system in Hfme.
     do 2 rewrite <- is_linear_system_solution_app in Hfme.
     destruct Hfme as [HW_sys [Hp_sys Haf_sys]].
-    unfold satisfaction_over_element in H.
+    unfold satisfaction_over_segment in H.
     specialize (H (linsys_solution_to_colvec sol)).
     apply W_to_linsys_solution in HW_sys.
     specialize (H HW_sys).
-    remember (affine_element_eval (Element _ _ el_p el_af) _) as eval_res.
+    remember (affine_segment_eval (Segment _ _ seg_p seg_af) _) as eval_res.
     destruct eval_res as [eval_res|].
     - symmetry in Heqeval_res.
-      apply affine_element_eval_correct in Heqeval_res.
-      unfold is_affine_element_value in Heqeval_res.
+      apply affine_segment_eval_correct in Heqeval_res.
+      unfold is_affine_segment_value in Heqeval_res.
       destruct Heqeval_res as [Hdel Hf]; clear Hdel.
       pose proof (af_to_linsys_solution _ _ _ Haf_sys eval_res Hf) as Haf_sol.
       rewrite Haf_sol in H.
       discriminate H.
-    - unfold affine_element_eval in Heqeval_res.
+    - unfold affine_segment_eval in Heqeval_res.
       apply p_to_linsys_solution in Hp_sys.
       apply polyhedron_eval_correct in Hp_sys.
       rewrite Hp_sys in Heqeval_res.
       discriminate Heqeval_res. 
   * rewrite H in Hfme.
     unfold satisfaction_as_linear_system in Hfme.
-    unfold satisfaction_over_element; intros x HxW.
-    remember (affine_element_eval (Element _ _ el_p el_af) _) as eval_res.
+    unfold satisfaction_over_segment; intros x HxW.
+    remember (affine_segment_eval (Segment _ _ seg_p seg_af) _) as eval_res.
     destruct eval_res as [eval_res|]; last (exact I).
-    symmetry in Heqeval_res; apply affine_element_eval_correct in Heqeval_res.
-    unfold is_affine_element_value in Heqeval_res.
-    destruct Heqeval_res as [Hel_dom Hel_val].
+    symmetry in Heqeval_res; apply affine_segment_eval_correct in Heqeval_res.
+    unfold is_affine_segment_value in Heqeval_res.
+    destruct Heqeval_res as [Hseg_dom Hseg_val].
     remember (0 <= toRS eval_res )%RS as cmp_res.
     destruct cmp_res; first reflexivity.
     exfalso; apply Hfme.
@@ -479,15 +479,15 @@ Proof.
     - apply solution_W_to_linsys.
       apply HxW. 
     - apply solution_p_to_linsys.
-      unfold in_affine_element_domain in Hel_dom.
-      apply Hel_dom.
+      unfold in_affine_segment_domain in Hseg_dom.
+      apply Hseg_dom.
     - apply (solution_af_to_linsys _ _ _ eval_res).
-      * apply Hel_val.
+      * apply Hseg_val.
       * symmetry in Heqcmp_res.
         apply Heqcmp_res.
 Qed.
 
-End NNDHAffineElementToFME.
+End NNDHAffineSegmentToFME.
 
 Section NNHyperpropertyVerification.
 
@@ -498,7 +498,7 @@ Open Scope RSOPM_scope.
 
 Fixpoint verify_hyperporperty_helper {d: nat}
     (W: ConvexPolyhedron (RSOPM:=RSOPMD) d)
-    (body: list (AffineElement (d + d) 1)) :=
+    (body: list (AffineSegment (d + d) 1)) :=
     match body with
     | nil => None
     | body_el :: tail => 
@@ -544,8 +544,8 @@ Proof.
     remember (aed nn) as nn_aed.
     split; intro H.
     * apply (aed_preserves_satisfiability _ _ nn_aed); first apply Heqnn_aed.
-      apply pwaf_satisfiability_elements_split.
-      unfold nndh_pwaf_element_split.
+      apply pwaf_satisfiability_segments_split.
+      unfold nndh_pwaf_segment_split.
       destruct nndh as [r w W netIn netSat].
       induction (body _); intro body_el.
       - unfold In; contradiction.
@@ -564,8 +564,8 @@ Proof.
           apply H.
           apply HIn.
     * apply (aed_preserves_satisfiability _ _ nn_aed) in H; last apply Heqnn_aed.
-      apply pwaf_satisfiability_elements_split in H.
-      unfold nndh_pwaf_element_split in H.   
+      apply pwaf_satisfiability_segments_split in H.
+      unfold nndh_pwaf_segment_split in H.   
       destruct nndh as [r w W netIn netSat].
       induction (body _).
       - unfold verify_hyperporperty_helper; reflexivity.

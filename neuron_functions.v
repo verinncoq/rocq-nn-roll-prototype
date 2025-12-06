@@ -15,7 +15,7 @@ Context { RSOPM : RealSubsetOPM }.
 Definition full_R_polyhedron (n: nat) := Polyhedron (RSOPM:=RSOPM) n nil.
 
 Definition linear_body {n m: nat} (M: matrix (T:=RSOPM) m n) (b: colvec (RSOPM:=RSOPM) m): list _ :=
-    cons (Element _ _ (full_R_polyhedron n) (Affine _ _ M b)) nil.
+    cons (Segment _ _ (full_R_polyhedron n) (Affine _ _ M b)) nil.
 
 Lemma linear_univalence {n m: nat} (M: matrix m n) (b: colvec m):
     pwaf_univalence (linear_body M b).
@@ -38,7 +38,7 @@ Proof.
     unfold is_total.
     intros x.
     unfold in_pwaf_domain.
-    exists (Element _ _ (full_R_polyhedron n) (Affine _ _ M b)).
+    exists (Segment _ _ (full_R_polyhedron n) (Affine _ _ M b)).
     split.
     - simpl. left. reflexivity.
     - unfold full_R_polyhedron.
@@ -79,7 +79,7 @@ Proof.
 Qed.
 
 Definition ZeroDim_body := 
-    [Element 0 0 ZeroDim_polyhedron (Affine 0 0 (Mone (T:=RSOPM) (n:=0)) (null_vector 0))].
+    [Segment 0 0 ZeroDim_polyhedron (Affine 0 0 (Mone (T:=RSOPM) (n:=0)) (null_vector 0))].
 
 Theorem ZeroDim_univalence: 
     pwaf_univalence ZeroDim_body.
@@ -106,7 +106,7 @@ Proof.
     split.
     * unfold ZeroDimPWAF; simpl.
       left. reflexivity.
-    * unfold in_affine_element_domain.
+    * unfold in_affine_segment_domain.
       apply ZeroDim_polyhedron_full.
 Qed.
 
@@ -188,9 +188,9 @@ Proof.
     apply Hintersect.
 Qed.
 
-Definition ReLU1d_body: list (AffineElement 1 1) 
-    := [Element 1 1 ReLU1d_polyhedra_left (Affine 1 1 (Mzero (G:=RSOPM)) (null_vector 1));
-        Element 1 1 ReLU1d_polyhedra_right (Affine 1 1 (Mone (T:=RSOPM)) (null_vector 1))].
+Definition ReLU1d_body: list (AffineSegment 1 1) 
+    := [Segment 1 1 ReLU1d_polyhedra_left (Affine 1 1 (Mzero (G:=RSOPM)) (null_vector 1));
+        Segment 1 1 ReLU1d_polyhedra_right (Affine 1 1 (Mone (T:=RSOPM)) (null_vector 1))].
 
 Definition ReLU1d_pwaf_univalence:
     pwaf_univalence ReLU1d_body.

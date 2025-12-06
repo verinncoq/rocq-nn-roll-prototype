@@ -90,7 +90,7 @@ Fixpoint nn_eval {in_dim out_dim: nat}
 
 End SequentialNetworkEvaluation.
 
-Section AffineElementDecomposition.
+Section AffineSegmentDecomposition.
 
 Context { RSOPM : RealSubsetOPM }.
 
@@ -119,18 +119,18 @@ Proof.
         rewrite Hrepr in HelIn; simpl in HelIn.
         destruct HelIn as [Hbody_el|HelIn]; try contradiction HelIn.
         rewrite <- Hbody_el in Helval.
-        unfold is_affine_element_value in Helval.
+        unfold is_affine_segment_value in Helval.
         destruct Helval as [Hdomain Hvalue].
         unfold is_affine_f_value in Hvalue.
         rewrite Mplus_null_vector in Hvalue.
         apply Hvalue.
-      - exists (Element _ _ (full_R_polyhedron input_dim) 
+      - exists (Segment _ _ (full_R_polyhedron input_dim) 
                     (Affine _ _ (mk_matrix (T:=RSOPM) output_dim input_dim Mone_seq) (null_vector output_dim))).
         split.
         * rewrite Hrepr; simpl.
           left; reflexivity.
-        * unfold is_affine_element_value.
-          unfold in_affine_element_domain.
+        * unfold is_affine_segment_value.
+          unfold in_affine_segment_domain.
           split.
           - unfold in_convex_polyhedron.
             unfold full_R_polyhedron.
@@ -151,4 +151,4 @@ Proof.
         apply H.
 Qed.
 
-End AffineElementDecomposition.
+End AffineSegmentDecomposition.
