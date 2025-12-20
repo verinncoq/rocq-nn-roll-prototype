@@ -425,17 +425,17 @@ Proof.
 Qed.
 
 Definition satisfaction_as_linear_system {d: nat}
-    (affine_el: AffineSegment (RSOPM:=RSOPMD) (d + d) 1)
+    (affine_seg: AffineSegment (RSOPM:=RSOPMD) (d + d) 1)
     (W: ConvexPolyhedron (RSOPM:=RSOPMD) d)
-    : LinearSystem (RSOPM:=RSOPMD) d := (*Maybe not d*)
-      match affine_el with
+    : LinearSystem (RSOPM:=RSOPMD) d :=
+      match affine_seg with
         | Segment p af => (W_to_linsys W) ++ (p_to_linsys p) ++ (af_to_linsys af)
       end.
 
 Theorem satisfaction_as_linear_system_correct {d: nat}:
-    forall affine_el (W: ConvexPolyhedron (RSOPM:=RSOPMD) d),
-        satisfaction_over_segment affine_el W <-> 
-        fme_solve (satisfaction_as_linear_system affine_el W) = None.
+    forall affine_seg (W: ConvexPolyhedron (RSOPM:=RSOPMD) d),
+        satisfaction_over_segment affine_seg W <-> 
+        fme_solve (satisfaction_as_linear_system affine_seg W) = None.
 Proof.
   intros el W; destruct el as [seg_p seg_af].
   pose proof (fme_correct _ (satisfaction_as_linear_system (Segment _ _ seg_p seg_af) W)) as Hfme.
@@ -508,7 +508,7 @@ Fixpoint verify_hyperporperty_helper {d: nat}
         end
     end.
 
-Definition verify_hyperporperty_witness {in_dim out_dim}
+Definition verify_hyperporperty_counterexample {in_dim out_dim}
     (nn: TPWANNSequential (input_dim:=in_dim) (output_dim:=out_dim))
     (nndh: NNHyperproperty) 
     : option _
@@ -528,7 +528,7 @@ Definition verify_hyperporperty {in_dim out_dim}
     (nndh: NNHyperproperty) 
     : bool 
     :=
-    match verify_hyperporperty_witness nn nndh with
+    match verify_hyperporperty_counterexample nn nndh with
     | Some _ => false
     | None => true
     end.
@@ -540,7 +540,7 @@ Theorem verify_hyperporperty_correct {in_dim out_dim}:
         verify_hyperporperty nn nndh = true <-> nn_satisfies_nndh nn nndh.
 Proof.
     intros nn nndh.
-    unfold verify_hyperporperty, verify_hyperporperty_witness.
+    unfold verify_hyperporperty, verify_hyperporperty_counterexample.
     remember (asd nn) as nn_asd.
     split; intro H.
     * apply (asd_preserves_satisfiability _ _ nn_asd); first apply Heqnn_asd.

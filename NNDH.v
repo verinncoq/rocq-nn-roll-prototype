@@ -280,12 +280,12 @@ Open Scope RSOPM_scope.
 (** Verification of a hypeproperty over individual affine segments *)
 
 Definition satisfaction_over_segment {w: nat}
-  (affine_el: AffineSegment (RSOPM:=RSOPM) (w + w) 1)
+  (affine_seg: AffineSegment (RSOPM:=RSOPM) (w + w) 1)
   (W: ConvexPolyhedron w)
   : Prop
   := 
   forall x, in_convex_polyhedron x W ->
-    match affine_segment_eval affine_el (colvec_concat x x) with
+    match affine_segment_eval affine_seg (colvec_concat x x) with
     | Some r => 0 <= toRS r = true
     | None => True
     end.
@@ -301,8 +301,8 @@ Definition nndh_pwaf_segment_split {pwaf_in_dim pwaf_out_dim: nat}
         pwaf_compose netSat
           (pwaf_concat netIn
             (pwaf_compose (repeat_concat r pwaf) netIn)) in
-      forall body_el, In body_el (body full_pwaf) ->
-        satisfaction_over_segment body_el W
+      forall body_seg, In body_seg (body full_pwaf) ->
+        satisfaction_over_segment body_seg W
   end.
 
 Theorem pwaf_satisfiability_segments_split {in_dim out_dim}:
