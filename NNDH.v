@@ -207,16 +207,16 @@ Qed.
 Lemma repeat_concat_total_is_eval_multiple_nn {in_dim out_dim}:
   forall
     (nn: TPWANNSequential (RSOPM:=RSOPM) (input_dim:=in_dim) (output_dim:=out_dim))
-    nn_aed r x,
-    nn_aed = aed nn ->
-    tpwaf_eval (repeat_concat_total r nn_aed) x = eval_nn_multiple nn x.
+    nn_asd r x,
+    nn_asd = asd nn ->
+    tpwaf_eval (repeat_concat_total r nn_asd) x = eval_nn_multiple nn x.
 Proof.
-  intros nn nn_aed r x Haed.
+  intros nn nn_asd r x Hasd.
   induction r.
   * unfold repeat_concat_total, repeat_concat_total_helper, eval_nn_multiple.
     unfold Nat.mul. 
     apply unique_colvec_0.
-  * unfold repeat_concat_total; fold (repeat_concat_total r nn_aed).
+  * unfold repeat_concat_total; fold (repeat_concat_total r nn_asd).
     unfold eval_nn_multiple; fold (eval_nn_multiple nn (mk_colvec (r * in_dim) (fun i : nat => coeff_colvec 0 x (i + in_dim)))).
     rewrite <- tpwaf_eval_is_value.
     pose proof (colvec_split in_dim (r * in_dim) x) as Hsplit.
@@ -224,22 +224,22 @@ Proof.
     rewrite Hxdef at 1.
     apply tpwaf_concat_correct.
     - rewrite Hx1.
-      apply (aed_correct _ _ _ _ nn nn_aed); last reflexivity.
-      apply Haed.
+      apply (asd_correct _ _ _ _ nn nn_asd); last reflexivity.
+      apply Hasd.
     - specialize (IHr (mk_colvec (r * in_dim) (fun i : nat => coeff_colvec 0 x (i + in_dim)))).
       rewrite Hx2.
       apply tpwaf_eval_is_value in IHr.
       apply IHr.
 Qed.
 
-Theorem aed_preserves_satisfiability {in_dim out_dim: nat}:
+Theorem asd_preserves_satisfiability {in_dim out_dim: nat}:
   forall 
     (nn: TPWANNSequential (RSOPM:=RSOPM) (input_dim:=in_dim) (output_dim:=out_dim)) 
-    nndh nn_aed,
-    nn_aed = aed nn ->
-    (nn_satisfies_nndh nn nndh <-> pwaf_satisfies_nndh nn_aed nndh).
+    nndh nn_asd,
+    nn_asd = asd nn ->
+    (nn_satisfies_nndh nn nndh <-> pwaf_satisfies_nndh nn_asd nndh).
 Proof.
-  intros nn nndh nn_aed Haed.
+  intros nn nndh nn_asd Hasd.
   destruct nndh as [r w W netIn netSat].
   unfold pwaf_satisfies_nndh, nn_satisfies_nndh.
   rewrite repeat_concat_total_correct.
@@ -256,7 +256,7 @@ Proof.
     rewrite tpwaf_eval_concat in Heval2.
     rewrite tpwaf_eval_compose in Heval2.
     rewrite (repeat_concat_total_is_eval_multiple_nn nn) in Heval2.
-    apply Heval2. apply Haed.
+    apply Heval2. apply Hasd.
   * destruct (pwaf_eval _ _) eqn:Heval.
     - rewrite <- H; do 2 f_equal.
       apply is_pwaf_value_tpwaf_eval.
@@ -266,7 +266,7 @@ Proof.
       rewrite tpwaf_eval_concat in Heval2.
       rewrite tpwaf_eval_compose in Heval2.
       rewrite (repeat_concat_total_is_eval_multiple_nn nn) in Heval2.
-      apply Heval2. apply Haed.
+      apply Heval2. apply Hasd.
     - apply tpwaf_pwaf_eval_never_none in Heval; contradiction.
 Qed.  
 

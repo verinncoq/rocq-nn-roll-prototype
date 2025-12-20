@@ -513,13 +513,13 @@ Definition verify_hyperporperty_witness {in_dim out_dim}
     (nndh: NNHyperproperty) 
     : option _
     :=
-    let nn_aed := aed nn in
+    let nn_asd := asd nn in
     match nndh with
     | NNDH r w W netIn netSat =>
         let full_pwaf := 
                 pwaf_compose netSat
                 (pwaf_concat netIn
-                    (pwaf_compose (repeat_concat r nn_aed) netIn)) in     
+                    (pwaf_compose (repeat_concat r nn_asd) netIn)) in     
         verify_hyperporperty_helper W (body full_pwaf)
     end.
 
@@ -541,9 +541,9 @@ Theorem verify_hyperporperty_correct {in_dim out_dim}:
 Proof.
     intros nn nndh.
     unfold verify_hyperporperty, verify_hyperporperty_witness.
-    remember (aed nn) as nn_aed.
+    remember (asd nn) as nn_asd.
     split; intro H.
-    * apply (aed_preserves_satisfiability _ _ nn_aed); first apply Heqnn_aed.
+    * apply (asd_preserves_satisfiability _ _ nn_asd); first apply Heqnn_asd.
       apply pwaf_satisfiability_segments_split.
       unfold nndh_pwaf_segment_split.
       destruct nndh as [r w W netIn netSat].
@@ -563,7 +563,7 @@ Proof.
         * apply IHl.
           apply H.
           apply HIn.
-    * apply (aed_preserves_satisfiability _ _ nn_aed) in H; last apply Heqnn_aed.
+    * apply (asd_preserves_satisfiability _ _ nn_asd) in H; last apply Heqnn_asd.
       apply pwaf_satisfiability_segments_split in H.
       unfold nndh_pwaf_segment_split in H.   
       destruct nndh as [r w W netIn netSat].

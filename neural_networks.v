@@ -94,23 +94,23 @@ Section AffineSegmentDecomposition.
 
 Context { RSOPM : RealSubsetOPM }.
 
-Fixpoint aed {in_dim out_dim: nat}
+Fixpoint asd {in_dim out_dim: nat}
     (nn: TPWANNSequential (input_dim := in_dim) (output_dim := out_dim)) 
     : TPWAF (RSOPM:=RSOPM) (in_dim := in_dim) (out_dim := out_dim)
     :=
     match nn with
         | NNOutput => OutputTPWAF
         | NNTPWALayer _ pwaf next => 
-            tpwaf_compose (aed next) pwaf
+            tpwaf_compose (asd next) pwaf
     end.
     
-Theorem aed_correct:
+Theorem asd_correct:
     forall in_dim out_dim (x: colvec in_dim) (f_x: colvec out_dim) nn nn_tpwaf,
-        nn_tpwaf = aed nn ->
+        nn_tpwaf = asd nn ->
         is_pwaf_value nn_tpwaf x f_x <-> nn_eval nn x = f_x.
 Proof.
     intros in_dim out_dim x f_x nn nn_tpwaf Hrepr.
-    induction nn; unfold aed in Hrepr.
+    induction nn; unfold asd in Hrepr.
     * unfold nn_eval.
       unfold flex_dim_copy.
       unfold is_pwaf_value.
@@ -138,10 +138,10 @@ Proof.
           - unfold is_affine_f_value.
             rewrite Mplus_null_vector.
             easy.
-    * fold (aed (in_dim:=hidden_dim) (out_dim:=output_dim)) in Hrepr.
+    * fold (asd (in_dim:=hidden_dim) (out_dim:=output_dim)) in Hrepr.
       unfold nn_eval; fold (nn_eval (RSOPM:=RSOPM) (in_dim:=hidden_dim) (out_dim:=output_dim)).
       rewrite Hrepr.  
-      specialize (IHnn (tpwaf_eval t x) f_x (aed nn) eq_refl).
+      specialize (IHnn (tpwaf_eval t x) f_x (asd nn) eq_refl).
       split; intros H.
       - apply tpwaf_compose_reverse_value in H.
         destruct H as [Ht Hnn].
