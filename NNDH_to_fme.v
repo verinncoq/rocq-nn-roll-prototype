@@ -515,12 +515,8 @@ Definition verify_hyperporperty_counterexample {in_dim out_dim}
     :=
     let nn_asd := asd nn in
     match nndh with
-    | NNDH r w W netIn netSat =>
-        let full_pwaf := 
-                pwaf_compose netSat
-                (pwaf_concat netIn
-                    (pwaf_compose (repeat_concat r nn_asd) netIn)) in     
-        verify_hyperporperty_helper W (body full_pwaf)
+    | NNDH r w W netIn netSat =>   
+        verify_hyperporperty_helper W (body (joint_pwaf netIn netSat nn_asd))
     end.
 
 Definition verify_hyperporperty {in_dim out_dim}

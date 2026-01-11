@@ -77,14 +77,13 @@ Fixpoint repeat_concat {pwaf_in_dim pwaf_out_dim: nat}
   | S n => (pwaf_concat pwaf (repeat_concat n pwaf))
   end.
 
-Definition nndh_full_pwaf_helper {pwaf_in_dim pwaf_out_dim r w: nat}
+Definition joint_pwaf {pwaf_in_dim pwaf_out_dim r w: nat}
   (netIn: PWAF (in_dim:=w)) 
   (netSat: PWAF (out_dim:=1))
   (pwaf: PWAF (RSOPM:=RSOPM) (in_dim:=pwaf_in_dim) (out_dim:=pwaf_out_dim))
   : PWAF
   :=
-  pwaf_compose netSat (pwaf_concat netIn
-    (pwaf_compose (repeat_concat r pwaf) netIn)).
+  pwaf_compose netSat (pwaf_concat netIn (pwaf_compose (repeat_concat r pwaf) netIn)).
 
 Definition pwaf_satisfies_nndh {pwaf_in_dim pwaf_out_dim: nat}
   (pwaf: PWAF (in_dim:=pwaf_in_dim) (out_dim:=pwaf_out_dim))
@@ -94,11 +93,7 @@ Definition pwaf_satisfies_nndh {pwaf_in_dim pwaf_out_dim: nat}
   match nndh with
   | NNDH r w W netIn netSat =>
     forall (x: colvec (RSOPM:=RSOPM) w), in_convex_polyhedron x W ->
-      let full_pwaf := 
-        pwaf_compose netSat
-          (pwaf_concat netIn
-            (pwaf_compose (repeat_concat r pwaf) netIn)) in
-      match pwaf_eval full_pwaf (colvec_concat x x) with
+      match pwaf_eval (joint_pwaf netIn netSat pwaf) (colvec_concat x x) with
       | Some r => 0 <= toRS r = true
       | None => True
       end
@@ -241,7 +236,7 @@ Theorem asd_preserves_satisfiability {in_dim out_dim: nat}:
 Proof.
   intros nn nndh nn_asd Hasd.
   destruct nndh as [r w W netIn netSat].
-  unfold pwaf_satisfies_nndh, nn_satisfies_nndh.
+  unfold pwaf_satisfies_nndh, nn_satisfies_nndh, joint_pwaf.
   rewrite repeat_concat_total_correct.
   rewrite pwaf_tpwaf_compose.
   rewrite pwaf_tpwaf_concat.
@@ -297,11 +292,7 @@ Definition nndh_pwaf_segment_split {pwaf_in_dim pwaf_out_dim: nat}
   :=
   match nndh with
   | NNDH r w W netIn netSat =>
-      let full_pwaf := 
-        pwaf_compose netSat
-          (pwaf_concat netIn
-            (pwaf_compose (repeat_concat r pwaf) netIn)) in
-      forall body_seg, In body_seg (body full_pwaf) ->
+      forall body_seg, In body_seg (body (joint_pwaf netIn netSat pwaf)) ->
         satisfaction_over_segment body_seg W
   end.
 
@@ -317,9 +308,7 @@ Proof.
     unfold satisfaction_over_segment.
     intros x Hx.
     specialize (H x Hx).
-    pose proof ((prop (pwaf_compose netSat
-                  (pwaf_concat netIn
-                    (pwaf_compose (repeat_concat r pwaf) netIn))))) as Huni.
+    pose proof ((prop (joint_pwaf netIn netSat pwaf))) as Huni.
     destruct (pwaf_eval _ _) eqn:Heval.
     - apply pwaf_eval_correct in Heval.
       unfold is_pwaf_value in Heval.
@@ -350,9 +339,7 @@ Proof.
     - remember (affine_segment_eval body_el _) as body_seg_val.
       destruct body_seg_val as [val|]; last (exact I).
       assert (Hcontra: is_pwaf_value 
-                        (pwaf_compose netSat 
-                          (pwaf_concat netIn 
-                            (pwaf_compose (repeat_concat r pwaf) netIn)))
+                        (joint_pwaf netIn netSat pwaf)
                         (colvec_concat x x) val). {
                           unfold is_pwaf_value.
                           exists body_el.
