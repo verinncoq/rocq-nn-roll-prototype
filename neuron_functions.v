@@ -10,11 +10,11 @@ Open Scope scalar_scope.
 
 Section LinearPiecewise.
 
-Context { RSOPM : RealSubsetOPM }.
+Context { RSOAM : RealSubsetOAM }.
 
-Definition full_R_polyhedron (n: nat) := Polyhedron (RSOPM:=RSOPM) n nil.
+Definition full_R_polyhedron (n: nat) := Polyhedron (RSOAM:=RSOAM) n nil.
 
-Definition linear_body {n m: nat} (M: matrix (T:=RSOPM) m n) (b: colvec (RSOPM:=RSOPM) m): list _ :=
+Definition linear_body {n m: nat} (M: matrix (T:=RSOAM) m n) (b: colvec (RSOAM:=RSOAM) m): list _ :=
     cons (Segment _ _ (full_R_polyhedron n) (Affine _ _ M b)) nil.
 
 Lemma linear_univalence {n m: nat} (M: matrix m n) (b: colvec m):
@@ -52,10 +52,10 @@ End LinearPiecewise.
 
 Section OutputPiecewise.
 
-Context { RSOPM : RealSubsetOPM }.
+Context { RSOAM : RealSubsetOAM }.
 
 Definition OutputTPWAF {in_dim out_dim: nat} : TPWAF :=
-    LinearTPWAF (RSOPM:=RSOPM) (mk_matrix out_dim in_dim Mone_seq) (null_vector out_dim).
+    LinearTPWAF (RSOAM:=RSOAM) (mk_matrix out_dim in_dim Mone_seq) (null_vector out_dim).
 
 End OutputPiecewise.
 
@@ -63,10 +63,10 @@ Section ZeroDimFunc.
 
 (* Helper PWAF of zeroth dimension *)
 
-Context { RSOPM : RealSubsetOPM }.
+Context { RSOAM : RealSubsetOAM }.
 
 Definition ZeroDim_polyhedron
-    := Polyhedron (RSOPM:=RSOPM) 0 nil.
+    := Polyhedron (RSOAM:=RSOAM) 0 nil.
 
 Theorem ZeroDim_polyhedron_full: 
     forall (x : colvec 0), in_convex_polyhedron x ZeroDim_polyhedron.
@@ -79,7 +79,7 @@ Proof.
 Qed.
 
 Definition ZeroDim_body := 
-    [Segment 0 0 ZeroDim_polyhedron (Affine 0 0 (Mone (T:=RSOPM) (n:=0)) (null_vector 0))].
+    [Segment 0 0 ZeroDim_polyhedron (Affine 0 0 (Mone (T:=RSOAM) (n:=0)) (null_vector 0))].
 
 Theorem ZeroDim_univalence: 
     pwaf_univalence ZeroDim_body.
@@ -116,26 +116,26 @@ End ZeroDimFunc.
 
 Section ReLUPiecewise.
 
-Context { RSOPM : RealSubsetOPM }.
+Context { RSOAM : RealSubsetOAM }.
 Import RealSubsetNotations.
-Local Open Scope RSOPM_scope.
+Local Open Scope RSOAM_scope.
 
 Definition ReLU1d_polyhedra_left 
-    := Polyhedron 1 [Constraint 1 (Mone (T:=RSOPM)) 0].
+    := Polyhedron 1 [Constraint 1 (Mone (T:=RSOAM)) 0].
 Definition ReLU1d_polyhedra_right 
-    := Polyhedron 1 [Constraint 1 ((RSopp 1) * (Mone (T:=RSOPM)))%scalar 0].
+    := Polyhedron 1 [Constraint 1 ((RSopp 1) * (Mone (T:=RSOAM)))%scalar 0].
 
 Lemma RelU1d_polyhedra_intersect:
     forall x, 
         in_convex_polyhedron x ReLU1d_polyhedra_left /\ 
         in_convex_polyhedron x ReLU1d_polyhedra_right ->
-        dot (Mone (T:=RSOPM)) x = 0.
+        dot (Mone (T:=RSOAM)) x = 0.
 Proof.
     intros x Hintersect.
     unfold in_convex_polyhedron in Hintersect.
     destruct Hintersect.
-    specialize (H (Constraint 1 (Mone (T:=RSOPM)) 0)). simpl in H. 
-    specialize (H0 (Constraint 1 (scalar_mult (RSopp 1) (Mone (T:=RSOPM))) 0)). simpl in H0.
+    specialize (H (Constraint 1 (Mone (T:=RSOAM)) 0)). simpl in H. 
+    specialize (H0 (Constraint 1 (scalar_mult (RSopp 1) (Mone (T:=RSOAM))) 0)). simpl in H0.
     apply ax_equality.
     apply Rle_antisym.
     - rewrite <- ax_real_leq_true. apply H. auto.
@@ -156,8 +156,8 @@ Proof.
 Qed.  
 
 Lemma x_is_0:
-    forall (x: colvec (RSOPM:=RSOPM) 1),
-        dot (Mone (T:=RSOPM)) x = 0 -> x = null_vector 1.
+    forall (x: colvec (RSOAM:=RSOAM) 1),
+        dot (Mone (T:=RSOAM)) x = 0 -> x = null_vector 1.
 Proof.
     intros x Hdot.
     unfold null_vector.
@@ -170,7 +170,7 @@ Proof.
     - rewrite <- Hdot at 2.
       unfold Mmult.
       rewrite coeff_mat_bij; try lia.
-      compute. rewrite (RSOPM_mult_one_l (RSOPM:=RSOPM)). rewrite (RSOPM_plus_0_r (RSOPM:=RSOPM)).
+      compute. rewrite (RSOAM_mult_one_l (RSOAM:=RSOAM)). rewrite (RSOAM_plus_0_r (RSOAM:=RSOAM)).
       reflexivity.
     induction j.
     all: lia.
@@ -189,8 +189,8 @@ Proof.
 Qed.
 
 Definition ReLU1d_body: list (AffineSegment 1 1) 
-    := [Segment 1 1 ReLU1d_polyhedra_left (Affine 1 1 (Mzero (G:=RSOPM)) (null_vector 1));
-        Segment 1 1 ReLU1d_polyhedra_right (Affine 1 1 (Mone (T:=RSOPM)) (null_vector 1))].
+    := [Segment 1 1 ReLU1d_polyhedra_left (Affine 1 1 (Mzero (G:=RSOAM)) (null_vector 1));
+        Segment 1 1 ReLU1d_polyhedra_right (Affine 1 1 (Mone (T:=RSOAM)) (null_vector 1))].
 
 Definition ReLU1d_pwaf_univalence:
     pwaf_univalence ReLU1d_body.
@@ -226,7 +226,7 @@ Proof.
     intros x.
     unfold in_convex_polyhedron.
     unfold ReLU1d_polyhedra_left; unfold ReLU1d_polyhedra_right.
-    remember (dot (Mone (T:=RSOPM)) x <= 0) as comp_result.
+    remember (dot (Mone (T:=RSOAM)) x <= 0) as comp_result.
     destruct comp_result.
     * left.
       intros constraint Hconstraint.

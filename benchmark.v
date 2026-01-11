@@ -9,12 +9,12 @@ From Verinncoq Require Import real_subsets
                               NNDH_to_fme
                               monotonicity1d.
 
-Open Scope RSOPM_scope.
+Open Scope RSOAM_scope.
 Import RealSubsetNotations.
 
 Section OneActivation.
     
-Definition example1_weights1: matrix (T:=Q_RSOPMD) 1 1 :=
+Definition example1_weights1: matrix (T:=Q_RSOAMD) 1 1 :=
     [[toQDEP 1.106%Q]].
 
 Definition example1_biases1: matrix 1 1 :=
@@ -33,13 +33,13 @@ End OneActivation.
 
 Section TwoActivations.
 
-Definition example2_weights1: matrix (T:=Q_RSOPMD) 1 1 :=
+Definition example2_weights1: matrix (T:=Q_RSOAMD) 1 1 :=
     [[toQDEP 1.463%Q]].
 
 Definition example2_biases1: matrix 1 1 :=
     [[toQDEP 0.828%Q]].
 
-Definition example2_weights2: matrix (T:=Q_RSOPMD) 1 1 :=
+Definition example2_weights2: matrix (T:=Q_RSOAMD) 1 1 :=
     [[toQDEP 1.749%Q]].
 
 Definition example2_biases2: matrix 1 1 :=
@@ -60,19 +60,19 @@ End TwoActivations.
 
 Section ThreeActivations.
 
-Definition example3_weights1: matrix (T:=Q_RSOPMD) 1 1 :=
+Definition example3_weights1: matrix (T:=Q_RSOAMD) 1 1 :=
     [[toQDEP 1.978%Q]].
 
 Definition example3_biases1: matrix 1 1 :=
     [[toQDEP 0.645%Q]].
 
-Definition example3_weights2: matrix (T:=Q_RSOPMD) 1 1 :=
+Definition example3_weights2: matrix (T:=Q_RSOAMD) 1 1 :=
     [[toQDEP 1.160%Q]].
 
 Definition example3_biases2: matrix 1 1 :=
     [[toQDEP 0.304%Q]].
 
-Definition example3_weights3: matrix (T:=Q_RSOPMD) 1 1 :=
+Definition example3_weights3: matrix (T:=Q_RSOAMD) 1 1 :=
     [[toQDEP 1.817%Q]].
 
 Definition example3_biases3: matrix 1 1 :=
@@ -95,19 +95,19 @@ End ThreeActivations.
 
 Section FourActivations.
 
-Definition example4_weights1: matrix (T:=Q_RSOPMD) 2 1 :=
+Definition example4_weights1: matrix (T:=Q_RSOAMD) 2 1 :=
     [[toQDEP 1.978%Q], [toQDEP 1.978%Q]].
 
 Definition example4_biases1: matrix 2 1 :=
     [[toQDEP 0.645%Q], [toQDEP 0.645%Q]].
 
-Definition example4_weights2: matrix (T:=Q_RSOPMD) 1 2 :=
+Definition example4_weights2: matrix (T:=Q_RSOAMD) 1 2 :=
     [[toQDEP 1.160%Q, toQDEP 1.160%Q]].
 
 Definition example4_biases2: matrix 1 1 :=
     [[toQDEP 0.304%Q]].
 
-Definition example4_weights3: matrix (T:=Q_RSOPMD) 1 1 :=
+Definition example4_weights3: matrix (T:=Q_RSOAMD) 1 1 :=
     [[toQDEP 1.817%Q]].
 
 Definition example4_biases3: matrix 1 1 :=
@@ -130,20 +130,20 @@ End FourActivations.
 
 Section FiveActivations.
 
-Definition example5_weights1: matrix (T:=Q_RSOPMD) 2 1 :=
+Definition example5_weights1: matrix (T:=Q_RSOAMD) 2 1 :=
     [[toQDEP 1.754%Q], [toQDEP 1.574%Q]].
 
 Definition example5_biases1: matrix 2 1 :=
     [[toQDEP 0.920%Q], [toQDEP 0.838%Q]].
 
-Definition example5_weights2: matrix (T:=Q_RSOPMD) 2 2 :=
+Definition example5_weights2: matrix (T:=Q_RSOAMD) 2 2 :=
     [[toQDEP 1.06%Q, toQDEP 1.215%Q],
      [toQDEP 1.435%Q, toQDEP 1.230%Q]].
 
 Definition example5_biases2: matrix 2 1 :=
     [[toQDEP 0.601%Q], [toQDEP 0.072%Q]].
 
-Definition example5_weights3: matrix (T:=Q_RSOPMD) 1 2 :=
+Definition example5_weights3: matrix (T:=Q_RSOAMD) 1 2 :=
     [[toQDEP 1.881%Q, toQDEP 1.929%Q]].
 
 Definition example5_biases3: matrix 1 1 :=
@@ -166,20 +166,20 @@ End FiveActivations.
 
 Section SixActivations.
 
-Definition example6_weights1: matrix (T:=Q_RSOPMD) 3 1 :=
+Definition example6_weights1: matrix (T:=Q_RSOAMD) 3 1 :=
     [[toQDEP 1.065%Q], [toQDEP 1.185%Q], [toQDEP 1.693%Q]].
 
 Definition example6_biases1: matrix 3 1 :=
     [[toQDEP 0.949%Q], [toQDEP 0.091%Q], [toQDEP 0.197%Q]].
 
-Definition example6_weights2: matrix (T:=Q_RSOPMD) 2 3 :=
+Definition example6_weights2: matrix (T:=Q_RSOAMD) 2 3 :=
     [[toQDEP 1.148%Q, toQDEP 1.354%Q, toQDEP 1.690%Q],
      [toQDEP 1.702%Q, toQDEP 1.846%Q, toQDEP 1.108%Q]].
 
 Definition example6_biases2: matrix 2 1 :=
     [[toQDEP 0.601%Q], [toQDEP 0.072%Q]].
 
-Definition example6_weights3: matrix (T:=Q_RSOPMD) 1 2 :=
+Definition example6_weights3: matrix (T:=Q_RSOAMD) 1 2 :=
     [[toQDEP 1.224%Q, toQDEP 1.697%Q]].
 
 Definition example6_biases3: matrix 1 1 :=
@@ -202,13 +202,13 @@ End SixActivations.
 
 Section SevenActivations.
 
-Definition example7_weights1: matrix (T:=Q_RSOPMD) 3 1 :=
+Definition example7_weights1: matrix (T:=Q_RSOAMD) 3 1 :=
     [[toQDEP 1.294%Q], [toQDEP 1.854%Q], [toQDEP 1.394%Q]].
 
 Definition example7_biases1: matrix 3 1 :=
     [[toQDEP 0.087%Q], [toQDEP 0.703%Q], [toQDEP 0.327%Q]].
 
-Definition example7_weights2: matrix (T:=Q_RSOPMD) 3 3 :=
+Definition example7_weights2: matrix (T:=Q_RSOAMD) 3 3 :=
     [[toQDEP 1.175%Q, toQDEP 1.195%Q, toQDEP 1.885%Q],
      [toQDEP 1.659%Q, toQDEP 1.213%Q, toQDEP 1.064%Q],
      [toQDEP 1.852%Q, toQDEP 1.970%Q, toQDEP 1.168%Q]].
@@ -216,7 +216,7 @@ Definition example7_weights2: matrix (T:=Q_RSOPMD) 3 3 :=
 Definition example7_biases2: matrix 3 1 :=
     [[toQDEP 0.333%Q], [toQDEP 0.579%Q], [toQDEP 0.780%Q]].
 
-Definition example7_weights3: matrix (T:=Q_RSOPMD) 1 3 :=
+Definition example7_weights3: matrix (T:=Q_RSOAMD) 1 3 :=
     [[toQDEP 1.898%Q, toQDEP 1.033%Q, toQDEP 1.708%Q]].
 
 Definition example7_biases3: matrix 1 1 :=
@@ -239,13 +239,13 @@ End SevenActivations.
 
 Section EightActivations.
 
-Definition example8_weights1: matrix (T:=Q_RSOPMD) 4 1 :=
+Definition example8_weights1: matrix (T:=Q_RSOAMD) 4 1 :=
     [[toQDEP 1.018%Q], [toQDEP 1.937%Q], [toQDEP 1.693%Q], [toQDEP 1.631%Q]].
 
 Definition example8_biases1: matrix 4 1 :=
     [[toQDEP 0.551%Q], [toQDEP 0.096%Q], [toQDEP 0.278%Q], [toQDEP 0.916%Q]].
 
-Definition example8_weights2: matrix (T:=Q_RSOPMD) 3 4 :=
+Definition example8_weights2: matrix (T:=Q_RSOAMD) 3 4 :=
     [[toQDEP 1.317%Q, toQDEP 1.840%Q, toQDEP 1.544%Q, toQDEP 1.693%Q],
      [toQDEP 1.043%Q, toQDEP 1.639%Q, toQDEP 1.772%Q, toQDEP 1.215%Q],
      [toQDEP 1.169%Q, toQDEP 1.842%Q, toQDEP 1.555%Q, toQDEP 1.901%Q]].
@@ -253,7 +253,7 @@ Definition example8_weights2: matrix (T:=Q_RSOPMD) 3 4 :=
 Definition example8_biases2: matrix 3 1 :=
     [[toQDEP 0.374%Q], [toQDEP 0.035%Q], [toQDEP 0.754%Q]].
 
-Definition example8_weights3: matrix (T:=Q_RSOPMD) 1 3 :=
+Definition example8_weights3: matrix (T:=Q_RSOAMD) 1 3 :=
     [[toQDEP 1.570%Q, toQDEP 1.977%Q, toQDEP 1.265%Q]].
 
 Definition example8_biases3: matrix 1 1 :=
@@ -276,13 +276,13 @@ End EightActivations.
 
 Section NineActivations.
 
-Definition example9_weights1: matrix (T:=Q_RSOPMD) 4 1 :=
+Definition example9_weights1: matrix (T:=Q_RSOAMD) 4 1 :=
     [[toQDEP 1.461%Q], [toQDEP 1.154%Q], [toQDEP 1.369%Q], [toQDEP 1.702%Q]].
 
 Definition example9_biases1: matrix 4 1 :=
     [[toQDEP 0.022%Q], [toQDEP 0.332%Q], [toQDEP 0.572%Q], [toQDEP 0.399%Q]].
 
-Definition example9_weights2: matrix (T:=Q_RSOPMD) 4 4 :=
+Definition example9_weights2: matrix (T:=Q_RSOAMD) 4 4 :=
     [[toQDEP 1.678%Q, toQDEP 1.094%Q, toQDEP 1.425%Q, toQDEP 1.778%Q],
      [toQDEP 1.135%Q, toQDEP 1.586%Q, toQDEP 1.696%Q, toQDEP 1.285%Q],
      [toQDEP 1.216%Q, toQDEP 1.837%Q, toQDEP 1.447%Q, toQDEP 1.253%Q],
@@ -291,7 +291,7 @@ Definition example9_weights2: matrix (T:=Q_RSOPMD) 4 4 :=
 Definition example9_biases2: matrix 4 1 :=
     [[toQDEP 0.631%Q], [toQDEP 0.601%Q], [toQDEP 0.559%Q], [toQDEP 0.259%Q]].
 
-Definition example9_weights3: matrix (T:=Q_RSOPMD) 1 4 :=
+Definition example9_weights3: matrix (T:=Q_RSOAMD) 1 4 :=
     [[toQDEP 1.93%Q, toQDEP 1.065%Q, toQDEP 1.155%Q, toQDEP 1.790%Q]].
 
 Definition example9_biases3: matrix 1 1 :=

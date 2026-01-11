@@ -18,16 +18,16 @@ Open Scope matrix_scope.
 
 Section NNDHAffineSegmentToFME.
 
-Context {RSOPMD : RSOPMWithDiv}.
-Open Scope RSOPM_scope.
+Context {RSOAMD : RSOAMWithDiv}.
+Open Scope RSOAM_scope.
 
 Definition linsys_solution_to_colvec {d}
-  (sol: LinearSystemSolution (RSOPM:=RSOPMD) d)
+  (sol: LinearSystemSolution (RSOAM:=RSOAMD) d)
   : colvec d :=
   mk_colvec d (fun i => sol (S i)).
 
 Definition colvec_to_linsys_solution {d}
-  (v: colvec (RSOPM:=RSOPMD) d)
+  (v: colvec (RSOAM:=RSOAMD) d)
   : LinearSystemSolution d :=
   (fun i => match i with 0 => 0 | S p => coeff_colvec 0 v p end).
 
@@ -49,7 +49,7 @@ Qed.
 
 Definition W_to_linsys {d}
   (W: ConvexPolyhedron d)
-  : LinearSystem (RSOPM:=RSOPMD) d :=
+  : LinearSystem (RSOAM:=RSOAMD) d :=
   match W with
   | Polyhedron lincons => map (fun lincon => 
     match lincon with
@@ -62,7 +62,7 @@ Definition W_to_linsys {d}
 Lemma interpret_inequality_sum_n:
   forall d (sol: LinearSystemSolution d) b f,
     interpret_inequality_helper d (fun i => if i =? 0 then (- b) else f i) sol =
-    sum_n (G:=RSOPMD) (fun i => if i =? 0 then (- b) else f i * sol i) d.
+    sum_n (G:=RSOAMD) (fun i => if i =? 0 then (- b) else f i * sol i) d.
 Proof.
   intros d.
   induction d; intros sol b f.
@@ -72,17 +72,17 @@ Proof.
     rewrite plus_zero_r.
     reflexivity.
   * unfold interpret_inequality_helper.
-    fold (interpret_inequality_helper (RSOPM:=RSOPMD) d); simpl.
+    fold (interpret_inequality_helper (RSOAM:=RSOAMD) d); simpl.
     rewrite sum_Sn.
     rewrite IHd; try lia.
     unfold plus; simpl.
-    RSOPM_realize_eq.
+    RSOAM_realize_eq.
     lra.
 Qed.
 
 Lemma sum_n_case_Sn:
   forall n r f,
-    sum_n (G:=RSOPMD) (fun i => if i =? 0 then r else (f i)) (S n) =
+    sum_n (G:=RSOAMD) (fun i => if i =? 0 then r else (f i)) (S n) =
     plus (sum_n (fun i => f (S i)%nat) n) r.
 Proof.
   induction n; intros r f.
@@ -96,7 +96,7 @@ Proof.
     rewrite <- IHn; simpl.
     rewrite sum_Sn; simpl.
     unfold plus; simpl.
-    RSOPM_realize_eq; lra.
+    RSOAM_realize_eq; lra.
 Qed.
 
 Lemma interpret_inequality_helper_W_to_linsys_eq:
@@ -114,13 +114,13 @@ Proof.
     rewrite mult_zero_l.
     rewrite plus_zero_r.
     rewrite plus_zero_l.
-    RSOPM_realize_eq.
+    RSOAM_realize_eq.
     lra.
   * simpl.
     rewrite sum_n_case_Sn.
     unfold plus; simpl.
-    RSOPM_realize_eq.
-    apply (Rplus_eq_compat_r (- INJ_RSOPM RSOPMD b)).
+    RSOAM_realize_eq.
+    apply (Rplus_eq_compat_r (- INJ_RSOAM RSOAMD b)).
     f_equal.
     apply sum_n_ext_loc.
     intros i H.
@@ -149,7 +149,7 @@ Proof.
 Qed.
 
 Lemma W_to_linsys_solution:
-  forall d (sol: LinearSystemSolution (RSOPM:=RSOPMD) d) W,
+  forall d (sol: LinearSystemSolution (RSOAM:=RSOAMD) d) W,
     is_linear_system_solution (W_to_linsys W) sol ->
     in_convex_polyhedron (linsys_solution_to_colvec sol) W.
 Proof.
@@ -177,7 +177,7 @@ Proof.
 Qed.
 
 Lemma solution_W_to_linsys:
-  forall d (x: colvec (RSOPM:=RSOPMD) d) W,
+  forall d (x: colvec (RSOAM:=RSOAMD) d) W,
     in_convex_polyhedron x W ->
     is_linear_system_solution (W_to_linsys W) (colvec_to_linsys_solution x).
 Proof.
@@ -197,7 +197,7 @@ Proof.
     rewrite linsys_solution_colvec_inverse.
     apply ax_real_leq_true.
     apply ax_real_leq_true in H.
-    RSOPM_realize; lra.
+    RSOAM_realize; lra.
   * apply IHlcs.
     intros constraint HIn.
     apply H, in_cons, HIn.
@@ -205,7 +205,7 @@ Qed.
 
 Definition p_to_linsys {d}
   (p: ConvexPolyhedron (d + d))
-  : LinearSystem (RSOPM:=RSOPMD) d :=
+  : LinearSystem (RSOAM:=RSOAMD) d :=
   match p with
   | Polyhedron lincons => map (fun lincon => 
     match lincon with
@@ -237,16 +237,16 @@ Proof.
     rewrite coeff_mat_bij; try lia.
     do 2 (rewrite coeff_mat_default; try lia).
     unfold plus, mult, zero; simpl.
-    RSOPM_realize_eq.
+    RSOAM_realize_eq.
     lra.
   * rewrite coeff_mat_bij; try lia.
     rewrite sum_n_case_Sn.
     unfold plus; simpl.
-    RSOPM_realize_eq.
-    apply (Rplus_eq_compat_r (- INJ_RSOPM RSOPMD b)).
+    RSOAM_realize_eq.
+    apply (Rplus_eq_compat_r (- INJ_RSOAM RSOAMD b)).
     rewrite <- ax_real_plus.
     f_equal.
-    pose proof (sum_n_plus (G:=RSOPMD)) as Hhelp.
+    pose proof (sum_n_plus (G:=RSOAMD)) as Hhelp.
     unfold plus in Hhelp; simpl in Hhelp.
     rewrite <- Hhelp; clear Hhelp.
     apply sum_n_ext_loc.
@@ -259,7 +259,7 @@ Proof.
     repeat rewrite coeff_mat_bij; try lia.
     rewrite Nat.sub_0_r.
     unfold mult; simpl.
-    RSOPM_realize_eq.
+    RSOAM_realize_eq.
     lra.
 Qed.
 
@@ -282,7 +282,7 @@ Proof.
 Qed.
 
 Lemma p_to_linsys_solution:
-  forall d (sol: LinearSystemSolution (RSOPM:=RSOPMD) d) p,
+  forall d (sol: LinearSystemSolution (RSOAM:=RSOAMD) d) p,
     is_linear_system_solution (p_to_linsys p) sol ->
     in_convex_polyhedron (colvec_concat (linsys_solution_to_colvec sol) (linsys_solution_to_colvec sol)) p.
 Proof.
@@ -310,7 +310,7 @@ Proof.
 Qed.
 
 Lemma solution_p_to_linsys:
-  forall d (x: colvec (RSOPM:=RSOPMD) d) p,
+  forall d (x: colvec (RSOAM:=RSOAMD) d) p,
     in_convex_polyhedron (colvec_concat x x) p ->
     is_linear_system_solution (p_to_linsys p) (colvec_to_linsys_solution x).
 Proof.
@@ -330,15 +330,15 @@ Proof.
     rewrite linsys_solution_colvec_inverse.
     apply ax_real_leq_true.
     apply ax_real_leq_true in H.
-    RSOPM_realize; lra.
+    RSOAM_realize; lra.
   * apply IHlcs.
     intros constraint HIn.
     apply H, in_cons, HIn.  
 Qed.  
 
 Definition af_to_linsys {d : nat} 
-  (af: AffineFunction (RSOPM:=RSOPMD) (d + d) 1) 
-  : LinearSystem (RSOPM:=RSOPMD) d :=
+  (af: AffineFunction (RSOAM:=RSOAMD) (d + d) 1) 
+  : LinearSystem (RSOAM:=RSOAMD) d :=
       match af with
       | Affine C b =>
         cons (Strict _ (fun i =>
@@ -347,7 +347,7 @@ Definition af_to_linsys {d : nat}
       end.
 
 Lemma interpret_inequality_helper_af_to_linsys_eq:
-  forall d (sol: LinearSystemSolution d) (M_af: matrix (T:=RSOPMD) 1 (d + d)) (b_af: matrix (T:=RSOPMD) 1 1),
+  forall d (sol: LinearSystemSolution d) (M_af: matrix (T:=RSOAMD) 1 (d + d)) (b_af: matrix (T:=RSOAMD) 1 1),
     interpret_inequality_helper _
      (fun i : nat => if i =? 0 then 
                         coeff_mat 0 b_af 0 0 
@@ -363,14 +363,14 @@ Proof.
           dot (transpose M_af) (colvec_concat (linsys_solution_to_colvec sol) (linsys_solution_to_colvec sol))).
           unfold dot. rewrite transpose_transpose. reflexivity.
   rewrite Hhelp; clear Hhelp.
-  assert (Hhelp: forall (r:T RSOPMD), r = - - r). intros r; RSOPM_realize_eq; lra.
+  assert (Hhelp: forall (r:T RSOAMD), r = - - r). intros r; RSOAM_realize_eq; lra.
   rewrite (Hhelp (coeff_mat zero b_af 0 0)).
-  unfold plus; simpl; fold (RSplus (RSOPM:=RSOPMD)).
+  unfold plus; simpl; fold (RSplus (RSOAM:=RSOAMD)).
   rewrite <- interpret_inequality_helper_p_to_linsys_eq.
   rewrite <- Hhelp.
   unfold zero, coeff_colvec; simpl.
   unfold transpose.
-  fold (RSzero (RSOPM:=RSOPMD)).
+  fold (RSzero (RSOAM:=RSOAMD)).
   f_equal. apply FunctionalExtensionality.functional_extensionality_dep; intro x.
   destruct (Nat.lt_ge_cases (x - 1 + d) (d + d)); destruct (Nat.lt_ge_cases (x - 1) (d + d)).
   * repeat (rewrite coeff_mat_bij; try lia).
@@ -386,7 +386,7 @@ Proof.
 Qed.
 
 Lemma af_to_linsys_solution:
-  forall d (sol: LinearSystemSolution (RSOPM:=RSOPMD) d) af,
+  forall d (sol: LinearSystemSolution (RSOAM:=RSOAMD) d) af,
     is_linear_system_solution (af_to_linsys af) sol ->
     forall val,
       is_affine_f_value af (colvec_concat (linsys_solution_to_colvec sol) (linsys_solution_to_colvec sol)) val ->
@@ -406,7 +406,7 @@ Proof.
 Qed.
 
 Lemma solution_af_to_linsys:
-  forall d (x: colvec (RSOPM:=RSOPMD) d) af val,
+  forall d (x: colvec (RSOAM:=RSOAMD) d) af val,
     is_affine_f_value af (colvec_concat x x) val ->
     (0 <= toRS val) = false ->
     is_linear_system_solution (af_to_linsys af) (colvec_to_linsys_solution x).
@@ -425,15 +425,15 @@ Proof.
 Qed.
 
 Definition satisfaction_as_linear_system {d: nat}
-    (affine_seg: AffineSegment (RSOPM:=RSOPMD) (d + d) 1)
-    (W: ConvexPolyhedron (RSOPM:=RSOPMD) d)
-    : LinearSystem (RSOPM:=RSOPMD) d :=
+    (affine_seg: AffineSegment (RSOAM:=RSOAMD) (d + d) 1)
+    (W: ConvexPolyhedron (RSOAM:=RSOAMD) d)
+    : LinearSystem (RSOAM:=RSOAMD) d :=
       match affine_seg with
         | Segment p af => (W_to_linsys W) ++ (p_to_linsys p) ++ (af_to_linsys af)
       end.
 
 Theorem satisfaction_as_linear_system_correct {d: nat}:
-    forall affine_seg (W: ConvexPolyhedron (RSOPM:=RSOPMD) d),
+    forall affine_seg (W: ConvexPolyhedron (RSOAM:=RSOAMD) d),
         satisfaction_over_segment affine_seg W <-> 
         fme_solve (satisfaction_as_linear_system affine_seg W) = None.
 Proof.
@@ -491,13 +491,13 @@ End NNDHAffineSegmentToFME.
 
 Section NNHyperpropertyVerification.
 
-Context {RSOPMD : RSOPMWithDiv}.
-Open Scope RSOPM_scope.
+Context {RSOAMD : RSOAMWithDiv}.
+Open Scope RSOAM_scope.
 
 (* Automated verification of neural network hyperproperties *)
 
 Fixpoint verify_hyperporperty_helper {d: nat}
-    (W: ConvexPolyhedron (RSOPM:=RSOPMD) d)
+    (W: ConvexPolyhedron (RSOAM:=RSOAMD) d)
     (body: list (AffineSegment (d + d) 1)) :=
     match body with
     | nil => None

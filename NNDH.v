@@ -17,27 +17,27 @@ Open Scope matrix_scope.
 
 Section NeuralNetworkDefinedHyperproperties.
 
-Context {RSOPM : RealSubsetOPM}.
-Open Scope RSOPM_scope.
+Context {RSOAM : RealSubsetOAM}.
+Open Scope RSOAM_scope.
 
 (** Neural network hyperproperty *)
 
 Inductive NNHyperproperty {nn_in_dim nn_out_dim : nat} :=
   | NNDH 
       (r w : nat)
-      (W : ConvexPolyhedron (RSOPM:=RSOPM) w)
-      (netIn : TPWAF (RSOPM:=RSOPM) (in_dim:=w) (out_dim:=r * nn_in_dim))
-      (netSat : TPWAF (RSOPM:=RSOPM) 
+      (W : ConvexPolyhedron (RSOAM:=RSOAM) w)
+      (netIn : TPWAF (RSOAM:=RSOAM) (in_dim:=w) (out_dim:=r * nn_in_dim))
+      (netSat : TPWAF (RSOAM:=RSOAM) 
         (in_dim:=(r * nn_in_dim) + (r * nn_out_dim)) (out_dim:=1)).
 
 (** Semantics over a neural network *)
 
-Definition toRS (c: colvec 1): T RSOPM := coeff_colvec 0 c 0.
+Definition toRS (c: colvec 1): T RSOAM := coeff_colvec 0 c 0.
 
 Fixpoint eval_nn_multiple {r} {nn_in_dim nn_out_dim: nat}
   (nn: TPWANNSequential (output_dim:=nn_out_dim))
   (inputs: colvec (r * nn_in_dim))
-  : colvec (RSOPM:=RSOPM) (r * nn_out_dim) :=
+  : colvec (RSOAM:=RSOAM) (r * nn_out_dim) :=
   match r with
   | 0 => null_vector (0 * nn_out_dim)
   | S n => 
@@ -53,7 +53,7 @@ Definition nn_satisfies_nndh {nn_in_dim nn_out_dim: nat}
   :=
   match nndh with 
   | NNDH r w W netIn netSat =>
-    forall (x: colvec (RSOPM:=RSOPM) w), in_convex_polyhedron x W -> 
+    forall (x: colvec (RSOAM:=RSOAM) w), in_convex_polyhedron x W -> 
       let input_set := tpwaf_eval netIn x in 
       let output_set := eval_nn_multiple nn input_set in
         0 <= toRS (tpwaf_eval netSat (colvec_concat input_set output_set)) = true
@@ -62,8 +62,8 @@ Definition nn_satisfies_nndh {nn_in_dim nn_out_dim: nat}
 (** Semantics over a PWAF *)
 
 Lemma repeat_concat_helper {m n}:
-    PWAF (RSOPM:=RSOPM) (in_dim:= 0) (out_dim:=0) -> 
-    PWAF (RSOPM:=RSOPM) (in_dim := 0 * m) (out_dim:=0 * n).
+    PWAF (RSOAM:=RSOAM) (in_dim:= 0) (out_dim:=0) -> 
+    PWAF (RSOAM:=RSOAM) (in_dim := 0 * m) (out_dim:=0 * n).
 Proof.
   intros H; apply H.
 Defined.
@@ -80,7 +80,7 @@ Fixpoint repeat_concat {pwaf_in_dim pwaf_out_dim: nat}
 Definition joint_pwaf {pwaf_in_dim pwaf_out_dim r w: nat}
   (netIn: PWAF (in_dim:=w)) 
   (netSat: PWAF (out_dim:=1))
-  (pwaf: PWAF (RSOPM:=RSOPM) (in_dim:=pwaf_in_dim) (out_dim:=pwaf_out_dim))
+  (pwaf: PWAF (RSOAM:=RSOAM) (in_dim:=pwaf_in_dim) (out_dim:=pwaf_out_dim))
   : PWAF
   :=
   pwaf_compose netSat (pwaf_concat netIn (pwaf_compose (repeat_concat r pwaf) netIn)).
@@ -92,7 +92,7 @@ Definition pwaf_satisfies_nndh {pwaf_in_dim pwaf_out_dim: nat}
   :=
   match nndh with
   | NNDH r w W netIn netSat =>
-    forall (x: colvec (RSOPM:=RSOPM) w), in_convex_polyhedron x W ->
+    forall (x: colvec (RSOAM:=RSOAM) w), in_convex_polyhedron x W ->
       match pwaf_eval (joint_pwaf netIn netSat pwaf) (colvec_concat x x) with
       | Some r => 0 <= toRS r = true
       | None => True
@@ -103,14 +103,14 @@ End NeuralNetworkDefinedHyperproperties.
 
 Section NNHyperpropertySemanticsRelationships.
 
-Context {RSOPM : RealSubsetOPM}.
-Open Scope RSOPM_scope.
+Context {RSOAM : RealSubsetOAM}.
+Open Scope RSOAM_scope.
 
 (** Relationship between hyperproperties on NNs and PWAFs *)
 
 Lemma pwaf_tpwaf_compose {in_dim hidden_dim out_dim: nat}:
   forall
-    (f: TPWAF (RSOPM:=RSOPM) (in_dim:=hidden_dim) (out_dim:=out_dim))
+    (f: TPWAF (RSOAM:=RSOAM) (in_dim:=hidden_dim) (out_dim:=out_dim))
     (g: TPWAF (in_dim:=in_dim) (out_dim:=hidden_dim)),
       pwaf_compose f g = tpwaf_compose f g.
 Proof.
@@ -119,7 +119,7 @@ Qed.
 
 Lemma pwaf_tpwaf_concat {in_dim1 in_dim2 out_dim1 out_dim2: nat}:
   forall
-    (f: TPWAF (RSOPM:=RSOPM) (in_dim:=in_dim1) (out_dim:=out_dim1))
+    (f: TPWAF (RSOAM:=RSOAM) (in_dim:=in_dim1) (out_dim:=out_dim1))
     (g: TPWAF (in_dim:=in_dim2) (out_dim:=out_dim2)),
       pwaf_concat f g = tpwaf_concat f g.
 Proof.
@@ -128,8 +128,8 @@ Qed.
 
 Lemma repeat_concat_total_helper:
   forall m n, 
-    TPWAF (RSOPM:=RSOPM) (in_dim:= 0) (out_dim:=0) -> 
-    TPWAF (RSOPM:=RSOPM) (in_dim := 0 * m) (out_dim:=0 * n).
+    TPWAF (RSOAM:=RSOAM) (in_dim:= 0) (out_dim:=0) -> 
+    TPWAF (RSOAM:=RSOAM) (in_dim := 0 * m) (out_dim:=0 * n).
 Proof.
   intros m n H. do 2 unfold Nat.mul. apply H.
 Defined.
@@ -156,7 +156,7 @@ Proof.
 Qed.
 
 Lemma tpwaf_eval_is_value {in_dim out_dim}:
-  forall (f: TPWAF (RSOPM:=RSOPM) (in_dim:=in_dim) (out_dim:=out_dim)) x fx, 
+  forall (f: TPWAF (RSOAM:=RSOAM) (in_dim:=in_dim) (out_dim:=out_dim)) x fx, 
   is_pwaf_value f x fx <-> tpwaf_eval f x = fx.
 Proof.
   intros f x fx.
@@ -173,7 +173,7 @@ Qed.
 
 Lemma tpwaf_eval_concat {in_dim1 in_dim2 out_dim1 out_dim2}:
   forall 
-    (tpwaf1: TPWAF (RSOPM:=RSOPM) (in_dim:=in_dim1) (out_dim:=out_dim1)) 
+    (tpwaf1: TPWAF (RSOAM:=RSOAM) (in_dim:=in_dim1) (out_dim:=out_dim1)) 
     (tpwaf2: TPWAF (in_dim:=in_dim2) (out_dim:=out_dim2)) x1 x2,
     tpwaf_eval (tpwaf_concat tpwaf1 tpwaf2) (colvec_concat x1 x2) =
       colvec_concat (tpwaf_eval tpwaf1 x1) (tpwaf_eval tpwaf2 x2).
@@ -188,7 +188,7 @@ Lemma tpwaf_eval_compose {in_dim hid_dim out_dim}:
     (x: colvec in_dim) 
     (f: TPWAF (in_dim:=hid_dim) (out_dim:=out_dim))
     (g: TPWAF (in_dim:=in_dim) (out_dim:=hid_dim)),
-      tpwaf_eval (tpwaf_compose (RSOPM:=RSOPM) f g) x = 
+      tpwaf_eval (tpwaf_compose (RSOAM:=RSOAM) f g) x = 
       tpwaf_eval f (tpwaf_eval g x).
 Proof.
   intros x f g.
@@ -201,7 +201,7 @@ Qed.
 
 Lemma repeat_concat_total_is_eval_multiple_nn {in_dim out_dim}:
   forall
-    (nn: TPWANNSequential (RSOPM:=RSOPM) (input_dim:=in_dim) (output_dim:=out_dim))
+    (nn: TPWANNSequential (RSOAM:=RSOAM) (input_dim:=in_dim) (output_dim:=out_dim))
     nn_asd r x,
     nn_asd = asd nn ->
     tpwaf_eval (repeat_concat_total r nn_asd) x = eval_nn_multiple nn x.
@@ -229,7 +229,7 @@ Qed.
 
 Theorem asd_preserves_satisfiability {in_dim out_dim: nat}:
   forall 
-    (nn: TPWANNSequential (RSOPM:=RSOPM) (input_dim:=in_dim) (output_dim:=out_dim)) 
+    (nn: TPWANNSequential (RSOAM:=RSOAM) (input_dim:=in_dim) (output_dim:=out_dim)) 
     nndh nn_asd,
     nn_asd = asd nn ->
     (nn_satisfies_nndh nn nndh <-> pwaf_satisfies_nndh nn_asd nndh).
@@ -269,13 +269,13 @@ End NNHyperpropertySemanticsRelationships.
 
 Section NNHyperpropertyComponentSplit.
 
-Context {RSOPM : RealSubsetOPM}.
-Open Scope RSOPM_scope.
+Context {RSOAM : RealSubsetOAM}.
+Open Scope RSOAM_scope.
 
 (** Verification of a hypeproperty over individual affine segments *)
 
 Definition satisfaction_over_segment {w: nat}
-  (affine_seg: AffineSegment (RSOPM:=RSOPM) (w + w) 1)
+  (affine_seg: AffineSegment (RSOAM:=RSOAM) (w + w) 1)
   (W: ConvexPolyhedron w)
   : Prop
   := 
@@ -297,7 +297,7 @@ Definition nndh_pwaf_segment_split {pwaf_in_dim pwaf_out_dim: nat}
   end.
 
 Theorem pwaf_satisfiability_segments_split {in_dim out_dim}:
-  forall nndh (pwaf: PWAF (RSOPM:=RSOPM) (in_dim:=in_dim) (out_dim:=out_dim)),
+  forall nndh (pwaf: PWAF (RSOAM:=RSOAM) (in_dim:=in_dim) (out_dim:=out_dim)),
     pwaf_satisfies_nndh pwaf nndh <-> nndh_pwaf_segment_split pwaf nndh.
 Proof.
   intros nndh pwaf.

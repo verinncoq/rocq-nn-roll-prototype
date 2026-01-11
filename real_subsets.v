@@ -3,56 +3,56 @@ From Coquelicot Require Import Coquelicot.
 
 Section RealSubsetsTypes.
 
-(* Real Subset - Order, Plus and Multiplication *)
-Record RealSubsetOPM := BuildRSOPM {
+(* Real Subset - Order, Addition and Multiplication *)
+Record RealSubsetOAM := BuildRSOAM {
     T: Type;
-    INJ_RSOPM: T -> R;
-    RSOPM_zero: T;
-    RSOPM_one: T;
-    RSOPM_opp: T -> T;
-    RSOPM_le: T -> T -> bool;
-    RSOPM_plus: T -> T -> T;
-    RSOPM_mult: T -> T -> T;
+    INJ_RSOAM: T -> R;
+    RSOAM_zero: T;
+    RSOAM_one: T;
+    RSOAM_opp: T -> T;
+    RSOAM_le: T -> T -> bool;
+    RSOAM_plus: T -> T -> T;
+    RSOAM_mult: T -> T -> T;
     ax_equality: forall x y,
-        INJ_RSOPM x = INJ_RSOPM y -> x = y;
+        INJ_RSOAM x = INJ_RSOAM y -> x = y;
     ax_zero_is_zero:
-        INJ_RSOPM RSOPM_zero = 0%R;
+        INJ_RSOAM RSOAM_zero = 0%R;
     ax_one_is_one:
-        INJ_RSOPM RSOPM_one = 1%R;
+        INJ_RSOAM RSOAM_one = 1%R;
     ax_opp_is_opp: forall x,
-        INJ_RSOPM (RSOPM_opp x) = Ropp (INJ_RSOPM x); 
+        INJ_RSOAM (RSOAM_opp x) = Ropp (INJ_RSOAM x); 
     ax_real_leq_true: forall x y,
-        RSOPM_le x y = true <-> Rle (INJ_RSOPM x) (INJ_RSOPM y);
+        RSOAM_le x y = true <-> Rle (INJ_RSOAM x) (INJ_RSOAM y);
     ax_real_leq_false: forall x y,
-        RSOPM_le x y = false <-> Rlt (INJ_RSOPM y) (INJ_RSOPM x);
+        RSOAM_le x y = false <-> Rlt (INJ_RSOAM y) (INJ_RSOAM x);
     ax_real_plus: forall x y,
-        INJ_RSOPM (RSOPM_plus x y) = Rplus (INJ_RSOPM x) (INJ_RSOPM y);
+        INJ_RSOAM (RSOAM_plus x y) = Rplus (INJ_RSOAM x) (INJ_RSOAM y);
     ax_real_mult: forall x y,
-        INJ_RSOPM (RSOPM_mult x y) = Rmult (INJ_RSOPM x) (INJ_RSOPM y) 
+        INJ_RSOAM (RSOAM_mult x y) = Rmult (INJ_RSOAM x) (INJ_RSOAM y) 
 }.
 
 End RealSubsetsTypes.
 
 Section RealSubsetExtensions.
 
-Context {RSOPM: RealSubsetOPM}.
+Context {RSOAM: RealSubsetOAM}.
 
-Definition RSeq (x y: (T RSOPM)) :=
-    match RSOPM_le RSOPM x y, RSOPM_le RSOPM y x with
+Definition RSeq (x y: (T RSOAM)) :=
+    match RSOAM_le RSOAM x y, RSOAM_le RSOAM y x with
     | true, true => true
     | _, _ => false
     end.
 
-Definition RSlt (x y: (T RSOPM)) :=
-    match RSOPM_le RSOPM x y, RSOPM_le RSOPM y x with
+Definition RSlt (x y: (T RSOAM)) :=
+    match RSOAM_le RSOAM x y, RSOAM_le RSOAM y x with
     | true, false => true
     | _, _ => false
     end.
 
-Definition RSge (x y: (T RSOPM)) :=
-    RSOPM_le RSOPM y x.
+Definition RSge (x y: (T RSOAM)) :=
+    RSOAM_le RSOAM y x.
 
-Definition RSgt (x y: (T RSOPM)) :=
+Definition RSgt (x y: (T RSOAM)) :=
     RSlt y x.
     
 End RealSubsetExtensions.
@@ -60,40 +60,40 @@ End RealSubsetExtensions.
 
 Module RealSubsetNotations.
     
-Declare Scope RSOPM_scope.
-Delimit Scope RSOPM_scope with RS. 
+Declare Scope RSOAM_scope.
+Delimit Scope RSOAM_scope with RS. 
 
-Definition RS {RSOPM: RealSubsetOPM} := T RSOPM.
+Definition RS {RSOAM: RealSubsetOAM} := T RSOAM.
 
-Definition RSzero {RSOPM: RealSubsetOPM} := RSOPM_zero RSOPM.
-Notation "0" := RSzero: RSOPM_scope.
+Definition RSzero {RSOAM: RealSubsetOAM} := RSOAM_zero RSOAM.
+Notation "0" := RSzero: RSOAM_scope.
 
-Definition RSone {RSOPM: RealSubsetOPM} := RSOPM_one RSOPM.
-Notation "1" := RSone: RSOPM_scope.
+Definition RSone {RSOAM: RealSubsetOAM} := RSOAM_one RSOAM.
+Notation "1" := RSone: RSOAM_scope.
 
-Definition RSopp {RSOPM: RealSubsetOPM} := RSOPM_opp RSOPM.
-Notation "- x" := (RSopp x) : RSOPM_scope.
+Definition RSopp {RSOAM: RealSubsetOAM} := RSOAM_opp RSOAM.
+Notation "- x" := (RSopp x) : RSOAM_scope.
 
-Definition RSle {RSOPM: RealSubsetOPM} := RSOPM_le RSOPM.
-Infix "<=" := RSle : RSOPM_scope.
+Definition RSle {RSOAM: RealSubsetOAM} := RSOAM_le RSOAM.
+Infix "<=" := RSle : RSOAM_scope.
 
-Infix "<" := RSlt : RSOPM_scope.
-Infix ">=" := RSge : RSOPM_scope.
-Infix ">" := RSgt : RSOPM_scope.
-Infix "==" := RSeq (at level 70, no associativity): RSOPM_scope.
+Infix "<" := RSlt : RSOAM_scope.
+Infix ">=" := RSge : RSOAM_scope.
+Infix ">" := RSgt : RSOAM_scope.
+Infix "==" := RSeq (at level 70, no associativity): RSOAM_scope.
 
-Definition RSplus {RSOPM: RealSubsetOPM} := RSOPM_plus RSOPM.
-Infix "+" := RSplus : RSOPM_scope.
+Definition RSplus {RSOAM: RealSubsetOAM} := RSOAM_plus RSOAM.
+Infix "+" := RSplus : RSOAM_scope.
 
-Definition RSmult {RSOPM: RealSubsetOPM} := RSOPM_mult RSOPM.
-Infix "*" := RSmult : RSOPM_scope.
+Definition RSmult {RSOAM: RealSubsetOAM} := RSOAM_mult RSOAM.
+Infix "*" := RSmult : RSOAM_scope.
 
 End RealSubsetNotations.
 
 Import RealSubsetNotations.
-Open Scope RSOPM_scope.
+Open Scope RSOAM_scope.
 
-Ltac RSOPM_realize :=
+Ltac RSOAM_realize :=
     repeat (
         rewrite ax_zero_is_zero ||
         rewrite ax_one_is_one ||
@@ -102,94 +102,94 @@ Ltac RSOPM_realize :=
         rewrite ax_real_mult
     ).
 
-Ltac RSOPM_realize_eq :=
+Ltac RSOAM_realize_eq :=
     repeat intro;
     apply ax_equality;
-    RSOPM_realize.
+    RSOAM_realize.
 
-Ltac RSOPM_solve :=
-    RSOPM_realize_eq; lra.
+Ltac RSOAM_solve :=
+    RSOAM_realize_eq; lra.
 
 Section SubsetsLemmas.
 
-Context {RSOPM: RealSubsetOPM}.
+Context {RSOAM: RealSubsetOAM}.
 
-Lemma RSOPM_plus_comm:
-    forall (x y: T RSOPM),
+Lemma RSOAM_plus_comm:
+    forall (x y: T RSOAM),
         x + y = y + x.
 Proof.
     intros x y. apply ax_equality.
-    RSOPM_realize; apply Rplus_comm.
+    RSOAM_realize; apply Rplus_comm.
 Qed.
 
-Lemma RSOPM_plus_assoc:
-    forall (x y z: T RSOPM),
+Lemma RSOAM_plus_assoc:
+    forall (x y z: T RSOAM),
         x + (y + z) = (x + y) + z.
 Proof.
     intros x y z. apply ax_equality.
-    RSOPM_realize; symmetry; apply Rplus_assoc.
+    RSOAM_realize; symmetry; apply Rplus_assoc.
 Qed.
 
-Lemma RSOPM_plus_0_r:
-    forall (x : T RSOPM),
+Lemma RSOAM_plus_0_r:
+    forall (x : T RSOAM),
         x + 0 = x.
 Proof.
     intros x. apply ax_equality.
-    RSOPM_realize; apply Rplus_0_r.
+    RSOAM_realize; apply Rplus_0_r.
 Qed.
 
-Lemma RSOPM_plus_opp:
-    forall (x: T RSOPM),
+Lemma RSOAM_plus_opp:
+    forall (x: T RSOAM),
         x + - x = 0.
 Proof.
     intros x. apply ax_equality.
-    RSOPM_realize.
+    RSOAM_realize.
     apply Rplus_opp_r.
 Qed.
 
-Lemma RSOPM_mult_assoc:
-    forall (x y z: T RSOPM),
+Lemma RSOAM_mult_assoc:
+    forall (x y z: T RSOAM),
         x * (y * z) = (x * y) * z.
 Proof.
     intros x y z. apply ax_equality.
-    RSOPM_realize.
+    RSOAM_realize.
     symmetry.
     apply Rmult_assoc.
 Qed.
 
-Lemma RSOPM_mult_one_r:
-    forall (x: T RSOPM),
+Lemma RSOAM_mult_one_r:
+    forall (x: T RSOAM),
         x * 1 = x.
 Proof.
     intros x. apply ax_equality.
-    RSOPM_realize.
+    RSOAM_realize.
     apply Rmult_1_r.
 Qed.
 
-Lemma RSOPM_mult_one_l:
-    forall (x: T RSOPM),
+Lemma RSOAM_mult_one_l:
+    forall (x: T RSOAM),
         1 * x = x.
 Proof.
     intros x. apply ax_equality.
-    RSOPM_realize.
+    RSOAM_realize.
     apply Rmult_1_l.
 Qed.
 
-Lemma RSOPM_mult_plus_distr_r:
-    forall (x y z: T RSOPM),
+Lemma RSOAM_mult_plus_distr_r:
+    forall (x y z: T RSOAM),
         (x + y) * z = (x * z) + (y * z).
 Proof.
     intros x y z. apply ax_equality.
-    RSOPM_realize.
+    RSOAM_realize.
     apply Rmult_plus_distr_r.
 Qed.
 
-Lemma RSOPM_mult_plus_distr_l:
-    forall (x y z: T RSOPM),
+Lemma RSOAM_mult_plus_distr_l:
+    forall (x y z: T RSOAM),
         x * (y + z) = (x * y) + (x * z).
 Proof.
     intros x y z. apply ax_equality.
-    RSOPM_realize.
+    RSOAM_realize.
     apply Rmult_plus_distr_l.
 Qed.
 
@@ -197,63 +197,63 @@ End SubsetsLemmas.
 
 Section SubsetsInHierarchy.
 
-(* RSOPM is always an abelian monoid *)
+(* RSOAM is always an abelian monoid *)
 
-Definition RSOPM_AbelianMonoid_Mixin (RSOPM: RealSubsetOPM)
-    : AbelianMonoid.class_of (T RSOPM) :=
-    AbelianMonoid.Mixin (T RSOPM) (RSOPM_plus RSOPM) 
-        (RSOPM_zero RSOPM) (RSOPM_plus_comm)
-        (RSOPM_plus_assoc) (RSOPM_plus_0_r).
+Definition RSOAM_AbelianMonoid_Mixin (RSOAM: RealSubsetOAM)
+    : AbelianMonoid.class_of (T RSOAM) :=
+    AbelianMonoid.Mixin (T RSOAM) (RSOAM_plus RSOAM) 
+        (RSOAM_zero RSOAM) (RSOAM_plus_comm)
+        (RSOAM_plus_assoc) (RSOAM_plus_0_r).
 
-Definition RSOPM_AbelianMonoid (RSOPM: RealSubsetOPM): AbelianMonoid :=
-    AbelianMonoid.Pack (T RSOPM) (RSOPM_AbelianMonoid_Mixin RSOPM) (T RSOPM).
+Definition RSOAM_AbelianMonoid (RSOAM: RealSubsetOAM): AbelianMonoid :=
+    AbelianMonoid.Pack (T RSOAM) (RSOAM_AbelianMonoid_Mixin RSOAM) (T RSOAM).
 
-(* RSOPM is always an abelian group *)
+(* RSOAM is always an abelian group *)
 
-Definition RSOPM_AbelianGroup_Mixin (RSOPM: RealSubsetOPM)
-    : AbelianGroup.mixin_of (RSOPM_AbelianMonoid RSOPM) :=
-    AbelianGroup.Mixin (RSOPM_AbelianMonoid RSOPM) (RSOPM_opp RSOPM) RSOPM_plus_opp.
+Definition RSOAM_AbelianGroup_Mixin (RSOAM: RealSubsetOAM)
+    : AbelianGroup.mixin_of (RSOAM_AbelianMonoid RSOAM) :=
+    AbelianGroup.Mixin (RSOAM_AbelianMonoid RSOAM) (RSOAM_opp RSOAM) RSOAM_plus_opp.
 
-Definition RSOPM_AbelianGroup_Class (RSOPM: RealSubsetOPM)
-    : AbelianGroup.class_of (T RSOPM) 
+Definition RSOAM_AbelianGroup_Class (RSOAM: RealSubsetOAM)
+    : AbelianGroup.class_of (T RSOAM) 
     :=
-    AbelianGroup.Class (T RSOPM) (RSOPM_AbelianMonoid_Mixin RSOPM) 
-        (RSOPM_AbelianGroup_Mixin RSOPM).
+    AbelianGroup.Class (T RSOAM) (RSOAM_AbelianMonoid_Mixin RSOAM) 
+        (RSOAM_AbelianGroup_Mixin RSOAM).
 
-Definition RSOPM_AbelianGroup (RSOPM: RealSubsetOPM): AbelianGroup :=
-    AbelianGroup.Pack (T RSOPM) (RSOPM_AbelianGroup_Class RSOPM) (T RSOPM).
+Definition RSOAM_AbelianGroup (RSOAM: RealSubsetOAM): AbelianGroup :=
+    AbelianGroup.Pack (T RSOAM) (RSOAM_AbelianGroup_Class RSOAM) (T RSOAM).
 
-(* RSOPM is always a ring *)
+(* RSOAM is always a ring *)
 
-Definition RSOPM_Ring_Mixin (RSOPM: RealSubsetOPM) 
-    : Ring.mixin_of (RSOPM_AbelianGroup RSOPM) 
+Definition RSOAM_Ring_Mixin (RSOAM: RealSubsetOAM) 
+    : Ring.mixin_of (RSOAM_AbelianGroup RSOAM) 
     :=
-    Ring.Mixin (RSOPM_AbelianGroup RSOPM) (RSOPM_mult RSOPM) (RSOPM_one RSOPM)
-        RSOPM_mult_assoc RSOPM_mult_one_r RSOPM_mult_one_l
-        RSOPM_mult_plus_distr_r RSOPM_mult_plus_distr_l.
+    Ring.Mixin (RSOAM_AbelianGroup RSOAM) (RSOAM_mult RSOAM) (RSOAM_one RSOAM)
+        RSOAM_mult_assoc RSOAM_mult_one_r RSOAM_mult_one_l
+        RSOAM_mult_plus_distr_r RSOAM_mult_plus_distr_l.
 
-Definition RSOPM_Ring_Class (RSOPM: RealSubsetOPM) : Ring.class_of (T RSOPM) :=
-    Ring.Class (T RSOPM) (RSOPM_AbelianGroup_Class RSOPM) (RSOPM_Ring_Mixin RSOPM).
+Definition RSOAM_Ring_Class (RSOAM: RealSubsetOAM) : Ring.class_of (T RSOAM) :=
+    Ring.Class (T RSOAM) (RSOAM_AbelianGroup_Class RSOAM) (RSOAM_Ring_Mixin RSOAM).
 
-Definition RSOPM_Ring (RSOPM: RealSubsetOPM): Ring :=
-    Ring.Pack (T RSOPM) (RSOPM_Ring_Class RSOPM) (T RSOPM).
+Definition RSOAM_Ring (RSOAM: RealSubsetOAM): Ring :=
+    Ring.Pack (T RSOAM) (RSOAM_Ring_Class RSOAM) (T RSOAM).
 
-Coercion RSOPM_Ring : RealSubsetOPM >-> Ring.
+Coercion RSOAM_Ring : RealSubsetOAM >-> Ring.
 
 End SubsetsInHierarchy.
 
-Section RSOPMMiscLemmata.
+Section RSOAMMiscLemmata.
 
-Context {RSOPM: RealSubsetOPM}.
+Context {RSOAM: RealSubsetOAM}.
 
-Lemma RSOPM_le_plus_opp_r:
-    forall (x y z: T RSOPM),
+Lemma RSOAM_le_plus_opp_r:
+    forall (x y z: T RSOAM),
       (x + y <= z) = true ->
       x <= z + (- y) = true.
 Proof.
     intros x y z H.
     apply ax_real_leq_true.
-    RSOPM_realize.
+    RSOAM_realize.
     rewrite <- Rminus_def.
     rewrite Rle_minus_r.
     apply ax_real_leq_true in H.
@@ -261,14 +261,14 @@ Proof.
     apply H.
 Qed.
 
-Lemma RSOPM_le_opp_plus_r:
-    forall (x y z: T RSOPM),
+Lemma RSOAM_le_opp_plus_r:
+    forall (x y z: T RSOAM),
         x <= z + (- y) = true ->
         (x + y <= z) = true.
 Proof.
     intros x y z H.
     apply ax_real_leq_true.
-    RSOPM_realize.
+    RSOAM_realize.
     rewrite <- Rle_minus_r.
     rewrite Rminus_def.
     apply ax_real_leq_true in H.
@@ -277,4 +277,4 @@ Proof.
     apply H.
 Qed.
 
-End RSOPMMiscLemmata.
+End RSOAMMiscLemmata.

@@ -3,7 +3,7 @@ From Verinncoq Require Import real_subsets.
 
 Open Scope R_scope.
 
-Section IntegersRSOPM.
+Section IntegersRSOAM.
 
 Lemma Z_ax_zero_is_zero:
     IZR 0%Z = 0.
@@ -41,7 +41,7 @@ Proof.
       apply lt_IZR; exact H.
 Qed.
     
-Canonical Z_RSOPM : RealSubsetOPM := BuildRSOPM 
+Canonical Z_RSOAM : RealSubsetOAM := BuildRSOAM 
     Z IZR 0%Z 1%Z Z.opp Z.leb Z.add Z.mul eq_IZR 
     Z_ax_zero_is_zero 
     Z_ax_one_is_one
@@ -51,9 +51,9 @@ Canonical Z_RSOPM : RealSubsetOPM := BuildRSOPM
     plus_IZR
     mult_IZR.
 
-End IntegersRSOPM.
+End IntegersRSOAM.
 
-Section RationalRSOPM.
+Section RationalRSOAM.
 
 (* 
     QDEP - dependent Q
@@ -266,10 +266,10 @@ Proof.
     apply Qeq_refl.
 Qed. 
     
-Definition QDEP_RSOPM : RealSubsetOPM := BuildRSOPM
+Definition QDEP_RSOAM : RealSubsetOAM := BuildRSOAM
     QDEP Q2R QDEP_zero QDEP_one QDEP_opp QDEP_le QDEP_plus QDEP_mult
     QDEP_ax_equality QDEP_ax_zero_is_zero QDEP_ax_one_is_one
     QDEP_ax_opp_is_opp QDEP_ax_real_leq_true QDEP_ax_real_leq_false
     QDEP_ax_real_plus QDEP_ax_real_mult.
 
-End RationalRSOPM.
+End RationalRSOAM.

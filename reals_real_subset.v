@@ -3,10 +3,10 @@ From Verinncoq Require Import real_subsets.
 
 Open Scope R_scope.
 
-Section RealsRSOPM.
+Section RealsRSOAM.
 
 (* Reals are in separate file, because using them as a subset instance
-   can alter results of RSOPM_* tactics  *)
+   can alter results of RSOAM_* tactics  *)
 
 Definition Rid (r: R) := r.
 
@@ -81,7 +81,7 @@ Proof.
     reflexivity.
 Qed.
 
-Canonical R_RSOPM : RealSubsetOPM := BuildRSOPM
+Canonical R_RSOAM : RealSubsetOAM := BuildRSOAM
     R Rid 0 1 Ropp Rle_bool Rplus Rmult
     R_ax_equality
     R_ax_zero_is_zero
@@ -92,4 +92,4 @@ Canonical R_RSOPM : RealSubsetOPM := BuildRSOPM
     R_ax_real_plus
     R_ax_real_mult.
 
-End RealsRSOPM.
+End RealsRSOAM.

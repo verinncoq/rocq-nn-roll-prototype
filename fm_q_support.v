@@ -29,5 +29,5 @@ Proof.
         lia.
 Qed.
 
-Definition Q_RSOPMD := 
-    Build_RSOPMD QDEP_RSOPM QDEP_div QDEP_ax_real_div.
+Definition Q_RSOAMD := 
+    Build_RSOAMD QDEP_RSOAM QDEP_div QDEP_ax_real_div.

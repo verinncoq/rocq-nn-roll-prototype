@@ -9,8 +9,8 @@ Open Scope matrix_scope.
 
 Section Polehydra.
 
-Context { RSOPM : RealSubsetOPM }.
-Open Scope RSOPM_scope.
+Context { RSOAM : RealSubsetOAM }.
+Open Scope RSOAM_scope.
 
 (** * Basic convex polyhedra theory
 
@@ -22,7 +22,7 @@ inequalities
 
 (** A linear constraint c * _ <= b *)
 Inductive LinearConstraint (dim: nat) : Type :=
-| Constraint (c: colvec (RSOPM:=RSOPM) dim) (b: T RSOPM).
+| Constraint (c: colvec (RSOAM:=RSOAM) dim) (b: T RSOAM).
 
 (** 
 A predicate that a certain point x satisfies a
@@ -67,7 +67,7 @@ match p with
 end.
 
 Lemma in_convex_polyhedron_remove_constraint:
-  forall dim constraint lc (x: colvec (RSOPM:=RSOPM) dim),
+  forall dim constraint lc (x: colvec (RSOAM:=RSOAM) dim),
     in_convex_polyhedron x (Polyhedron dim (constraint :: lc)) ->
     in_convex_polyhedron x (Polyhedron dim lc).
 Proof.
@@ -165,7 +165,7 @@ Proof.
 Qed. 
 
 Lemma in_polyhedra_intersect1:
-  forall dim p1 p2 (x: colvec (RSOPM:=RSOPM) dim),
+  forall dim p1 p2 (x: colvec (RSOAM:=RSOAM) dim),
     in_convex_polyhedron x (polyhedra_intersect p1 p2) ->
     in_convex_polyhedron x p1.
 Proof.
@@ -183,7 +183,7 @@ Proof.
 Qed.
 
 Lemma in_polyhedra_intersect2:
-  forall dim p1 p2 (x: colvec (RSOPM:=RSOPM) dim),
+  forall dim p1 p2 (x: colvec (RSOAM:=RSOAM) dim),
     in_convex_polyhedron x (polyhedra_intersect p1 p2) ->
     in_convex_polyhedron x p2.
 Proof.
@@ -205,13 +205,13 @@ End Polehydra.
 (** * Constructive piecewise affine functions *)
 Section PiecewiseLinear.
 
-Context { RSOPM : RealSubsetOPM }.
-Open Scope RSOPM_scope.
+Context { RSOAM : RealSubsetOAM }.
+Open Scope RSOAM_scope.
 
 (* Affine functions *)
 Inductive AffineFunction (in_dim out_dim: nat) :=
-| Affine (C: matrix (T:=T RSOPM) out_dim in_dim) 
-    (b: colvec (RSOPM:=RSOPM) out_dim).
+| Affine (C: matrix (T:=T RSOAM) out_dim in_dim) 
+    (b: colvec (RSOAM:=RSOAM) out_dim).
 
 Definition is_affine_f_value {in_dim out_dim: nat} 
   (f: AffineFunction in_dim out_dim) 
@@ -219,7 +219,7 @@ Definition is_affine_f_value {in_dim out_dim: nat}
   (f_x: colvec out_dim) : Prop 
   :=
   match f with
-  | Affine C b => ((Mmult (T:=RSOPM) C x) + b)%M = f_x
+  | Affine C b => ((Mmult (T:=RSOAM) C x) + b)%M = f_x
   end.
 
 
@@ -228,7 +228,7 @@ Definition affine_f_eval {in_dim out_dim: nat}
   (x: colvec in_dim) : colvec out_dim
   :=
   match f with
-  | Affine C b => ((Mmult (T:=RSOPM) C x) + b)%M
+  | Affine C b => ((Mmult (T:=RSOAM) C x) + b)%M
   end.
 
 Theorem affine_f_eval_correct:
@@ -243,7 +243,7 @@ Qed.
 
 (* Affine segment *)
 Inductive AffineSegment (in_dim out_dim: nat) :=
-| Segment (p: ConvexPolyhedron (RSOPM:=RSOPM) in_dim) 
+| Segment (p: ConvexPolyhedron (RSOAM:=RSOAM) in_dim) 
     (f: AffineFunction in_dim out_dim).
 
 Definition in_affine_segment_domain {in_dim out_dim: nat}
@@ -740,7 +740,7 @@ Proof.
     intros H. destruct H as [H H0].
     specialize (H lincon1). specialize (H0 lincon2).
     unfold lincon1 in H. unfold lincon2 in H0.
-    assert (forall dim (c: LinearConstraint (RSOPM:=Z_RSOPM) dim), 
+    assert (forall dim (c: LinearConstraint (RSOAM:=Z_RSOAM) dim), 
                 c = c \/ False). {
         intros dim c. left. reflexivity.
     }
@@ -807,14 +807,14 @@ Proof.
           rewrite simpleReLU_polyhedra_intersection; try apply Hinboth.
           unfold dot. unfold Mmult.
           rewrite coeff_mat_bij; try lia. unfold sum_n.
-          assert (Hzero: forall n m, sum_n_m (G:=Z_RSOPM) 
+          assert (Hzero: forall n m, sum_n_m (G:=Z_RSOAM) 
               (fun _ => zero) n m = 0%Z). {
             intros n m.
             rewrite (sum_n_m_const_zero n m).
             reflexivity.
           }
           rewrite <- (Hzero 0%nat 1%nat).
-          apply (sum_n_m_ext_loc (G:=Z_RSOPM)). 
+          apply (sum_n_m_ext_loc (G:=Z_RSOAM)). 
           intros n Hn.
           unfold transpose.
           rewrite coeff_mat_bij; try lia.
@@ -899,10 +899,10 @@ Proof.
             unfold sum_n; unfold sum_n_m; unfold Iter.iter_nat; 
             unfold Iter.iter; simpl.
             unfold coeff_colvec; unfold coeff_mat; simpl.
-            rewrite (mult_zero_l (K:=Z_RSOPM)).
-            rewrite (plus_zero_l (G:=Z_RSOPM)).
-            rewrite (mult_one_l (K:=Z_RSOPM)).
-            rewrite (plus_zero_r (G:=Z_RSOPM)).
+            rewrite (mult_zero_l (K:=Z_RSOAM)).
+            rewrite (plus_zero_l (G:=Z_RSOAM)).
+            rewrite (mult_one_l (K:=Z_RSOAM)).
+            rewrite (plus_zero_r (G:=Z_RSOAM)).
             reflexivity.
     * exists affine_seg_2.
       split.
@@ -953,10 +953,10 @@ Proof.
             unfold Iter.iter; simpl.
             unfold coeff_colvec; unfold coeff_mat; simpl.
             rewrite Hhelp; simpl.
-            rewrite (mult_zero_l (K:=Z_RSOPM)).
-            rewrite (plus_zero_l (G:=Z_RSOPM)).
-            rewrite (mult_one_l (K:=Z_RSOPM)).
-            rewrite (plus_zero_r (G:=Z_RSOPM)).
+            rewrite (mult_zero_l (K:=Z_RSOAM)).
+            rewrite (plus_zero_l (G:=Z_RSOAM)).
+            rewrite (mult_one_l (K:=Z_RSOAM)).
+            rewrite (plus_zero_r (G:=Z_RSOAM)).
             reflexivity.
 Qed.
 

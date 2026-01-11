@@ -6,23 +6,23 @@ Import RealSubsetNotations.
 
 Section RealSubsetsDivision.
 
-Record RSOPMWithDiv := Build_RSOPMD {
-   RSOPM :> RealSubsetOPM;
-   RSOPM_div: (T RSOPM) -> (T RSOPM) -> (T RSOPM);
-   ax_real_div: forall (x y: T RSOPM),
-      INJ_RSOPM RSOPM (RSOPM_div x y) = Rdiv (INJ_RSOPM RSOPM x) 
-        (INJ_RSOPM RSOPM y);
+Record RSOAMWithDiv := Build_RSOAMD {
+   RSOAM :> RealSubsetOAM;
+   RSOAM_div: (T RSOAM) -> (T RSOAM) -> (T RSOAM);
+   ax_real_div: forall (x y: T RSOAM),
+      INJ_RSOAM RSOAM (RSOAM_div x y) = Rdiv (INJ_RSOAM RSOAM x) 
+        (INJ_RSOAM RSOAM y);
 }.
 
 End RealSubsetsDivision.
 
 Section FourierMotzkinImplementation.
 
-Context { RSOPM : RSOPMWithDiv }.
-Open Scope RSOPM_scope.
+Context { RSOAM : RSOAMWithDiv }.
+Open Scope RSOAM_scope.
 
-Definition RSdiv {RSOPM: RSOPMWithDiv} := RSOPM_div RSOPM.
-Infix "/" := RSdiv : RSOPM_scope.
+Definition RSdiv {RSOAM: RSOAMWithDiv} := RSOAM_div RSOAM.
+Infix "/" := RSdiv : RSOAM_scope.
 
 (* Linear inequality in form 
     c_1 * x_1 + c_2 * x_2 + ... + c_n * x_n + b <= 0 (inclusive)
@@ -32,12 +32,12 @@ Infix "/" := RSdiv : RSOPM_scope.
    to its associated coefficient. Zero is mapped to b.
    The parameter n refers to x_n, the variable with the largest index. *)
 Inductive LinearInequality (n: nat) := 
-| Strict (coeffs: nat -> T RSOPM)
-| Inclusive (coeffs: nat -> T RSOPM). 
+| Strict (coeffs: nat -> T RSOAM)
+| Inclusive (coeffs: nat -> T RSOAM). 
 Definition LinearSystem (n: nat) := list (LinearInequality n).
-Definition LinearSystemSolution (n: nat) := nat -> T RSOPM.
+Definition LinearSystemSolution (n: nat) := nat -> T RSOAM.
 
-Definition ineq_coeffs {n} (ineq: LinearInequality n): nat -> T RSOPM :=
+Definition ineq_coeffs {n} (ineq: LinearInequality n): nat -> T RSOAM :=
   match ineq with
   | Strict coeffs => coeffs
   | Inclusive coeffs => coeffs
@@ -51,9 +51,9 @@ Definition ineq_rank_change {n} (ineq: LinearInequality n) (new_rank: nat) : Lin
 
 Fixpoint interpret_inequality_helper 
     (n: nat) 
-    (coeffs: nat -> T RSOPM)
+    (coeffs: nat -> T RSOAM)
     (sol: LinearSystemSolution n)
-    : T RSOPM :=
+    : T RSOAM :=
     match n with
     | 0 => coeffs 0%nat
     | S i => (coeffs n) * (sol n) + interpret_inequality_helper i coeffs sol
@@ -67,30 +67,30 @@ Proof.
   intros n coeffs1 coeffs2 sol.
   induction n.
   * unfold interpret_inequality_helper.
-    RSOPM_realize_eq.
+    RSOAM_realize_eq.
     rewrite Rplus_comm. reflexivity.
   * unfold interpret_inequality_helper; fold (interpret_inequality_helper n).
     specialize (IHn sol).
     rewrite <- IHn.
-    RSOPM_realize_eq.
+    RSOAM_realize_eq.
     lra.
 Qed.
 
 Lemma interpret_inequality_helper_div:
-  forall n (coeffs: nat -> T RSOPM) c sol,
+  forall n (coeffs: nat -> T RSOAM) c sol,
     interpret_inequality_helper n coeffs sol / c = interpret_inequality_helper n (fun i => coeffs i / c) sol.
 Proof.
   intros n coeffs c sol.
   induction n.
   * unfold interpret_inequality_helper.
-    RSOPM_realize_eq.
+    RSOAM_realize_eq.
     repeat rewrite ax_real_div.
     apply Rdiv_eq_compat_r; reflexivity.
   * unfold interpret_inequality_helper; fold (interpret_inequality_helper n).
     specialize (IHn sol).
     rewrite <- IHn.
-    RSOPM_realize_eq.
-    repeat (RSOPM_realize; rewrite ax_real_div).
+    RSOAM_realize_eq.
+    repeat (RSOAM_realize; rewrite ax_real_div).
     lra.
 Qed.
 
@@ -159,7 +159,7 @@ Proof.
     rewrite ax_real_plus; lra.
 Qed.
 
-Definition ineq_constdiv {n} (ineq: LinearInequality n) (c: T RSOPM) :=
+Definition ineq_constdiv {n} (ineq: LinearInequality n) (c: T RSOAM) :=
   match ineq with
   | Strict coeffs => Strict n (fun i => coeffs i / c)
   | Inclusive coeffs => Inclusive n (fun i => coeffs i / c)
@@ -761,7 +761,7 @@ Definition bool_to_Prop (b : bool) : Prop :=
 
 Coercion bool_to_Prop : bool >-> Sortclass.
 
-Lemma RSOPM_le_refl : forall x : T RSOPM, x <= x = true.
+Lemma RSOAM_le_refl : forall x : T RSOAM, x <= x = true.
 Proof.
   intro x.
   unfold "<=".
@@ -769,11 +769,11 @@ Proof.
   apply Rle_refl.
 Qed.
 
-Lemma RSOPM_le_and_le_eq: 
-  forall x y : T RSOPM, (x <= y) = true /\ (y <= x) = true <-> (x=y).
+Lemma RSOAM_le_and_le_eq: 
+  forall x y : T RSOAM, (x <= y) = true /\ (y <= x) = true <-> (x=y).
 Proof.
   intros.
-  repeat rewrite <- RSOPM_bool_prop.
+  repeat rewrite <- RSOAM_bool_prop.
   split.
   intro.
   apply ax_equality.
@@ -788,17 +788,17 @@ Proof.
   intro.
   rewrite H.
   split.
-  apply RSOPM_le_refl.
-  apply RSOPM_le_refl.
+  apply RSOAM_le_refl.
+  apply RSOAM_le_refl.
 Qed.
 
-Lemma RSOPM_0_mult : forall x : T RSOPM,  0 *  x = 0.
+Lemma RSOAM_0_mult : forall x : T RSOAM,  0 *  x = 0.
 Proof.
 intros.
 apply ax_equality.
 rewrite ax_real_mult.
 rewrite ax_zero_is_zero.
-rewrite (Rmult_0_l (INJ_RSOPM RSOPM x)).
+rewrite (Rmult_0_l (INJ_RSOAM RSOAM x)).
 reflexivity.
 Qed.
 
@@ -845,14 +845,14 @@ induction sys.
     fold interpret_inequality_helper in H1.
     unfold interpret_inequality.
     assert ((ineq_coeffs a) (S n) = 0).
-    apply RSOPM_le_and_le_eq.
+    apply RSOAM_le_and_le_eq.
     split. exact Ha1. exact Ha2.
     destruct a.
     1,2: unfold ineq_coeffs in H; unfold ineq_rank_change.
     1,2: rewrite H in H1.
-    1,2: rewrite RSOPM_0_mult in H1.
-    1,2: rewrite RSOPM_plus_comm in H1.
-    1,2: rewrite RSOPM_plus_0_r in H1.
+    1,2: rewrite RSOAM_0_mult in H1.
+    1,2: rewrite RSOAM_plus_comm in H1.
+    1,2: rewrite RSOAM_plus_0_r in H1.
     1,2: exact H1.
     exact H2.
     intro.
@@ -862,14 +862,14 @@ induction sys.
     unfold interpret_inequality_helper.
     fold (interpret_inequality_helper n).
     assert ((ineq_coeffs a) (S n) = 0).
-    apply RSOPM_le_and_le_eq.
+    apply RSOAM_le_and_le_eq.
     split. exact Ha1. exact Ha2.
     destruct a.
     1,2: unfold ineq_coeffs in H.
     1,2: rewrite H.
-    1,2: rewrite RSOPM_0_mult.
-    1,2: rewrite RSOPM_plus_comm.
-    1,2: rewrite RSOPM_plus_0_r.
+    1,2: rewrite RSOAM_0_mult.
+    1,2: rewrite RSOAM_plus_comm.
+    1,2: rewrite RSOAM_plus_0_r.
     1,2: exact H1.
     exact H2.
     - subst.
@@ -1040,10 +1040,10 @@ Proof.
         1,3: unfold is_linear_system_solution, interpret_inequalities,
           interpret_inequality, interpret_inequality_helper; split; last easy.
         1,3: apply ax_real_leq_true in Ha_le0, Ha_ge0.
-        * apply ax_real_leq_false; RSOPM_realize.
+        * apply ax_real_leq_false; RSOAM_realize.
           rewrite ax_zero_is_zero in Ha_le0, Ha_ge0.
           unfold ineq_coeffs in Ha_le0, Ha_ge0.
-          assert (INJ_RSOPM RSOPM (coeffs 1%nat) = 0%R) as Hhelp. lra.
+          assert (INJ_RSOAM RSOAM (coeffs 1%nat) = 0%R) as Hhelp. lra.
           rewrite Hhelp. field_simplify.
           apply negb_true_iff in Ha_cons.
           apply ax_real_leq_false in Ha_cons.
@@ -1054,10 +1054,10 @@ Proof.
           - reflexivity.
           - apply Htriv_cons.
         * apply ax_real_leq_true in Ha_le0, Ha_ge0.
-          apply ax_real_leq_true; RSOPM_realize.
+          apply ax_real_leq_true; RSOAM_realize.
           rewrite ax_zero_is_zero in Ha_le0, Ha_ge0.
           unfold ineq_coeffs in Ha_le0, Ha_ge0.
-          assert (INJ_RSOPM RSOPM (coeffs 1%nat) = 0%R) as Hhelp. lra.
+          assert (INJ_RSOAM RSOAM (coeffs 1%nat) = 0%R) as Hhelp. lra.
           rewrite Hhelp. field_simplify.
           apply ax_real_leq_true in Ha_cons.
           rewrite ax_zero_is_zero in Ha_cons.
@@ -1080,8 +1080,8 @@ Qed.
 
 Inductive SolutionBound :=
 | Unbounded
-| StrictBound (value: T RSOPM)
-| InclusiveBound (value: T RSOPM).
+| StrictBound (value: T RSOAM)
+| InclusiveBound (value: T RSOAM).
 
 Fixpoint compute_lb (lt0_partition: LinearSystem 1): SolutionBound :=
   match lt0_partition with
@@ -1145,7 +1145,7 @@ Proof.
           apply ax_real_leq_false in H, Ha2.
           rewrite ax_zero_is_zero in Ha2.
           rewrite ax_opp_is_opp, ax_real_div in H.
-          apply ax_real_leq_false; RSOPM_realize.
+          apply ax_real_leq_false; RSOAM_realize.
           rewrite <- Rdiv_opp_r in H.
           rewrite Rcomplements.Rlt_div_l in H; last lra.
           apply Rlt_minus in H.
@@ -1165,7 +1165,7 @@ Proof.
           apply ax_real_leq_false in H, Ha2.
           rewrite ax_zero_is_zero in Ha2.
           rewrite ax_opp_is_opp, ax_real_div in H.
-          apply ax_real_leq_false; RSOPM_realize.
+          apply ax_real_leq_false; RSOAM_realize.
           rewrite <- Rdiv_opp_r in H.
           rewrite Rcomplements.Rlt_div_l in H; last lra.
           apply Rlt_minus in H.
@@ -1187,7 +1187,7 @@ Proof.
           rewrite ax_real_leq_false in Hval.
           rewrite ax_real_leq_false in H.
           pose proof (Rlt_trans _ _ _ Hval H) as Hfinal.
-          rewrite ax_real_leq_false; RSOPM_realize.
+          rewrite ax_real_leq_false; RSOAM_realize.
           rewrite ax_opp_is_opp, ax_real_div in Hfinal.
           rewrite ax_real_leq_false, ax_zero_is_zero in Ha2.
           rewrite <- Rdiv_opp_r in Hfinal.
@@ -1209,7 +1209,7 @@ Proof.
           apply ax_real_leq_false in H, Ha2.
           rewrite ax_zero_is_zero in Ha2.
           rewrite ax_opp_is_opp, ax_real_div in H.
-          apply ax_real_leq_false; RSOPM_realize.
+          apply ax_real_leq_false; RSOAM_realize.
           rewrite <- Rdiv_opp_r in H.
           rewrite Rcomplements.Rlt_div_l in H; last lra.
           apply Rlt_minus in H.
@@ -1234,7 +1234,7 @@ Proof.
             intros r1 r2 r3 H1 H2. lra.
           }
           specialize (Hfinal _ _ _ Hval H).
-          rewrite ax_real_leq_false; RSOPM_realize.
+          rewrite ax_real_leq_false; RSOAM_realize.
           rewrite ax_opp_is_opp, ax_real_div in Hfinal.
           rewrite ax_real_leq_false, ax_zero_is_zero in Ha2.
           rewrite <- Rdiv_opp_r in Hfinal.
@@ -1256,7 +1256,7 @@ Proof.
           apply ax_real_leq_true in H.
           rewrite ax_zero_is_zero in Ha2.
           rewrite ax_opp_is_opp, ax_real_div in H.
-          apply ax_real_leq_true; RSOPM_realize.
+          apply ax_real_leq_true; RSOAM_realize.
           rewrite <- Rdiv_opp_r in H.
           rewrite Rcomplements.Rle_div_l in H; last lra.
           apply Rle_minus in H.
@@ -1279,7 +1279,7 @@ Proof.
             intros r1 r2 r3 H1 H2. lra.
           }
           specialize (Hfinal _ _ _ Hval H).
-          rewrite ax_real_leq_true; RSOPM_realize.
+          rewrite ax_real_leq_true; RSOAM_realize.
           rewrite ax_opp_is_opp, ax_real_div in Hfinal.
           rewrite ax_real_leq_false, ax_zero_is_zero in Ha2.
           rewrite <- Rdiv_opp_r in Hfinal.
@@ -1300,7 +1300,7 @@ Proof.
           apply ax_real_leq_false in Ha2.
           rewrite ax_zero_is_zero in Ha2.
           rewrite ax_opp_is_opp, ax_real_div in H.
-          apply ax_real_leq_true; RSOPM_realize.
+          apply ax_real_leq_true; RSOAM_realize.
           rewrite <- Rdiv_opp_r in H.
           rewrite Rcomplements.Rle_div_l in H; last lra.
           apply Rle_minus in H.
@@ -1325,7 +1325,7 @@ Proof.
           apply ax_real_leq_false in Ha2.
           rewrite ax_zero_is_zero in Ha2.
           rewrite ax_opp_is_opp, ax_real_div in H.
-          apply ax_real_leq_true; RSOPM_realize.
+          apply ax_real_leq_true; RSOAM_realize.
           rewrite <- Rdiv_opp_r in H.
           rewrite Rcomplements.Rle_div_l in H; last lra.
           apply Rle_minus in H.
@@ -1350,7 +1350,7 @@ Proof.
             intros r1 r2 r3 H1 H2. lra.
           }
           specialize (Hfinal _ _ _ Hval H).
-          rewrite ax_real_leq_true; RSOPM_realize.
+          rewrite ax_real_leq_true; RSOAM_realize.
           rewrite ax_opp_is_opp, ax_real_div in Hfinal.
           rewrite ax_real_leq_false, ax_zero_is_zero in Ha2.
           rewrite <- Rdiv_opp_r in Hfinal.
@@ -1606,7 +1606,7 @@ Proof.
           apply ax_real_leq_false in H, Ha1.
           rewrite ax_zero_is_zero in Ha1.
           rewrite ax_opp_is_opp, ax_real_div in H.
-          apply ax_real_leq_false; RSOPM_realize.
+          apply ax_real_leq_false; RSOAM_realize.
           rewrite <- Rdiv_opp_l in H.
           rewrite <- Rcomplements.Rlt_div_r in H; last lra.
           apply Rlt_minus in H.
@@ -1626,7 +1626,7 @@ Proof.
             intros r1 r2 r3 H1 H2. lra.
           }
           specialize (Hfinal _ _ _ H Hval).
-          rewrite ax_real_leq_false; RSOPM_realize.
+          rewrite ax_real_leq_false; RSOAM_realize.
           rewrite ax_opp_is_opp, ax_real_div in Hfinal.
           rewrite ax_real_leq_false, ax_zero_is_zero in Ha1.
           rewrite <- Rdiv_opp_l in Hfinal.
@@ -1643,7 +1643,7 @@ Proof.
           apply ax_real_leq_false in H, Ha1.
           rewrite ax_zero_is_zero in Ha1.
           rewrite ax_opp_is_opp, ax_real_div in H.
-          apply ax_real_leq_false; RSOPM_realize.
+          apply ax_real_leq_false; RSOAM_realize.
           rewrite <- Rdiv_opp_l in H.
           rewrite <- Rcomplements.Rlt_div_r in H; last lra.
           apply Rlt_minus in H.
@@ -1663,7 +1663,7 @@ Proof.
           unfold ineq_coeffs in H, Ha1, Ha2.
           rewrite ax_real_leq_true in Hval.
           rewrite ax_real_leq_false in H.
-          rewrite ax_real_leq_false; RSOPM_realize.
+          rewrite ax_real_leq_false; RSOAM_realize.
           rewrite ax_opp_is_opp, ax_real_div in H.
           rewrite <- Rdiv_opp_l in H.
           apply ax_real_leq_false in Ha1.
@@ -1684,7 +1684,7 @@ Proof.
           unfold ineq_coeffs in H, Ha1, Ha2.
           rewrite ax_real_leq_false in Hval, Ha1.
           rewrite ax_real_leq_true in H.
-          rewrite ax_real_leq_false; RSOPM_realize.
+          rewrite ax_real_leq_false; RSOAM_realize.
           assert (Hfinal: (forall r1 r2 r3, r1 <= r2 -> r2 < r3 -> r1 < r3)%R). {
             intros r1 r2 r3 H1 H2. lra.
           }
@@ -1708,7 +1708,7 @@ Proof.
           apply ax_real_leq_true in H.
           rewrite ax_zero_is_zero in Ha1.
           rewrite ax_opp_is_opp, ax_real_div in H.
-          apply ax_real_leq_true; RSOPM_realize.
+          apply ax_real_leq_true; RSOAM_realize.
           rewrite <- Rdiv_opp_l in H.
           rewrite <- Rcomplements.Rle_div_r in H; last lra.
           apply Rle_minus in H.
@@ -1728,7 +1728,7 @@ Proof.
             intros r1 r2 r3 H1 H2. lra.
           }
           specialize (Hfinal _ _ _ H Hval).
-          rewrite ax_real_leq_true; RSOPM_realize.
+          rewrite ax_real_leq_true; RSOAM_realize.
           rewrite ax_opp_is_opp, ax_real_div in Hfinal.
           rewrite ax_real_leq_false, ax_zero_is_zero in Ha1.
           rewrite <- Rdiv_opp_l in Hfinal.
@@ -1746,7 +1746,7 @@ Proof.
           rewrite ax_zero_is_zero in Ha1.
           apply ax_real_leq_true in H.
           rewrite ax_opp_is_opp, ax_real_div in H.
-          apply ax_real_leq_true; RSOPM_realize.
+          apply ax_real_leq_true; RSOAM_realize.
           rewrite <- Rdiv_opp_l in H.
           rewrite <- Rcomplements.Rle_div_r in H; last lra.
           apply Rle_minus in H.
@@ -1767,7 +1767,7 @@ Proof.
           rewrite ax_real_leq_true in Hval.
           rewrite ax_real_leq_true in H.
           pose proof (Rle_trans _ _ _ H Hval) as Hfinal.
-          rewrite ax_real_leq_true; RSOPM_realize.
+          rewrite ax_real_leq_true; RSOAM_realize.
           rewrite ax_opp_is_opp, ax_real_div in Hfinal.
           rewrite ax_real_leq_false, ax_zero_is_zero in Ha1.
           rewrite <- Rdiv_opp_l in Hfinal.
@@ -1785,7 +1785,7 @@ Proof.
           rewrite ax_zero_is_zero in Ha1.
           apply ax_real_leq_true in H.
           rewrite ax_opp_is_opp, ax_real_div in H.
-          apply ax_real_leq_true; RSOPM_realize.
+          apply ax_real_leq_true; RSOAM_realize.
           rewrite <- Rdiv_opp_l in H.
           rewrite <- Rcomplements.Rle_div_r in H; last lra.
           apply Rle_minus in H.
@@ -1935,7 +1935,7 @@ Qed.
 Definition satisfy_bounds 
     (lbb: SolutionBound) 
     (ubb: SolutionBound) 
-    : option (T RSOPM) :=
+    : option (T RSOAM) :=
     match lbb, ubb with
     | Unbounded, Unbounded => Some 0
     | Unbounded, StrictBound ub => Some (ub + - (1))
@@ -2050,7 +2050,7 @@ Proof.
           - reflexivity.
 Qed.
 
-Definition trivial_extract (sys: LinearSystem 1): option (T RSOPM) :=
+Definition trivial_extract (sys: LinearSystem 1): option (T RSOAM) :=
     let (p, gt0) := partition_inequalities sys in
     let (lt0, eq0) := p in
     match trivial_consistency (system_rank_change eq0 0%nat) with
@@ -2082,14 +2082,14 @@ Proof.
         - injection Hextract; intro Hinject.
           rewrite <- Hinject in Hsol.
           rewrite Hsol.
-          apply ax_real_leq_false; RSOPM_realize; lra.
+          apply ax_real_leq_false; RSOAM_realize; lra.
         - destruct (value0 <= value) eqn:Hcmp; try discriminate.
           injection Hextract; intro Hinject.
           rewrite Hsol, <- Hinject.
           apply ax_real_leq_false.
           apply ax_real_leq_false in Hcmp.
-          pose proof (Rlt_half_plus (INJ_RSOPM _ value) (INJ_RSOPM _ value0) Hcmp) as Hhalf.
-          rewrite ax_real_div; RSOPM_realize.
+          pose proof (Rlt_half_plus (INJ_RSOAM _ value) (INJ_RSOAM _ value0) Hcmp) as Hhalf.
+          rewrite ax_real_div; RSOAM_realize.
           apply Hhalf.  
         - destruct (value0 <= value) eqn:Hcmp; try discriminate.
           injection Hextract; intro Hinject.
@@ -2099,17 +2099,17 @@ Proof.
         - injection Hextract; intro Hinject.
           rewrite <- Hinject in Hsol.
           rewrite Hsol.
-          apply ax_real_leq_true; RSOPM_realize; lra.
+          apply ax_real_leq_true; RSOAM_realize; lra.
         - destruct (value0 <= value) eqn:Hcmp; try discriminate.
           injection Hextract; intro Hinject.
           rewrite <- Hinject in Hsol.
           rewrite Hsol.
-          apply ax_real_leq_true; RSOPM_realize; lra.
+          apply ax_real_leq_true; RSOAM_realize; lra.
         - destruct (value <= value0) eqn:Hcmp; try discriminate.
           injection Hextract; intro Hinject.
           rewrite <- Hinject in Hsol.
           rewrite Hsol.
-          apply ax_real_leq_true; RSOPM_realize; lra.
+          apply ax_real_leq_true; RSOAM_realize; lra.
     - apply (trivial_consistency_partition_solution 
                     sys lt0_sys eq0_sys gt0_sys sol).
       * symmetry; apply Hpart_sys.
@@ -2121,14 +2121,14 @@ Proof.
         - injection Hextract; intro Hinject.
           rewrite <- Hinject in Hsol.
           rewrite Hsol.
-          apply ax_real_leq_false; RSOPM_realize; lra.
+          apply ax_real_leq_false; RSOAM_realize; lra.
         - destruct (value <= value0) eqn:Hcmp; try discriminate.
           injection Hextract; intro Hinject.
           rewrite Hsol, <- Hinject.
           apply ax_real_leq_false.
           apply ax_real_leq_false in Hcmp.
-          pose proof (Rlt_half_plus (INJ_RSOPM _ value0) (INJ_RSOPM _ value) Hcmp) as Hhalf.
-          rewrite ax_real_div; RSOPM_realize.
+          pose proof (Rlt_half_plus (INJ_RSOAM _ value0) (INJ_RSOAM _ value) Hcmp) as Hhalf.
+          rewrite ax_real_div; RSOAM_realize.
           apply Hhalf.  
         - destruct (value <= value0) eqn:Hcmp; try discriminate.
           injection Hextract; intro Hinject.
@@ -2138,12 +2138,12 @@ Proof.
         - injection Hextract; intro Hinject.
           rewrite <- Hinject in Hsol.
           rewrite Hsol.
-          apply ax_real_leq_true; RSOPM_realize; lra.
+          apply ax_real_leq_true; RSOAM_realize; lra.
         - destruct (value <= value0) eqn:Hcmp; try discriminate.
           injection Hextract; intro Hinject.
           rewrite <- Hinject in Hsol.
           rewrite Hsol.
-          apply ax_real_leq_true; RSOPM_realize; lra.
+          apply ax_real_leq_true; RSOAM_realize; lra.
         - destruct (value0 <= value) eqn:Hcmp; try discriminate.
           injection Hextract; intro Hinject.
           rewrite <- Hinject in Hsol.
@@ -2364,8 +2364,8 @@ Proof.
   split; intros H; apply H.
 Qed.
 
-Definition prepend_to_solution {n} (s: T RSOPM) (sol: LinearSystemSolution n)
-  : nat -> T RSOPM 
+Definition prepend_to_solution {n} (s: T RSOAM) (sol: LinearSystemSolution n)
+  : nat -> T RSOAM 
   :=
   (fun sol_arg: nat => if sol_arg =? S n then s else sol sol_arg).  
 
@@ -2397,7 +2397,7 @@ Proof.
 Qed.
 
 Lemma prepend_interpret_rank:
-  forall n n2 (a: nat -> T RSOPM) s (sol: LinearSystemSolution n2),
+  forall n n2 (a: nat -> T RSOAM) s (sol: LinearSystemSolution n2),
     (n2 > n)%nat ->
     interpret_inequality_helper n a (prepend_to_solution (n:=n2) s sol) = 
     interpret_inequality_helper n a (prepend_to_solution (n:=S n2) s sol).
@@ -2413,7 +2413,7 @@ Proof.
 Qed.
 
 Lemma prepend_interpret:
-  forall n (a: nat -> T RSOPM) s (sol: LinearSystemSolution (S n)),
+  forall n (a: nat -> T RSOAM) s (sol: LinearSystemSolution (S n)),
     interpret_inequality_helper n a (prepend_to_solution s sol) = 
     interpret_inequality_helper n a sol.
 Proof.
@@ -2924,38 +2924,38 @@ Proof.
   intros n e1 e2 sol.
   induction n.
   * unfold interpret_inequality_helper.
-    RSOPM_realize_eq; repeat rewrite ax_real_div; RSOPM_realize.
+    RSOAM_realize_eq; repeat rewrite ax_real_div; RSOAM_realize.
     rewrite Ropp_div_distr_r; reflexivity.
   * unfold interpret_inequality_helper; fold (interpret_inequality_helper n).
     specialize (IHn sol).
     rewrite <- IHn.
-    RSOPM_realize_eq; repeat rewrite ax_real_div; RSOPM_realize.
+    RSOAM_realize_eq; repeat rewrite ax_real_div; RSOAM_realize.
     rewrite Ropp_div_distr_r.
     rewrite Ropp_mult_distr_l_reverse.
     rewrite <- Ropp_plus_distr.
     reflexivity.
 Qed.
 
-Lemma RSOPMD_leq_shift:
-  forall (r1: T RSOPM) r2, ((0 <= r1 + r2) = false -> (- r2 <= r1) = false)%RS.
+Lemma RSOAMD_leq_shift:
+  forall (r1: T RSOAM) r2, ((0 <= r1 + r2) = false -> (- r2 <= r1) = false)%RS.
 Proof.
     intros r1 r2.
     do 2 rewrite ax_real_leq_false.
-    RSOPM_realize.
+    RSOAM_realize.
     lra.
 Qed.
 
-Lemma RSOPMD_leq_shift2:
-  forall (r1: T RSOPM) r2, ((- r1 + r2 <= 0) = true -> (- r1 <= - r2) = true)%RS.
+Lemma RSOAMD_leq_shift2:
+  forall (r1: T RSOAM) r2, ((- r1 + r2 <= 0) = true -> (- r1 <= - r2) = true)%RS.
 Proof.
     intros r1 r2.
     do 2 rewrite ax_real_leq_true.
-    RSOPM_realize.
+    RSOAM_realize.
     lra.
 Qed.
 
 Lemma interpret_inequality_helper_fold:
-  forall sol n (coeffs: nat -> T RSOPM),
+  forall sol n (coeffs: nat -> T RSOAM),
     coeffs (S n) * sol (S n) + interpret_inequality_helper n coeffs sol = 
     interpret_inequality_helper (S n) coeffs sol.
 Proof.
@@ -2982,7 +2982,7 @@ Proof.
   unfold is_linear_system_solution, interpret_inequalities, interpret_inequality,
       compose_inequalities, list_prod, map, app, ineq_compose in Hineqs.
   unfold ineq_coeffs, ineq_insert_solution; simpl.
-  rewrite RSOPMD_leq_shift; first reflexivity.
+  rewrite RSOAMD_leq_shift; first reflexivity.
   do 2 rewrite interpret_inequality_helper_fold.
   do 2 rewrite interpret_inequality_helper_div.
   rewrite interpret_inequality_helper_reconstruction.
@@ -3010,7 +3010,7 @@ Proof.
   unfold is_linear_system_solution, interpret_inequalities, interpret_inequality,
       compose_inequalities, list_prod, map, app, ineq_compose in Hineqs.
   unfold ineq_coeffs, ineq_insert_solution; simpl.
-  rewrite RSOPMD_leq_shift; first reflexivity.
+  rewrite RSOAMD_leq_shift; first reflexivity.
   do 2 rewrite interpret_inequality_helper_fold.
   do 2 rewrite interpret_inequality_helper_div.
   rewrite interpret_inequality_helper_reconstruction.
@@ -3038,7 +3038,7 @@ Proof.
   unfold is_linear_system_solution, interpret_inequalities, interpret_inequality,
       compose_inequalities, list_prod, map, app, ineq_compose in Hineqs.
   unfold ineq_coeffs, ineq_insert_solution; simpl.
-  rewrite RSOPMD_leq_shift; first reflexivity.
+  rewrite RSOAMD_leq_shift; first reflexivity.
   do 2 rewrite interpret_inequality_helper_fold.
   do 2 rewrite interpret_inequality_helper_div.
   rewrite interpret_inequality_helper_reconstruction.
@@ -3066,7 +3066,7 @@ Proof.
   unfold is_linear_system_solution, interpret_inequalities, interpret_inequality,
       compose_inequalities, list_prod, map, app, ineq_compose in Hineqs.
   unfold ineq_coeffs, ineq_insert_solution; simpl.
-  rewrite RSOPMD_leq_shift2; first reflexivity.
+  rewrite RSOAMD_leq_shift2; first reflexivity.
   do 2 rewrite interpret_inequality_helper_fold.
   do 2 rewrite interpret_inequality_helper_div.
   rewrite interpret_inequality_helper_reconstruction.

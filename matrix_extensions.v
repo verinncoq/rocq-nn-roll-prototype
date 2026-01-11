@@ -255,9 +255,9 @@ End CoquelicotGeneralLemmas.
 
 Section CoquelicotMatrix.
 
-Context {RSOPM : RealSubsetOPM}.
+Context {RSOAM : RealSubsetOAM}.
 Import RealSubsetNotations.
-Open Scope RSOPM_scope.
+Open Scope RSOAM_scope.
 
 Lemma coeff_mat_default:
     forall A d m n (M: matrix (T:=A) m n) i j,
@@ -275,7 +275,7 @@ Proof.
 Qed.
 
 Definition transpose {m n: nat} (M: matrix m n) :=
-    mk_matrix n m (fun i j => coeff_mat (RSOPM_zero RSOPM) M j i).
+    mk_matrix n m (fun i j => coeff_mat (RSOAM_zero RSOAM) M j i).
 
 Theorem transpose_transpose:
     forall m n (M: matrix m n),
@@ -284,7 +284,7 @@ Proof.
     intros m n M.
     unfold transpose.
     unfold transpose.
-    rewrite <- (mk_matrix_bij (RSOPM_zero RSOPM)).
+    rewrite <- (mk_matrix_bij (RSOAM_zero RSOAM)).
     apply mk_matrix_ext.
     intros i j Hi Hj.
     repeat (rewrite coeff_mat_bij; try lia).
@@ -308,17 +308,17 @@ Proof.
     reflexivity.
 Qed.
 
-Definition scalar_mult {m n: nat} (c: T RSOPM) (v: matrix m n) := 
+Definition scalar_mult {m n: nat} (c: T RSOAM) (v: matrix m n) := 
   mk_matrix m n (fun i j => c * (coeff_mat 0 v i j)).
 
 Lemma coeff_mat_00_Mplus:
-  forall m n (X: matrix (T:=RSOPM) m n) Y,
+  forall m n (X: matrix (T:=RSOAM) m n) Y,
     coeff_mat 0 X 0 0 + coeff_mat 0 Y 0 0 = coeff_mat 0 (Mplus X Y) 0 0.
 Proof.
   intros m n X Y.
   induction m.
-  induction n; try apply RSOPM_plus_0_r.
-  induction n; try apply RSOPM_plus_0_r.
+  induction n; try apply RSOAM_plus_0_r.
+  induction n; try apply RSOAM_plus_0_r.
   * unfold Mplus.
     rewrite coeff_mat_bij.
     reflexivity. 
@@ -343,12 +343,12 @@ Operations:
 
 Section ColumnVectors.
 
-Context {RSOPM : RealSubsetOPM}.
+Context {RSOAM : RealSubsetOAM}.
 Import RealSubsetNotations.
-Open Scope RSOPM_scope.
+Open Scope RSOAM_scope.
 
 (* Column vector is a 1d matrix *)
-Definition colvec m := matrix (T:=T RSOPM) m 1.
+Definition colvec m := matrix (T:=T RSOAM) m 1.
 
 (* There is only a single colvec of dimension zero *)
 Lemma unique_colvec_0:
@@ -373,7 +373,7 @@ Definition mk_colvec m (f: nat -> RS) : colvec m :=
 
 (* Dot product *)
 Definition dot {n:nat} (c1: colvec n) (c2: colvec n) : RS :=
-    coeff_mat RSzero (Mmult (T:= RSOPM) (transpose c1) c2) 0 0.
+    coeff_mat RSzero (Mmult (T:= RSOAM) (transpose c1) c2) 0 0.
 
 (* Null vector *)
 Definition null_vector m := mk_colvec m (fun i => RSzero).
@@ -387,13 +387,13 @@ Proof.
     unfold dot.
     unfold Mmult.
     repeat rewrite (coeff_mat_bij _ _ 0 0 Nat.lt_0_1 Nat.lt_0_1).
-    assert (Hhelp: RSmult = (mult (K:=RSOPM))). reflexivity.
+    assert (Hhelp: RSmult = (mult (K:=RSOAM))). reflexivity.
     rewrite Hhelp.
-    rewrite <- (sum_n_mult_l (K:=RSOPM) c).
-    apply (sum_n_ext_loc (G:=RSOPM)).
+    rewrite <- (sum_n_mult_l (K:=RSOAM) c).
+    apply (sum_n_ext_loc (G:=RSOAM)).
     intros n Hloc.
     induction dim.
-    * compute; RSOPM_realize_eq. lra.
+    * compute; RSOAM_realize_eq. lra.
     * assert (Hdim: (S dim >= 1)%nat). lia.
       pose proof (nat_pred_le_lt n (S dim) Hloc Hdim) as Hndim.
       unfold scalar_mult.
@@ -404,11 +404,11 @@ Proof.
       unfold coeff_colvec.
       rewrite (coeff_mat_bij _ _ n 0 Hndim Nat.lt_0_1).
       unfold mult; simpl.
-      symmetry; apply RSOPM_mult_assoc.
+      symmetry; apply RSOAM_mult_assoc.
 Qed.
 
 Theorem Mmult_null_vector:
-    forall m n (M: matrix (T:=RSOPM) m n),
+    forall m n (M: matrix (T:=RSOAM) m n),
         Mmult M (null_vector n) = null_vector m. 
 Proof. 
   intros m n M.
@@ -420,14 +420,14 @@ Proof.
   unfold mk_colvec.
   apply mk_matrix_ext.
   intros i j Hi Hj.
-  assert (HHelp: RSzero = (zero (G:=RSOPM))). reflexivity.
+  assert (HHelp: RSzero = (zero (G:=RSOAM))). reflexivity.
   rewrite HHelp.
-  rewrite <- (sum_n_m_const_zero (G:=RSOPM) 0 (Nat.pred n)) at 1.
-  apply (sum_n_m_ext_loc (G:=RSOPM)).
+  rewrite <- (sum_n_m_const_zero (G:=RSOAM) 0 (Nat.pred n)) at 1.
+  apply (sum_n_m_ext_loc (G:=RSOAM)).
   intros k Hk.
   destruct Hk.
   induction n.
-  * compute; RSOPM_realize_eq; lra.
+  * compute; RSOAM_realize_eq; lra.
   * assert (Hdim: (S n >= 1)%nat). lia. 
     pose proof (nat_pred_le_lt k (S n) H0 Hdim) as Hnn.
     rewrite (coeff_mat_bij _ _ k j); try lia.
@@ -446,21 +446,21 @@ Proof.
   unfold coeff_colvec.
   unfold null_vector.
   unfold mk_colvec.
-  assert (HHelp: RSzero = (zero (G:=RSOPM))). reflexivity.
+  assert (HHelp: RSzero = (zero (G:=RSOAM))). reflexivity.
   rewrite HHelp.
-  rewrite <- (sum_n_m_const_zero (G:=RSOPM) 0 (Nat.pred dim)) at 1.
-  apply (sum_n_m_ext_loc (G:=RSOPM)).
+  rewrite <- (sum_n_m_const_zero (G:=RSOAM) 0 (Nat.pred dim)) at 1.
+  apply (sum_n_m_ext_loc (G:=RSOAM)).
   intros n Hn.
   destruct Hn.
   induction dim.
-  * compute; RSOPM_realize_eq; lra.
+  * compute; RSOAM_realize_eq; lra.
   * assert (Hdim: (S dim >= 1)%nat). lia. 
     pose proof (nat_pred_le_lt n (S dim) H0 Hdim) as Hndim.
     unfold transpose.
     rewrite (coeff_mat_bij _ _ 0 n Nat.lt_0_1 Hndim). 
     rewrite (coeff_mat_bij _ _ n 0 Hndim Nat.lt_0_1).
     unfold mult; unfold zero; simpl.
-    RSOPM_realize_eq; lra.
+    RSOAM_realize_eq; lra.
 Qed.
 
 Theorem dot_comm:
@@ -472,23 +472,23 @@ Proof.
     unfold Mmult.
     do 2 rewrite (coeff_mat_bij _ _ 0 0 Nat.lt_0_1 Nat.lt_0_1).
     unfold sum_n.
-    apply (sum_n_m_ext_loc (G:=RSOPM)).
+    apply (sum_n_m_ext_loc (G:=RSOAM)).
     intros k Hk.
     destruct Hk.
     induction dim.
-    * compute; RSOPM_realize_eq; lra.
+    * compute; RSOAM_realize_eq; lra.
     * assert (Hdim: (S dim >= 1)%nat). lia. 
       pose proof (nat_pred_le_lt k (S dim) H0 Hdim) as Hndim.
       unfold transpose.
       do 2 (rewrite (coeff_mat_bij _ _ 0 k); try lia).
       unfold zero; simpl.
       unfold mult; simpl.
-      RSOPM_realize_eq; lra.
+      RSOAM_realize_eq; lra.
 Qed.
 
 (* v1 + 0 = v1 *)
 Theorem Mplus_null_vector: 
-    forall dim v, Mplus (G:=RSOPM) v (null_vector dim) = v.
+    forall dim v, Mplus (G:=RSOAM) v (null_vector dim) = v.
 Proof. 
     intros dim v.
     unfold Mplus. unfold colvec in v. unfold null_vector. unfold mk_colvec.
@@ -496,15 +496,15 @@ Proof.
     apply mk_matrix_ext.
     intros i j Hi Hj.
     unfold coeff_colvec.
-    rewrite (coeff_mat_bij (T:=RSOPM) zero (fun _ _ => 0) i j); try lia.
-    unfold plus; simpl. apply RSOPM_plus_0_r. 
+    rewrite (coeff_mat_bij (T:=RSOAM) zero (fun _ _ => 0) i j); try lia.
+    unfold plus; simpl. apply RSOAM_plus_0_r. 
 Qed.
 
 (* For a matrix M and a vector v, M*v can be split into multiple
    dot products over matrix rows *)
 Theorem Mmult_dot_split:
     forall n m M v, 
-      Mmult (T:=RSOPM) M v = mk_colvec n (
+      Mmult (T:=RSOAM) M v = mk_colvec n (
         fun i => 
             dot (mk_colvec m (fun j => coeff_mat RSzero M i j)) v
       ).
@@ -518,8 +518,8 @@ Proof.
     apply sum_n_ext_loc.
     intros n0 Hn0.
     induction m.
-    * compute; RSOPM_realize_eq.
-      destruct RSOPM; lra. 
+    * compute; RSOAM_realize_eq.
+      destruct RSOAM; lra. 
     * unfold transpose.
       do 2 (rewrite coeff_mat_bij; try lia).
       induction j.
@@ -530,32 +530,32 @@ Qed.
 (* v1 * (v2 + v3) = v1 * v2 + v1 * v3 *)
 Theorem dot_Mplus_distr:
     forall dim (v1: colvec dim) v2 v3,
-        dot v1 (Mplus (G:=RSOPM) v2 v3) = RSplus (dot v1 v2) (dot v1 v3).
+        dot v1 (Mplus (G:=RSOAM) v2 v3) = RSplus (dot v1 v2) (dot v1 v3).
 Proof.
     intros dim v1 v2 c3.
     unfold dot.
     unfold Mplus.
     unfold Mmult.
     repeat (rewrite coeff_mat_bij; try lia).
-    assert (HHelp: RSplus = (plus (G:=RSOPM))). reflexivity.
+    assert (HHelp: RSplus = (plus (G:=RSOAM))). reflexivity.
     rewrite HHelp.
-    rewrite <- (sum_n_plus (G:=RSOPM)).
-    apply (sum_n_ext_loc (G:=RSOPM)).
+    rewrite <- (sum_n_plus (G:=RSOAM)).
+    apply (sum_n_ext_loc (G:=RSOAM)).
     intros n Hn.
     unfold mk_colvec. unfold coeff_colvec.
     induction dim.
-    * compute; RSOPM_realize_eq; lra.
+    * compute; RSOAM_realize_eq; lra.
     * repeat (rewrite coeff_mat_bij; try lia).
       unfold mult; unfold plus; simpl.
-      apply RSOPM_mult_plus_distr_l.
+      apply RSOAM_mult_plus_distr_l.
 Qed. 
 
 (* Associativity of dot and matrix multiplication via transposition.
    For matrix M and vectors v1 v2: v1 * (M * v2) = (v1^T * M)^T * v2 *)
 Theorem dot_Mmult:
     forall m n v1 (M: matrix m n) v2,
-        dot v1 (Mmult (T:=RSOPM) M v2) = 
-          dot (transpose (Mmult (T:=RSOPM) (transpose v1) M)) v2.
+        dot v1 (Mmult (T:=RSOAM) M v2) = 
+          dot (transpose (Mmult (T:=RSOAM) (transpose v1) M)) v2.
 Proof.
     intros m n v1 M v2.
     unfold dot.
@@ -571,14 +571,14 @@ End ColumnVectors.
 
 Section ReshapeOperations.
 
-Context {RSOPM : RealSubsetOPM}.
+Context {RSOAM : RealSubsetOAM}.
 Import RealSubsetNotations.
-Open Scope RSOPM_scope.
+Open Scope RSOAM_scope.
 
 Definition block_diag_matrix 
     {in_dim1 in_dim2 out_dim1 out_dim2: nat}  
-    (M1: matrix (T:=T RSOPM) out_dim1 in_dim1)
-    (M2: matrix (T:=T RSOPM) out_dim2 in_dim2): 
+    (M1: matrix (T:=T RSOAM) out_dim1 in_dim1)
+    (M2: matrix (T:=T RSOAM) out_dim2 in_dim2): 
     matrix (out_dim1 + out_dim2) (in_dim1 + in_dim2) :=
     mk_matrix (out_dim1 + out_dim2) (in_dim1 + in_dim2) 
         (fun i j => 
@@ -595,7 +595,7 @@ Definition block_diag_matrix
         ).
 
 Definition extend_colvec_at_bottom {n: nat} (v: colvec n) (new_dim: nat) :=
-    mk_colvec (RSOPM:=RSOPM) new_dim (
+    mk_colvec (RSOAM:=RSOAM) new_dim (
         fun i =>
         match i <? n with
         | true => coeff_colvec 0 v i
@@ -643,7 +643,7 @@ Proof.
       remember (i <? d1) as r.
       destruct r; try reflexivity.
       symmetry in Heqr. rewrite Nat.ltb_lt in Heqr.
-      pose proof (mk_matrix_ext (T:=T RSOPM)) as Hext.
+      pose proof (mk_matrix_ext (T:=T RSOAM)) as Hext.
       specialize (Hext d1 1%nat (coeff_mat RSzero v1) (coeff_mat RSzero v2)).
       unfold coeff_colvec.
       repeat (rewrite coeff_mat_bij; try lia).
@@ -656,7 +656,7 @@ Proof.
       intros i j Hi Hj.
       unfold extend_colvec_at_bottom in Hequal.
       unfold mk_colvec in Hequal.
-      pose proof (mk_matrix_ext (T:=T RSOPM)) as Hext.
+      pose proof (mk_matrix_ext (T:=T RSOAM)) as Hext.
       specialize (Hext (d1 + d2)%nat 1%nat).
       specialize (Hext (fun i _ : nat => 
                           if i <? d1 then 
@@ -685,7 +685,7 @@ Proof.
 Qed.
 
 Definition extend_colvec_on_top {n: nat} (v: colvec n) (new_dim: nat) :=
-    mk_colvec (RSOPM:=RSOPM) new_dim (
+    mk_colvec (RSOAM:=RSOAM) new_dim (
         fun i => 
         match i <? (new_dim - n) with
         | true => RSzero
@@ -735,7 +735,7 @@ Proof.
       remember (i <? d1) as r.
       destruct r; try reflexivity.
       symmetry in Heqr. rewrite Nat.ltb_ge in Heqr.
-      pose proof (mk_matrix_ext (T:=T RSOPM)) as Hext.
+      pose proof (mk_matrix_ext (T:=T RSOAM)) as Hext.
       specialize (Hext d2 1%nat (coeff_mat RSzero v1) (coeff_mat RSzero v2)).
       unfold coeff_colvec.
       repeat (rewrite coeff_mat_bij; try lia).
@@ -749,7 +749,7 @@ Proof.
       unfold extend_colvec_on_top in Hequal.
       unfold mk_colvec in Hequal.
       rewrite Nat.add_sub in Hequal.
-      pose proof (mk_matrix_ext (T:=T RSOPM)) as Hext.
+      pose proof (mk_matrix_ext (T:=T RSOAM)) as Hext.
       specialize (Hext (d1 + d2)%nat 1%nat).
       specialize (Hext (fun i _ : nat => 
                           if i <? d1 then 
@@ -779,12 +779,12 @@ Proof.
 Qed.
 
 Definition colvec_concat {n m: nat} (v1: colvec n) (v2: colvec m) :=
-    Mplus (G:=RSOPM)
+    Mplus (G:=RSOAM)
       (extend_colvec_at_bottom v1 (n + m)) (extend_colvec_on_top v2 (n + m)).
 
 Lemma f_equal2_plus_RS:
     forall x1 y1 x2 y2, x1 = y1 -> x2 = y2 
-      -> RSplus (RSOPM:=RSOPM) x1 x2 = RSplus y1 y2.
+      -> RSplus (RSOAM:=RSOAM) x1 x2 = RSplus y1 y2.
 Proof.
     intros x1 y1 x2 y2 H1 H2.
     rewrite H1; rewrite H2; reflexivity.
@@ -808,20 +808,20 @@ Proof.
         rewrite coeff_mat_default; try lia.
         rewrite mult_zero_l. rewrite Nat.add_0_l at 1.
         unfold zero at 1. unfold zero at 1.
-        rewrite <- (sum_n_m_const_zero (G:=RSOPM) 0 (d2)).
-        apply (sum_n_ext_loc (G:=RSOPM)).
+        rewrite <- (sum_n_m_const_zero (G:=RSOAM) 0 (d2)).
+        apply (sum_n_ext_loc (G:=RSOAM)).
         intros n Hn.
         unfold transpose.
         unfold extend_colvec_at_bottom.
         unfold mk_colvec.
         repeat (rewrite coeff_mat_bij; try lia); simpl.
-        apply (mult_zero_l (K:=RSOPM)).
+        apply (mult_zero_l (K:=RSOAM)).
     * destruct d2.
       - unfold dot.
         unfold Mmult.
         repeat (rewrite coeff_mat_bij; try lia).
         rewrite Nat.add_0_r at 1.
-        apply (sum_n_ext_loc (G:=RSOPM)).
+        apply (sum_n_ext_loc (G:=RSOAM)).
         intros n Hn.
         unfold transpose.
         unfold extend_colvec_at_bottom. unfold mk_colvec.
@@ -838,7 +838,7 @@ Proof.
         rewrite <- Nat.ltb_lt in Hn.
         rewrite Hn.
         unfold coeff_colvec.
-        rewrite (plus_zero_r (G:=RSOPM)).
+        rewrite (plus_zero_r (G:=RSOAM)).
         reflexivity.
       - unfold extend_colvec_at_bottom.
         unfold colvec_concat.
@@ -848,7 +848,7 @@ Proof.
         rewrite <- (plus_zero_r (sum_n_m _ _ (d1))).
         rewrite (sum_n_m_Chasles _ _ d1 (d1 + S d2)); try lia.
         apply f_equal2_plus_RS.
-        * apply (sum_n_ext_loc (G:=RSOPM)).
+        * apply (sum_n_ext_loc (G:=RSOAM)).
           intros n Hn.
           unfold transpose.
           unfold Mplus.
@@ -862,11 +862,11 @@ Proof.
           rewrite <- Nat.ltb_lt in Hn.
           rewrite Hn.
           unfold coeff_colvec.
-          rewrite (plus_zero_r (G:=RSOPM)).
+          rewrite (plus_zero_r (G:=RSOAM)).
           reflexivity.
         * simpl.
-          rewrite <- (sum_n_m_const_zero (G:=RSOPM) (S d1) (d1 + S d2)) at 1.
-          apply (sum_n_m_ext_loc (G:=RSOPM)).
+          rewrite <- (sum_n_m_const_zero (G:=RSOAM) (S d1) (d1 + S d2)) at 1.
+          apply (sum_n_m_ext_loc (G:=RSOAM)).
           intros k Hk.
           unfold transpose.
           unfold Mplus.
@@ -877,7 +877,7 @@ Proof.
           destruct Hk.
           rewrite <- Nat.ltb_ge in H.
           rewrite H.
-          apply (mult_zero_l (K:=RSOPM)).
+          apply (mult_zero_l (K:=RSOAM)).
 Qed.
 
 Lemma dot_extend_on_top:
@@ -895,7 +895,7 @@ Proof.
         unfold Mmult.
         repeat (rewrite coeff_mat_bij; try lia).
         rewrite Nat.add_0_l at 1.
-        apply (sum_n_ext_loc (G:=RSOPM)).
+        apply (sum_n_ext_loc (G:=RSOAM)).
         intros n Hn.
         unfold transpose.
         unfold extend_colvec_at_bottom. unfold mk_colvec.
@@ -909,7 +909,7 @@ Proof.
         repeat (rewrite coeff_mat_bij; try lia).
         rewrite Nat.add_sub. simpl.
         unfold coeff_colvec.
-        rewrite (plus_zero_l (G:=RSOPM)).
+        rewrite (plus_zero_l (G:=RSOAM)).
         rewrite Nat.sub_0_r.
         reflexivity.
     * destruct d2.
@@ -918,9 +918,9 @@ Proof.
         repeat (rewrite coeff_mat_bij; try lia).
         rewrite sum_O.
         rewrite coeff_mat_default; try lia.
-        rewrite (mult_zero_l (K:=RSOPM)). rewrite Nat.add_0_r at 1.
-        rewrite <- (sum_n_m_const_zero (G:=RSOPM) 0 (d1)).
-        apply (sum_n_ext_loc (G:=RSOPM)).
+        rewrite (mult_zero_l (K:=RSOAM)). rewrite Nat.add_0_r at 1.
+        rewrite <- (sum_n_m_const_zero (G:=RSOAM) 0 (d1)).
+        apply (sum_n_ext_loc (G:=RSOAM)).
         intros n Hn.
         unfold transpose.
         unfold extend_colvec_on_top.
@@ -930,7 +930,7 @@ Proof.
         rewrite <- Nat.lt_succ_r in Hn.
         rewrite <- Nat.ltb_lt in Hn.
         rewrite Hn.
-        apply (mult_zero_l (K:=RSOPM)).
+        apply (mult_zero_l (K:=RSOAM)).
       - unfold extend_colvec_on_top.
         unfold colvec_concat.
         unfold dot. unfold Mmult.
@@ -940,8 +940,8 @@ Proof.
         rewrite (sum_n_m_Chasles _ _ d1 (d1 + S d2)); try lia.
         apply f_equal2_plus_RS.
         * simpl.
-          rewrite <- (sum_n_m_const_zero (G:=RSOPM) 0 d1) at 1.
-          apply (sum_n_m_ext_loc (G:=RSOPM)).
+          rewrite <- (sum_n_m_const_zero (G:=RSOAM) 0 d1) at 1.
+          apply (sum_n_m_ext_loc (G:=RSOAM)).
           intros k Hk.
           unfold transpose.
           unfold Mplus.
@@ -957,13 +957,13 @@ Proof.
           rewrite <- Nat.lt_succ_r in H0.
           rewrite <- Nat.ltb_lt in H0.
           rewrite H0.
-          apply (mult_zero_l (K:=RSOPM)).
+          apply (mult_zero_l (K:=RSOAM)).
         * rewrite (sum_n_m_shift _ 0 d2 (S d1)).
           rewrite Nat.add_0_l.
           rewrite Nat.add_succ_r at 1.
           rewrite (Nat.add_succ_r d2 d1).
           rewrite (Nat.add_comm d1 d2).
-          apply (sum_n_m_ext_loc (G:=RSOPM)).
+          apply (sum_n_m_ext_loc (G:=RSOAM)).
           intros n Hn.
           unfold transpose.
           unfold Mplus.
@@ -981,7 +981,7 @@ Proof.
           rewrite Nat.add_succ_r.
           rewrite <- Nat.add_succ_l.
           rewrite Nat.add_sub.
-          rewrite (plus_zero_l (G:=RSOPM)).
+          rewrite (plus_zero_l (G:=RSOAM)).
           reflexivity.
 Qed.
 
@@ -998,17 +998,17 @@ Qed.
 
 Lemma Mplus_colvec_concat:
     forall d1 d2 (v1: colvec d1) (v2: colvec d2) v3 v4,
-        Mplus (G:=RSOPM) (colvec_concat v1 v2) (colvec_concat v3 v4) =
+        Mplus (G:=RSOAM) (colvec_concat v1 v2) (colvec_concat v3 v4) =
         colvec_concat 
-          (Mplus (G:=RSOPM) v1 v3) (Mplus (G:=RSOPM) v2 v4).
+          (Mplus (G:=RSOAM) v1 v3) (Mplus (G:=RSOAM) v2 v4).
 Proof.
     intros d1 d2 v1 v2 v3 v4.
     unfold colvec_concat.
-    rewrite (Mplus_assoc (G:=RSOPM) _ (extend_colvec_at_bottom v3 _) _).
-    rewrite <- (Mplus_assoc (G:=RSOPM) (extend_colvec_at_bottom v1 _) _ _).
-    rewrite (Mplus_comm (G:=RSOPM) (extend_colvec_on_top v2 _) (extend_colvec_at_bottom v3 _)).
-    rewrite (Mplus_assoc (G:=RSOPM) (extend_colvec_at_bottom v1 _) _ _).
-    rewrite <- (Mplus_assoc (G:=RSOPM) _ (extend_colvec_on_top v2 _) _).
+    rewrite (Mplus_assoc (G:=RSOAM) _ (extend_colvec_at_bottom v3 _) _).
+    rewrite <- (Mplus_assoc (G:=RSOAM) (extend_colvec_at_bottom v1 _) _ _).
+    rewrite (Mplus_comm (G:=RSOAM) (extend_colvec_on_top v2 _) (extend_colvec_at_bottom v3 _)).
+    rewrite (Mplus_assoc (G:=RSOAM) (extend_colvec_at_bottom v1 _) _ _).
+    rewrite <- (Mplus_assoc (G:=RSOAM) _ (extend_colvec_on_top v2 _) _).
     unfold Mplus.
     apply mk_matrix_ext.
     intros i j Hi Hj.
@@ -1020,7 +1020,7 @@ Proof.
         unfold mk_colvec. unfold coeff_colvec.
         do 7 (rewrite coeff_mat_bij; try lia).
         simpl. rewrite Nat.sub_diag. simpl.
-        repeat rewrite (plus_zero_l (G:=RSOPM)).
+        repeat rewrite (plus_zero_l (G:=RSOAM)).
         repeat (rewrite coeff_mat_bij; try lia).
         rewrite Nat.sub_0_r.
         reflexivity.
@@ -1032,7 +1032,7 @@ Proof.
         rewrite Nat.add_sub. 
         rewrite Nat.add_0_r in Hi.
         rewrite <- Nat.ltb_lt in Hi.
-        rewrite Hi. rewrite (plus_zero_l (G:=RSOPM)). reflexivity.
+        rewrite Hi. rewrite (plus_zero_l (G:=RSOAM)). reflexivity.
       * unfold extend_colvec_at_bottom.
         unfold extend_colvec_on_top.
         unfold mk_colvec. unfold coeff_colvec.
@@ -1041,11 +1041,11 @@ Proof.
         rewrite Nat.add_sub.
         remember (i <? S d1) as r.
         destruct r.
-        - repeat rewrite (plus_zero_r (G:=RSOPM)).
+        - repeat rewrite (plus_zero_r (G:=RSOAM)).
           symmetry in Heqr. rewrite Nat.ltb_lt in Heqr.
           rewrite coeff_mat_bij; try lia.
           reflexivity.
-        - repeat rewrite (plus_zero_l (G:=RSOPM)).
+        - repeat rewrite (plus_zero_l (G:=RSOAM)).
           symmetry in Heqr. rewrite Nat.ltb_ge in Heqr. 
           rewrite coeff_mat_bij; try lia.
           reflexivity.
@@ -1054,14 +1054,14 @@ Qed.
 Lemma MMmult_block_diag_matrix:
     forall m1 n1 m2 n2 (A1: matrix m1 n1) (A2: matrix m2 n2)
         (v1: colvec n1) (v2: colvec n2),
-        Mmult (T:=RSOPM) (block_diag_matrix A1 A2) (colvec_concat v1 v2) = 
+        Mmult (T:=RSOAM) (block_diag_matrix A1 A2) (colvec_concat v1 v2) = 
         colvec_concat 
-          (Mmult (T:=RSOPM) A1 v1) (Mmult (T:=RSOPM) A2 v2).
+          (Mmult (T:=RSOAM) A1 v1) (Mmult (T:=RSOAM) A2 v2).
 Proof.
-    assert (HHelp: RSzero = (zero (G:=RSOPM))). reflexivity.
+    assert (HHelp: RSzero = (zero (G:=RSOAM))). reflexivity.
     intros m1 n1 m2 n2 A1 A2 v1 v2.
     unfold colvec_concat.
-    rewrite (Mmult_distr_l (T:=RSOPM) (block_diag_matrix A1 A2) _ _).
+    rewrite (Mmult_distr_l (T:=RSOAM) (block_diag_matrix A1 A2) _ _).
     unfold Mplus.
     apply mk_matrix_ext.
     intros i j Hi Hj.
@@ -1069,20 +1069,20 @@ Proof.
     destruct (lt_dec i m1) as [Hile|Helt].
     - destruct m1. lia. simpl in Hile.
       assert (H1: coeff_mat zero 
-        (Mmult (T:=RSOPM) (block_diag_matrix A1 A2) 
+        (Mmult (T:=RSOAM) (block_diag_matrix A1 A2) 
           (extend_colvec_on_top v2 _)) i 0 = RSzero). { 
         unfold Mmult.
         rewrite coeff_mat_bij; try lia.
         unfold sum_n.
         rewrite <- HHelp. rewrite HHelp at 1.
-        rewrite <- (sum_n_m_const_zero (G:=RSOPM) 0 (pred (n1 + n2))).
+        rewrite <- (sum_n_m_const_zero (G:=RSOAM) 0 (pred (n1 + n2))).
         destruct (le_gt_dec (n1 + n2) 0).
         - rewrite Nat.le_0_r in l. symmetry in l.
           repeat rewrite <- l at 1. simpl. 
           repeat rewrite sum_n_n.
           rewrite (coeff_mat_default _ _ _ _ _ 0 0); try lia.
-          apply (mult_zero_r (K:=RSOPM)).
-        - apply (sum_n_m_ext_loc (G:=RSOPM)).
+          apply (mult_zero_r (K:=RSOAM)).
+        - apply (sum_n_m_ext_loc (G:=RSOAM)).
           intros n Hn.
           unfold extend_colvec_on_top.
           unfold mk_colvec. unfold coeff_colvec.
@@ -1090,23 +1090,23 @@ Proof.
           rewrite Nat.add_sub.
           remember (n <? n1) as r.
           induction r.
-          * apply (mult_zero_r (K:=RSOPM)).
+          * apply (mult_zero_r (K:=RSOAM)).
           * unfold block_diag_matrix.
             rewrite coeff_mat_bij; try lia.
             apply Nat.ltb_lt in Hile.
             rewrite Hile. rewrite <- Heqr.
-            apply (mult_zero_l (K:=RSOPM)).
+            apply (mult_zero_l (K:=RSOAM)).
       }
-      rewrite H1. rewrite (plus_zero_r (G:=RSOPM)).
+      rewrite H1. rewrite (plus_zero_r (G:=RSOAM)).
       unfold extend_colvec_on_top. unfold mk_colvec.
       rewrite coeff_mat_bij; try lia.
       rewrite Nat.add_sub.
       apply Nat.ltb_lt in Hile.
-      rewrite Hile. rewrite (plus_zero_r (G:=RSOPM)).
+      rewrite Hile. rewrite (plus_zero_r (G:=RSOAM)).
       unfold Mmult at 1. 
       repeat rewrite coeff_mat_bij; try lia.
       unfold sum_n. rewrite (sum_n_m_Chasles _ _ (pred n1) _); try lia.
-      rewrite <- (plus_zero_r (G:=RSOPM)).
+      rewrite <- (plus_zero_r (G:=RSOAM)).
       apply f_equal2_plus_RS.
       * unfold extend_colvec_at_bottom.
         unfold mk_colvec. unfold coeff_colvec.
@@ -1114,7 +1114,7 @@ Proof.
         rewrite Hile.
         unfold Mmult. rewrite Nat.ltb_lt in Hile.
         rewrite coeff_mat_bij; try lia.
-        unfold sum_n. apply (sum_n_m_ext_loc (G:=RSOPM)).
+        unfold sum_n. apply (sum_n_m_ext_loc (G:=RSOAM)).
         intros k Hk.
         induction n1.
         * simpl in Hk.
@@ -1127,7 +1127,7 @@ Proof.
             rewrite mult_zero_l. rewrite mult_zero_r. reflexivity.
           * rewrite coeff_mat_bij; try lia.
             rewrite (coeff_mat_default _ _ _ _ v1); try lia.
-            repeat rewrite (mult_zero_r (K:=RSOPM)). reflexivity.
+            repeat rewrite (mult_zero_r (K:=RSOAM)). reflexivity.
         * rewrite coeff_mat_bij; try lia.
           unfold block_diag_matrix.
           rewrite coeff_mat_bij; try lia.
@@ -1140,15 +1140,15 @@ Proof.
         unfold mk_colvec. unfold coeff_colvec.
         rewrite <- HHelp. rewrite HHelp at 1. 
         rewrite <- (sum_n_m_const_zero 
-            (G:=RSOPM) (S (pred n1)) (pred (n1 + n2))).
-        apply (sum_n_m_ext_loc (G:=RSOPM)).
+            (G:=RSOAM) (S (pred n1)) (pred (n1 + n2))).
+        apply (sum_n_m_ext_loc (G:=RSOAM)).
         intros k Hk.
         rewrite coeff_mat_bij; try lia.
         destruct Hk.
         remember (k <? n1) as r.
         induction r.
         * symmetry in Heqr. rewrite Nat.ltb_lt in Heqr. lia.
-        * apply (mult_zero_r (K:=RSOPM)).  
+        * apply (mult_zero_r (K:=RSOAM)).  
     - apply not_lt in Helt.
       assert (Hib: i <? m1 = false). {
          rewrite Nat.ltb_ge.
@@ -1156,7 +1156,7 @@ Proof.
       }
       apply f_equal2_plus_RS.
       * assert (H1: coeff_mat zero 
-                      (Mmult (T:=RSOPM)
+                      (Mmult (T:=RSOAM)
                         (block_diag_matrix A1 A2) 
                         (extend_colvec_at_bottom v1 _)) i 0 = RSzero). 
         { 
@@ -1164,13 +1164,13 @@ Proof.
             rewrite coeff_mat_bij; try lia.
             unfold sum_n.
             rewrite <- HHelp. rewrite HHelp at 1.
-            rewrite <- (sum_n_m_const_zero (G:=RSOPM) 0 (pred (n1 + n2))).
+            rewrite <- (sum_n_m_const_zero (G:=RSOAM) 0 (pred (n1 + n2))).
             apply sum_n_m_ext_loc.
             intros n Hn.
             destruct (le_gt_dec (n1 + n2) 0).
             - rewrite Nat.le_0_r in l. symmetry in l.
               rewrite (coeff_mat_default _ _ _ _ _ n 0); try lia.
-              apply (mult_zero_r (K:=RSOPM)).
+              apply (mult_zero_r (K:=RSOAM)).
             - unfold extend_colvec_at_bottom.
               unfold mk_colvec. unfold coeff_colvec.
               rewrite coeff_mat_bij; try lia.
@@ -1178,8 +1178,8 @@ Proof.
               rewrite coeff_mat_bij; try lia.
               rewrite Hib.
               destruct (n <? n1).
-              - apply (mult_zero_l (K:=RSOPM)).
-              - apply (mult_zero_r (K:=RSOPM)).
+              - apply (mult_zero_l (K:=RSOAM)).
+              - apply (mult_zero_r (K:=RSOAM)).
         }
         rewrite H1.
         unfold extend_colvec_at_bottom. unfold mk_colvec.
@@ -1196,7 +1196,7 @@ Proof.
           * repeat rewrite sum_n_n.
             repeat rewrite coeff_mat_default; try lia.
             reflexivity.
-          * apply (sum_n_ext_loc (G:=RSOPM)).
+          * apply (sum_n_ext_loc (G:=RSOAM)).
             intros n Hn. simpl.
             repeat rewrite coeff_mat_bij; try lia.
             rewrite Hib. rewrite Nat.sub_0_r. reflexivity.
@@ -1206,8 +1206,8 @@ Proof.
           apply f_equal2_plus_RS.
           - rewrite <- HHelp. rewrite HHelp at 1.
             rewrite <- (sum_n_m_const_zero 
-              (G:=RSOPM) 0 (pred (S n1))).
-            apply (sum_n_m_ext_loc (G:=RSOPM)).
+              (G:=RSOAM) 0 (pred (S n1))).
+            apply (sum_n_m_ext_loc (G:=RSOAM)).
             intros k Hk.
             rewrite coeff_mat_bij; try lia.
             rewrite Hib.
@@ -1215,16 +1215,16 @@ Proof.
             simpl in H0.
             rewrite <- Nat.lt_succ_r in H0.
             rewrite <- Nat.ltb_lt in H0.
-            rewrite H0. apply (mult_zero_l (K:=RSOPM)). 
+            rewrite H0. apply (mult_zero_l (K:=RSOAM)). 
         - destruct n2.
           * rewrite sum_n_m_zero; try lia.
             rewrite sum_n_n.
             rewrite (coeff_mat_default _ _ _ _ v2); try lia.
-            symmetry. apply (mult_zero_r (K:=RSOPM)).
+            symmetry. apply (mult_zero_r (K:=RSOAM)).
           * rewrite (sum_n_m_shift _ 0 _ (S (pred (S n1)))). simpl.
             rewrite <- Nat.add_succ_comm.
             rewrite (Nat.add_comm n2 _).
-            apply (sum_n_m_ext_loc (G:=RSOPM)).
+            apply (sum_n_m_ext_loc (G:=RSOAM)).
             intros k Hk.
             repeat (rewrite coeff_mat_bij; try lia).
             rewrite Hib.
@@ -1249,14 +1249,14 @@ Proof.
       - simpl. repeat rewrite sum_n_n.
         repeat rewrite coeff_mat_default; try lia.
         rewrite mult_zero_l. unfold zero; simpl.
-        RSOPM_realize_eq. destruct RSOPM; lra.
+        RSOAM_realize_eq. destruct RSOAM; lra.
       - simpl.
         rewrite sum_n_n.
         rewrite coeff_mat_default; try lia.
-        rewrite (mult_zero_l (K:=RSOPM)). 
-        unfold zero at 3. rewrite RSOPM_plus_comm.
-        simpl. rewrite RSOPM_plus_0_r. 
-        apply (sum_n_ext_loc (G:=RSOPM)).
+        rewrite (mult_zero_l (K:=RSOAM)). 
+        unfold zero at 3. rewrite RSOAM_plus_comm.
+        simpl. rewrite RSOAM_plus_0_r. 
+        apply (sum_n_ext_loc (G:=RSOAM)).
         intros n Hn.
         unfold transpose.
         unfold colvec_concat.
@@ -1265,16 +1265,16 @@ Proof.
         unfold mk_colvec.
         repeat (rewrite coeff_mat_bij; try lia).
         repeat rewrite extend_colvec_on_top_same_dim.
-        simpl. repeat rewrite (plus_zero_l (G:=RSOPM)).
+        simpl. repeat rewrite (plus_zero_l (G:=RSOAM)).
         reflexivity.
     * destruct d2.
       - simpl.
         rewrite Nat.add_0_r at 1.
         rewrite sum_n_n.
         rewrite coeff_mat_default; try lia.
-        rewrite (mult_zero_l (K:=RSOPM)). 
-        unfold zero at 5. simpl. rewrite RSOPM_plus_0_r.
-        apply (sum_n_m_ext_loc (G:=RSOPM)).
+        rewrite (mult_zero_l (K:=RSOAM)). 
+        unfold zero at 5. simpl. rewrite RSOAM_plus_0_r.
+        apply (sum_n_m_ext_loc (G:=RSOAM)).
         intros k Hk. 
         unfold transpose.
         unfold colvec_concat.
@@ -1287,12 +1287,12 @@ Proof.
         destruct Hk as [Hk1 Hk2].
         rewrite <- Nat.lt_succ_r in Hk2.
         rewrite <- Nat.ltb_lt in Hk2.
-        rewrite Hk2. repeat rewrite (plus_zero_r (G:=RSOPM)).
+        rewrite Hk2. repeat rewrite (plus_zero_r (G:=RSOAM)).
         reflexivity.
       - rewrite (sum_n_m_Chasles _ _ (d1) (pred (S d1 + S d2))); try lia.
         apply f_equal2_plus_RS.
         * simpl.
-          apply (sum_n_ext_loc (G:=RSOPM)).
+          apply (sum_n_ext_loc (G:=RSOAM)).
           intros n Hn.
           unfold transpose.
           unfold colvec_concat.
@@ -1305,14 +1305,14 @@ Proof.
           rewrite <- Nat.lt_succ_r in Hn.
           rewrite <- Nat.ltb_lt in Hn.
           rewrite Hn.
-          repeat rewrite (plus_zero_r (G:=RSOPM)). 
+          repeat rewrite (plus_zero_r (G:=RSOAM)). 
           unfold coeff_colvec.
           reflexivity.
         * rewrite (sum_n_m_shift _ 0 (pred (S d2)) (S d1)).
           rewrite Nat.add_pred_l; try lia.
           rewrite (Nat.add_comm (S d2) (S d1)).
           rewrite Nat.add_0_l.
-          apply (sum_n_m_ext_loc (G:=RSOPM)).
+          apply (sum_n_m_ext_loc (G:=RSOAM)).
           intros k Hk.
           unfold transpose.
           unfold colvec_concat.
@@ -1324,7 +1324,7 @@ Proof.
           destruct Hk as [H1 H2].
           rewrite Nat.add_sub.
           rewrite <- Nat.ltb_ge in H1. rewrite H1.
-          repeat rewrite (plus_zero_l (G:=RSOPM)).
+          repeat rewrite (plus_zero_l (G:=RSOAM)).
           unfold coeff_colvec.
           reflexivity.
 Qed.
@@ -1354,7 +1354,7 @@ Proof.
         intros i j Hi Hj
     ).
       * rewrite coeff_mat_bij; try lia.
-        rewrite (plus_zero_l (G:=RSOPM)).
+        rewrite (plus_zero_l (G:=RSOAM)).
         rewrite coeff_mat_bij; try lia.
         rewrite Nat.sub_diag. 
         rewrite coeff_mat_bij; try lia.
@@ -1371,8 +1371,8 @@ Proof.
         do 3 (rewrite coeff_mat_bij; try lia).
         rewrite Nat.add_sub.
         apply Nat.ltb_lt in Heqr. rewrite Heqr.
-        rewrite (plus_zero_r (G:=RSOPM)). reflexivity.
-      * rewrite (plus_zero_l (G:=RSOPM)).
+        rewrite (plus_zero_r (G:=RSOAM)). reflexivity.
+      * rewrite (plus_zero_l (G:=RSOAM)).
         rewrite coeff_mat_bij; try lia.
         rewrite Nat.add_sub.
         symmetry in Heqr.

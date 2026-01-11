@@ -10,12 +10,12 @@ Open Scope colvec_scope.
 
 Section PWAFConcatenation.
 
-Context { RSOPM : RealSubsetOPM }.
-Open Scope RSOPM_scope.
+Context { RSOAM : RealSubsetOAM }.
+Open Scope RSOAM_scope.
 
 Fixpoint extend_lincons_at_bottom
     {in_dim: nat} 
-    (lcs: list (LinearConstraint (RSOPM:=RSOPM) in_dim)) 
+    (lcs: list (LinearConstraint (RSOAM:=RSOAM) in_dim)) 
     (new_dim: nat): list (LinearConstraint new_dim) :=
     match lcs with 
     | nil => nil
@@ -64,7 +64,7 @@ Qed.
 
 Fixpoint extend_lincons_on_top
     {in_dim: nat} 
-    (lcs: list (LinearConstraint (RSOPM:=RSOPM) in_dim))
+    (lcs: list (LinearConstraint (RSOAM:=RSOAM) in_dim))
     (new_dim: nat): list (LinearConstraint new_dim) :=
     match lcs with 
     | nil => nil
@@ -134,7 +134,7 @@ Proof.
         unfold Mplus in Hcolvec.
         unfold extend_colvec_at_bottom in Hcolvec at 1.
         unfold mk_colvec in Hcolvec.
-        pose proof (mk_matrix_ext (T:=T RSOPM)) as Hmatrix_ext.
+        pose proof (mk_matrix_ext (T:=T RSOAM)) as Hmatrix_ext.
         specialize (Hmatrix_ext (d1 + d2)%nat 1%nat).
         specialize (Hmatrix_ext (fun i _: nat => 
                                     if i <? d1 then
@@ -164,8 +164,8 @@ Proof.
         repeat (rewrite coeff_mat_bij in Hext2; try lia).
         rewrite Nat.add_sub in Hext2.
         rewrite Hi2 in Hext2.
-        rewrite RSOPM_plus_comm in Hext2.
-        rewrite RSOPM_plus_0_r in Hext2.
+        rewrite RSOAM_plus_comm in Hext2.
+        rewrite RSOAM_plus_0_r in Hext2.
         rewrite Nat.add_sub in Hext2.
         rewrite coeff_mat_bij; try lia.
         symmetry. induction j. apply Hext2. lia.
@@ -183,8 +183,8 @@ Proof.
         rewrite Nat.add_sub.
         remember (i <? d1) as i_d1.
         destruct i_d1.
-        - rewrite (plus_zero_r (G:=RSOPM)). reflexivity.
-        - rewrite (plus_zero_l (G:=RSOPM)).
+        - rewrite (plus_zero_r (G:=RSOAM)). reflexivity.
+        - rewrite (plus_zero_l (G:=RSOAM)).
           rewrite Hgoal1.
           unfold null_vector.
           unfold mk_colvec. unfold coeff_colvec.
@@ -219,7 +219,7 @@ Proof.
         unfold extend_colvec_on_top in Hcolvec at 1.
         rewrite Nat.add_sub in Hcolvec.
         unfold mk_colvec in Hcolvec.
-        pose proof (mk_matrix_ext (T:=RSOPM)) as Hmatrix_ext.
+        pose proof (mk_matrix_ext (T:=RSOAM)) as Hmatrix_ext.
         specialize (Hmatrix_ext (d1 + d2)%nat 1%nat).
         specialize (Hmatrix_ext (fun i _: nat => 
                                     if i <? d1 then
@@ -249,7 +249,7 @@ Proof.
         repeat (rewrite coeff_mat_bij in Hext2; try lia).
         rewrite Nat.add_sub in Hext2.
         rewrite Hi_cp in Hext2.
-        rewrite RSOPM_plus_0_r in Hext2.
+        rewrite RSOAM_plus_0_r in Hext2.
         rewrite coeff_mat_bij; try lia.
         symmetry. induction j. apply Hext2. lia.
       }
@@ -266,14 +266,14 @@ Proof.
         rewrite Nat.add_sub.
         remember (i <? d1) as i_d1.
         destruct i_d1.
-        - rewrite (plus_zero_r (G:=RSOPM)).
+        - rewrite (plus_zero_r (G:=RSOAM)).
           rewrite Hgoal1.
           unfold null_vector.
           unfold mk_colvec. unfold coeff_colvec.
           symmetry in Heqi_d1. rewrite Nat.ltb_lt in Heqi_d1.
           rewrite coeff_mat_bij; try lia.
           reflexivity.
-        - rewrite (plus_zero_l (G:=RSOPM)). reflexivity.
+        - rewrite (plus_zero_l (G:=RSOAM)). reflexivity.
     - apply IHconstraints.
       apply H.
 Qed.
@@ -339,7 +339,7 @@ Proof.
       intros constraint HconstraintIn.
       destruct constraint as [c b].
       apply in_app_or in HconstraintIn.
-      pose proof (colvec_split (RSOPM:=RSOPM)).
+      pose proof (colvec_split (RSOAM:=RSOAM)).
       specialize (H d1 d2 c).
       destruct H as [c_top H].
       destruct H as [c_bottom H].
@@ -358,7 +358,7 @@ Proof.
         destruct H_lin_bot_split as [H_c_bottom_def Hconcat_def].
         rewrite H_c_bottom_def.
         rewrite dot_null_vector.
-        rewrite RSOPM_plus_0_r.
+        rewrite RSOAM_plus_0_r.
         rewrite Hconcat_def in H.
         specialize (Hinv b constraints1).
         apply Hinv in H.
@@ -376,8 +376,8 @@ Proof.
         destruct H_lin_top_split as [H_c_top_def Hconcat_def].
         rewrite H_c_top_def.
         rewrite dot_null_vector.
-        rewrite RSOPM_plus_comm.
-        rewrite RSOPM_plus_0_r.
+        rewrite RSOAM_plus_comm.
+        rewrite RSOAM_plus_0_r.
         rewrite Hconcat_def in H.
         specialize (Hinv b constraints2).
         apply Hinv in H.
@@ -391,7 +391,7 @@ Definition concat_affine_functions
     {in_dim1 in_dim2 out_dim1 out_dim2: nat}  
     (af1: AffineFunction in_dim1 out_dim1)
     (af2: AffineFunction in_dim2 out_dim2)
-    : AffineFunction (RSOPM:=RSOPM) (in_dim1 + in_dim2) (out_dim1 + out_dim2) 
+    : AffineFunction (RSOAM:=RSOAM) (in_dim1 + in_dim2) (out_dim1 + out_dim2) 
     := 
     match af1, af2 with 
     | Affine M_f b_f, Affine M_g b_g =>
@@ -424,7 +424,7 @@ Definition concat_affine_segments
   {in_dim1 in_dim2 out_dim1 out_dim2: nat}  
   (el1: AffineSegment in_dim1 out_dim1)
   (el2: AffineSegment in_dim2 out_dim2)
-  : AffineSegment (RSOPM:=RSOPM) (in_dim1 + in_dim2) (out_dim1 + out_dim2) 
+  : AffineSegment (RSOAM:=RSOAM) (in_dim1 + in_dim2) (out_dim1 + out_dim2) 
   := 
   match el1, el2 with 
   | Segment p1 af1, Segment p2 af2 =>
@@ -557,7 +557,7 @@ Proof.
     destruct af_fg2 as [M_fg2 b_fg2].
     unfold affine_segment_eval.
     unfold affine_f_eval.
-    pose proof (colvec_split (RSOPM:=RSOPM)) as Hx.
+    pose proof (colvec_split (RSOAM:=RSOAM)) as Hx.
     specialize (Hx _ _ x).
     destruct Hx as [x1 Hx].
     destruct Hx as [x2 Hx].
@@ -682,8 +682,8 @@ End PWAFConcatenation.
 
 Section PWAFComposition.
 
-Context { RSOPM : RealSubsetOPM }.
-Open Scope RSOPM_scope.
+Context { RSOAM : RealSubsetOAM }.
+Open Scope RSOAM_scope.
 
 Definition affine_f_polyhedron_preimage
     {in_dim out_dim: nat}
@@ -696,7 +696,7 @@ Definition affine_f_polyhedron_preimage
           map (fun constraint => 
                 match constraint with
                   Constraint c b => Constraint in_dim 
-                    (transpose (Mmult (T:=RSOPM) (transpose c) M_af)) (b + (- (c * b_af)%v))
+                    (transpose (Mmult (T:=RSOAM) (transpose c) M_af)) (b + (- (c * b_af)%v))
                 end) lc
         in Polyhedron _ lc_new
     end. 
@@ -715,7 +715,7 @@ Proof.
   unfold in_convex_polyhedron in Hp.
   destruct lc as [c_lc b_lc].
   specialize (Hp (Constraint _ (transpose 
-                                  (Mmult (T:=RSOPM) (transpose c_lc) M_af)%M) 
+                                  (Mmult (T:=RSOAM) (transpose c_lc) M_af)%M) 
                                 (b_lc + - (c_lc * b_af)%v))).
   unfold satisfies_lc in Hp.
   unfold affine_f_eval.
@@ -725,7 +725,7 @@ Proof.
   unfold dot.
   rewrite Mmult_distr_l.
   rewrite <- coeff_mat_00_Mplus.
-  apply RSOPM_le_opp_plus_r.
+  apply RSOAM_le_opp_plus_r.
   rewrite Mmult_assoc.
   apply Hp.
   apply in_map_iff.
@@ -764,7 +764,7 @@ Proof.
       unfold satisfies_lc.
       unfold satisfies_lc in Hp.
       unfold affine_f_eval in Hp.
-      apply RSOPM_le_plus_opp_r.
+      apply RSOAM_le_plus_opp_r.
       unfold dot in Hp.
       rewrite Mmult_distr_l in Hp.
       unfold dot. rewrite transpose_transpose.
@@ -787,7 +787,7 @@ Definition compose_affine_functions
     :=
     match af_f, af_g with
     | Affine M_f b_f, Affine M_g b_g =>
-        Affine (RSOPM:=RSOPM) in_dim out_dim (Mmult (T:=RSOPM) M_f M_g) ((Mmult (T:=RSOPM) M_f b_g) + b_f)%M
+        Affine (RSOAM:=RSOAM) in_dim out_dim (Mmult (T:=RSOAM) M_f M_g) ((Mmult (T:=RSOAM) M_f b_g) + b_f)%M
     end.
 
 Lemma compose_affine_functions_correct:
@@ -810,8 +810,8 @@ Qed.
 
 Lemma compose_affine_functions_reverse_f:
   forall in_dim hid_dim out_dim x g_x fg_x
-    (af_f: AffineFunction (RSOPM:=RSOPM) hid_dim out_dim)
-    (af_g: AffineFunction (RSOPM:=RSOPM) in_dim hid_dim),
+    (af_f: AffineFunction (RSOAM:=RSOAM) hid_dim out_dim)
+    (af_g: AffineFunction (RSOAM:=RSOAM) in_dim hid_dim),
     is_affine_f_value (compose_affine_functions af_f af_g) x fg_x ->
     is_affine_f_value af_g x g_x ->
     is_affine_f_value af_f g_x fg_x.  
@@ -982,8 +982,8 @@ Qed.
 
 Lemma compose_affine_segments_value_reverse_f:
   forall in_dim hid_dim out_dim x g_x f_x
-    (seg_f: AffineSegment (RSOPM:=RSOPM) hid_dim out_dim)
-    (seg_g: AffineSegment (RSOPM:=RSOPM) in_dim hid_dim),
+    (seg_f: AffineSegment (RSOAM:=RSOAM) hid_dim out_dim)
+    (seg_g: AffineSegment (RSOAM:=RSOAM) in_dim hid_dim),
     is_affine_segment_value (compose_affine_segments seg_f seg_g) x f_x ->
     is_affine_segment_value seg_g x g_x ->
     is_affine_segment_value seg_f g_x f_x.
@@ -1136,14 +1136,14 @@ End PWAFComposition.
 
 Section TPWAFOperations.
 
-Context { RSOPM : RealSubsetOPM }.
-Open Scope RSOPM_scope.
+Context { RSOAM : RealSubsetOAM }.
+Open Scope RSOAM_scope.
 
 Theorem pwaf_concat_total:
   forall in_dim1 in_dim2 out_dim1 out_dim2
     (f: TPWAF (in_dim:=in_dim1) (out_dim:=out_dim1)) 
     (g: TPWAF (in_dim:=in_dim2) (out_dim:=out_dim2)),
-    is_total (RSOPM:=RSOPM) (pwaf_concat f g).
+    is_total (RSOAM:=RSOAM) (pwaf_concat f g).
 Proof.
   intros in_dim1 in_dim2 out_dim1 out_dim2 f g.
   unfold is_total.
@@ -1155,7 +1155,7 @@ Proof.
   pose proof Hgtotal as Hgtotal_cp.
   unfold is_total in Hftotal_cp.
   unfold is_total in Hgtotal_cp.
-  pose proof (colvec_split (RSOPM:=RSOPM) in_dim1 in_dim2 x) as Hsplit.
+  pose proof (colvec_split (RSOAM:=RSOAM) in_dim1 in_dim2 x) as Hsplit.
   destruct Hsplit as [x1 Hsplit].
   destruct Hsplit as [x2 Hsplit].
   destruct Hsplit as [Hx1 Hsplit].
@@ -1203,7 +1203,7 @@ Theorem pwaf_compose_total:
   forall in_dim hid_dim out_dim
     (f: TPWAF (in_dim:=hid_dim) (out_dim:=out_dim)) 
     (g: TPWAF (in_dim:=in_dim) (out_dim:=hid_dim)),
-    is_total (RSOPM:=RSOPM) (pwaf_compose f g).
+    is_total (RSOAM:=RSOAM) (pwaf_compose f g).
 Proof.
   intros in_dim hid_dim out_dim f g.
   unfold is_total.
@@ -1251,8 +1251,8 @@ Definition tpwaf_compose
 
 Theorem tpwaf_compose_correct:
   forall in_dim hid_dim out_dim x f_x
-      (f: TPWAF (RSOPM:=RSOPM) (in_dim:=hid_dim) (out_dim:=out_dim)) 
-      (g: TPWAF (RSOPM:=RSOPM) (in_dim:=in_dim) (out_dim:=hid_dim)),
+      (f: TPWAF (RSOAM:=RSOAM) (in_dim:=hid_dim) (out_dim:=out_dim)) 
+      (g: TPWAF (RSOAM:=RSOAM) (in_dim:=in_dim) (out_dim:=hid_dim)),
       is_pwaf_value f (tpwaf_eval g x) f_x ->
       is_pwaf_value (tpwaf_compose f g) x f_x.
 Proof.
@@ -1268,13 +1268,13 @@ End TPWAFOperations.
 
 Section PWAFOperationsProperties.
 
-Context { RSOPM : RealSubsetOPM }.
-Open Scope RSOPM_scope.
+Context { RSOAM : RealSubsetOAM }.
+Open Scope RSOAM_scope.
 
 Theorem pwaf_compose_reverse_value_f:
   forall in_dim hid_dim out_dim x g_x fg_x
-    (f: PWAF (RSOPM:=RSOPM) (in_dim:=hid_dim) (out_dim:=out_dim)) 
-    (g: PWAF (RSOPM:=RSOPM) (in_dim:=in_dim) (out_dim:=hid_dim)),
+    (f: PWAF (RSOAM:=RSOAM) (in_dim:=hid_dim) (out_dim:=out_dim)) 
+    (g: PWAF (RSOAM:=RSOAM) (in_dim:=in_dim) (out_dim:=hid_dim)),
      is_pwaf_value (pwaf_compose f g) x fg_x ->
      is_pwaf_value g x g_x ->
      is_pwaf_value f g_x fg_x.
@@ -1318,8 +1318,8 @@ Qed.
 
 Theorem tpwaf_compose_reverse_value:
   forall in_dim hid_dim out_dim x fg_x
-    (f: TPWAF (RSOPM:=RSOPM) (in_dim:=hid_dim) (out_dim:=out_dim)) 
-    (g: TPWAF (RSOPM:=RSOPM) (in_dim:=in_dim) (out_dim:=hid_dim)),
+    (f: TPWAF (RSOAM:=RSOAM) (in_dim:=hid_dim) (out_dim:=out_dim)) 
+    (g: TPWAF (RSOAM:=RSOAM) (in_dim:=in_dim) (out_dim:=hid_dim)),
         is_pwaf_value (tpwaf_compose f g) x fg_x ->
         is_pwaf_value g x (tpwaf_eval g x) /\ is_pwaf_value f (tpwaf_eval g x) fg_x.
 Proof.

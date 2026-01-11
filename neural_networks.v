@@ -4,12 +4,12 @@ From Verinncoq Require Import real_subsets real_subsets_instances matrix_extensi
 
 Section NeuralNetworks.
 
-Context { RSOPM : RealSubsetOPM }.
+Context { RSOAM : RealSubsetOAM }.
 
 Inductive TPWANNSequential {input_dim output_dim: nat} :=
 | NNOutput : TPWANNSequential
 | NNTPWALayer {hidden_dim: nat}:
-    TPWAF (RSOPM:=RSOPM) (in_dim:=input_dim) (out_dim:=hidden_dim) 
+    TPWAF (RSOAM:=RSOAM) (in_dim:=input_dim) (out_dim:=hidden_dim) 
     -> TPWANNSequential (input_dim:=hidden_dim) (output_dim:=output_dim)
     -> TPWANNSequential.
 
@@ -50,11 +50,11 @@ End SequentialNeuralNetworkExample.
 
 Section SequentialNeuralNetworkExample2.
 
-Definition example_weights2: matrix (T:=QDEP_RSOPM) 2 2 :=
+Definition example_weights2: matrix (T:=QDEP_RSOAM) 2 2 :=
     [[toQDEP 1, toQDEP 1],
      [toQDEP 1, toQDEP 1]].
 
-Definition example_biases2: colvec (RSOPM:=QDEP_RSOPM) 2 :=
+Definition example_biases2: colvec (RSOAM:=QDEP_RSOAM) 2 :=
     [[toQDEP 1], 
      [toQDEP 0.25]].
 
@@ -70,12 +70,12 @@ End SequentialNeuralNetworkExample2.
 
 Section SequentialNetworkEvaluation.
 
-Context { RSOPM : RealSubsetOPM }.
+Context { RSOAM : RealSubsetOAM }.
 
 Definition flex_dim_copy {input_dim output_dim: nat} 
     (x: colvec input_dim): colvec output_dim 
     :=
-    Mmult (T:=RSOPM) (mk_matrix output_dim input_dim Mone_seq) x.
+    Mmult (T:=RSOAM) (mk_matrix output_dim input_dim Mone_seq) x.
 
 Fixpoint nn_eval {in_dim out_dim: nat} 
     (nn: TPWANNSequential (input_dim:=in_dim) (output_dim:=out_dim)) 
@@ -92,11 +92,11 @@ End SequentialNetworkEvaluation.
 
 Section AffineSegmentDecomposition.
 
-Context { RSOPM : RealSubsetOPM }.
+Context { RSOAM : RealSubsetOAM }.
 
 Fixpoint asd {in_dim out_dim: nat}
     (nn: TPWANNSequential (input_dim := in_dim) (output_dim := out_dim)) 
-    : TPWAF (RSOPM:=RSOPM) (in_dim := in_dim) (out_dim := out_dim)
+    : TPWAF (RSOAM:=RSOAM) (in_dim := in_dim) (out_dim := out_dim)
     :=
     match nn with
         | NNOutput => OutputTPWAF
@@ -125,7 +125,7 @@ Proof.
         rewrite Mplus_null_vector in Hvalue.
         apply Hvalue.
       - exists (Segment _ _ (full_R_polyhedron input_dim) 
-                    (Affine _ _ (mk_matrix (T:=RSOPM) output_dim input_dim Mone_seq) (null_vector output_dim))).
+                    (Affine _ _ (mk_matrix (T:=RSOAM) output_dim input_dim Mone_seq) (null_vector output_dim))).
         split.
         * rewrite Hrepr; simpl.
           left; reflexivity.
@@ -139,7 +139,7 @@ Proof.
             rewrite Mplus_null_vector.
             easy.
     * fold (asd (in_dim:=hidden_dim) (out_dim:=output_dim)) in Hrepr.
-      unfold nn_eval; fold (nn_eval (RSOPM:=RSOPM) (in_dim:=hidden_dim) (out_dim:=output_dim)).
+      unfold nn_eval; fold (nn_eval (RSOAM:=RSOAM) (in_dim:=hidden_dim) (out_dim:=output_dim)).
       rewrite Hrepr.  
       specialize (IHnn (tpwaf_eval t x) f_x (asd nn) eq_refl).
       split; intros H.
