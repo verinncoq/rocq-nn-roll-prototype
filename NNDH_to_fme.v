@@ -498,7 +498,8 @@ Open Scope RSOAM_scope.
 
 Fixpoint verify_hyperporperty_helper {d: nat}
     (W: ConvexPolyhedron (RSOAM:=RSOAMD) d)
-    (body: list (AffineSegment (d + d) 1)) :=
+    (body: list (AffineSegment (d + d) 1))
+    : option (LinearSystemSolution (d + d)) :=
     match body with
     | nil => None
     | body_el :: tail => 
