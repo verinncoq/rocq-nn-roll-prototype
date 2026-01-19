@@ -276,7 +276,7 @@ Definition example_nn2 :=
     (NNReLU
     (NNOutput (output_dim:=1)))))).
 
-Theorem example4_not_monotone :
+Theorem example2_not_monotone :
   ~ is_monotone_1d example_nn2.
 Proof.
   intro Hcontra.
