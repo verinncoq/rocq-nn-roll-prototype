@@ -11,14 +11,14 @@ Section Monotonicity1DHyperpropery.
 
 Definition is_monotone_1d (nn: TPWANNSequential (RSOAM:=Q_RSOAMD)): Prop :=
     forall x1 x2,
-        toRS x1 <= (toRS x2) = true -> toRS (nn_eval nn x1) <= toRS (nn_eval nn x2) = true.
+        toRS x1 <= toRS x2 = true -> toRS (nn_eval nn x1) <= toRS (nn_eval nn x2) = true.
 
 Definition W_monotonicity_1d: ConvexPolyhedron 2 :=
     Polyhedron (RSOAM:=Q_RSOAMD) 2 (cons (Constraint 2 [[1], [- (1)]] 0) nil).
 
 Lemma W_monotonicity_1d_correct:
     forall x1 x2,
-       toRS x1 <= (toRS x2) = true <-> in_convex_polyhedron (colvec_concat x1 x2) W_monotonicity_1d.
+       toRS x1 <= toRS x2 = true <-> in_convex_polyhedron (colvec_concat x1 x2) W_monotonicity_1d.
 Proof.
     intros x1 x2; split; intro H.
     * unfold in_convex_polyhedron, W_monotonicity_1d.
