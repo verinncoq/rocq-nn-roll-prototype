@@ -253,6 +253,15 @@ Proof.
   vm_compute; reflexivity.
 Qed.
 
+(* Extended proof for the paper *)
+Theorem example1_monotone: 
+  is_monotone_1d example_nn1.
+Proof.
+  rewrite monotonicity_1d_correct.
+  rewrite <- verify_hyperporperty_correct.
+  vm_compute; reflexivity.
+Qed.
+
 End SatisfactionExample.
 
 Section ViolationExample.
