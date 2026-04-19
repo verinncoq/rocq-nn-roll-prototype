@@ -4,7 +4,7 @@
 
 This repository contains a prototype under the codename "Rocq-NN-Roll", a prover for neural networks developed and verified in Rocq. While scalability is a priority for most theorem provers, Rocq-NN-Roll tries to optimize for soundness and close the gap between Rocq and the real world. In this prototype, we achieved this by developing a fully verified decision procedure for hyperproperties of real-valued piecewise-affine neural networks in Rocq, the first of its kind. The algorithm constructs an exponentially large piecewise function based on a neural network and a desired hyperproperty, and then solves a system of linear inequalities for each polyhedron in the constructed piecewise function. With Rocq-NN-Roll, not only can you verify small neural networks without leaving Rocq, but we also open a pathway for research on harder soundness issues withing Rocq.
 
-More about Rocq-NN-Roll in the paper: [COMING SOON]
+More about Rocq-NN-Roll in the paper: [ACCEPTED TO CAV 2026, COMING SOON]
 
 ### Requirements
 
