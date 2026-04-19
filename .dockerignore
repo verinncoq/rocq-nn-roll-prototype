@@ -1,0 +1,25 @@
+# Docker ignore file for Rocq-NN-Roll
+
+# Git directory
+.git
+
+# Build artifacts
+target/
+
+# Cache files
+*.cache
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Editor/IDE files
+.vscode/
+.idea/
+
+# Environment files
+.env
+
+# Temporary files
+*.tmp
+*.swp
