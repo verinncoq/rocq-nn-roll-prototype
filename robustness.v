@@ -339,11 +339,75 @@ Proof.
   unfold tpwaf_4_to_1, body_4_to_1, seg_xy, seg_yx, P_xy_eps_nonneg, P_yx_eps_nonneg, c_x_minus_y, c_y_minus_x.
 Admitted.
 
-Lemma monotonicity_1d_correct:
+
+
+Lemma robustness_1d_correct:
     forall (nn: TPWANNSequential (RSOPM:=Q_RSOPMD)) (epsilon delta: Q_RSOPMD) (Hepsilon : 0<= epsilon) (Hdelta : 0<= delta),
         is_robust_1d nn epsilon delta Hepsilon Hdelta <-> nn_satisfies_nndh nn (NNDH_robustness_1d epsilon delta Hepsilon Hdelta).
 Proof.
 Admitted.
+
+Lemma is_robust_1d_verification (epsilon delta: Q_RSOPMD) 
+  (Hepsilon : 0<= epsilon)
+  (Hdelta : 0<= delta):
+  forall nn,
+    verify_hyperporperty nn (NNDH_robustness_1d epsilon delta Hepsilon Hdelta)= true <-> is_robust_1d nn epsilon delta Hepsilon Hdelta.
+Proof.
+  intro nn.
+  rewrite robustness_1d_correct.
+  rewrite verify_hyperporperty_correct.
+  apply iff_refl.
+Qed.
+
+Section ViolationExample.
+
+Definition example2_weights1: matrix (T:=Q_RSOPMD) 3 1 :=
+    [[toQDEP (-1)%Q], [toQDEP 1%Q], [toQDEP 0.7%Q]].
+
+Definition example2_biases1: matrix 3 1 :=
+    [[toQDEP 0.1%Q], [toQDEP 0.25%Q], [toQDEP 0%Q]].
+
+Definition example2_weights2: matrix (T:=Q_RSOPMD) 1 3 :=
+    [[toQDEP 0.66%Q, toQDEP (-0.3)%Q, toQDEP 0.99%Q]].
+
+Definition example2_biases2: matrix 1 1 :=
+    [[toQDEP 0.1%Q]].
+
+Definition example_nn2 := 
+    (NNLinear example2_weights1 example2_biases1 
+    (NNReLU
+    (NNLinear example2_weights2 example2_biases2
+    (NNReLU
+    (NNOutput (output_dim:=1)))))).
+
+
+(*somehow mixed up epsilon and delta somewhere ...
+ but essentially if input has distance up to one, output
+ distance is bigger then 0*)
+Theorem example4_not_robust :
+  ~ is_robust_1d example_nn2 0 1 
+    (ltac:(vm_compute; reflexivity)) 
+    (ltac:(vm_compute; reflexivity)).
+Proof.
+  intro Hcontra.
+  apply is_robust_1d_verification in Hcontra.
+  vm_compute in Hcontra.
+  discriminate.
+Qed.
+
+(*if input distance is not bigger then one then also 
+the output*)
+Theorem example4_robust :
+  is_robust_1d example_nn2 1 1 
+    (ltac:(vm_compute; reflexivity)) 
+    (ltac:(vm_compute; reflexivity)).
+Proof.
+  apply is_robust_1d_verification.
+  vm_compute.
+  reflexivity.
+Qed.
+  
+End ViolationExample.
 
 (*multi-dimensional variant? *)
 Definition is_robust {in_dim out_dim : nat}
