@@ -13,6 +13,157 @@ Context {RSOPM : RealSubsetOPM}.
 Import RealSubsetNotations.
 Open Scope RSOPM_scope.
 
+(*missin RSOPM Lemmas: *)
+Lemma RSOPM_le_transitive:
+    forall (x y z: T RSOPM),
+        x <= y = true ->
+        y <= z = true ->
+        x <= z = true.
+Proof.
+    intros x y z H1 H2.
+    apply ax_real_leq_true.
+    apply ax_real_leq_true in H1.
+    apply ax_real_leq_true in H2.
+    apply Rle_trans with (r2 := INJ_RSOPM RSOPM y).
+    apply H1.
+    apply H2.
+Qed.
+
+Lemma RSOPM_opp_bracket:
+    forall (x y: T RSOPM),
+        - (x + - y) = - x + y.
+Proof.
+    intros x y.
+    apply ax_equality.
+    RSOPM_realize.
+    rewrite Ropp_plus_distr.
+    rewrite Ropp_involutive.
+    reflexivity.
+Qed.
+
+Lemma RSOPM_opp_le_zero :
+  forall (x : T RSOPM),
+    x <= 0 = true <-> - x >= 0 = true.
+Proof.
+  intros x.
+  split.
+  - intro Hle.
+    unfold RSge.
+    apply ax_real_leq_true.
+    apply ax_real_leq_true in Hle.
+    RSOPM_realize.
+    rewrite ax_zero_is_zero in *.
+    lra.
+  - intro H.
+    apply ax_real_leq_true.
+    apply ax_real_leq_true in H.
+    rewrite ax_zero_is_zero in *.
+    rewrite ax_opp_is_opp in H.
+    lra.
+Qed.
+
+Lemma RSOPM_opp_lt_zero :
+  forall (x : T RSOPM),
+    x < 0 = true <-> - x > 0 = true.
+Proof.
+  intros x.
+  split.
+  - intro Hlt.
+    unfold RSgt, RSlt.
+    unfold RSlt in Hlt.
+    destruct (RSOPM_le RSOPM x 0) eqn:H1; try discriminate.
+    destruct (RSOPM_le RSOPM 0 x) eqn:H2; try discriminate.
+    apply ax_real_leq_true in H1.
+    apply ax_real_leq_false in H2.
+    destruct (RSOPM_le RSOPM 0 (- x)) eqn:H3.
+    + destruct (RSOPM_le RSOPM (- x) 0) eqn:H4.
+      * apply ax_real_leq_true in H4.
+        rewrite ax_zero_is_zero in *.
+        rewrite ax_opp_is_opp in H4.
+        lra.
+      * reflexivity.
+    + apply ax_real_leq_false in H3.
+      rewrite ax_zero_is_zero in *.
+      rewrite ax_opp_is_opp in H3.
+      lra.
+  - intro Hgt.
+    unfold RSlt.
+    unfold RSgt, RSlt in Hgt.
+    destruct (RSOPM_le RSOPM 0 (- x)) eqn:H1; try discriminate.
+    destruct (RSOPM_le RSOPM (- x) 0) eqn:H2; try discriminate.
+    apply ax_real_leq_true in H1.
+    apply ax_real_leq_false in H2.
+    destruct (RSOPM_le RSOPM x 0) eqn:H3.
+    + destruct (RSOPM_le RSOPM 0 x) eqn:H4.
+      * apply ax_real_leq_true in H4.
+        rewrite ax_zero_is_zero in *.
+        rewrite ax_opp_is_opp in H1.
+        apply ax_real_leq_true in H3.
+        rewrite ax_zero_is_zero in H3.
+        assert (INJ_RSOPM RSOPM x = 0)%R as Heq.
+        { apply Rle_antisym. apply H3. apply H4. }
+        rewrite ax_opp_is_opp in H2.
+        rewrite Heq in H2.
+        exfalso; lra.
+      * reflexivity.
+    + apply ax_real_leq_false in H3.
+      rewrite ax_zero_is_zero in *.
+      rewrite ax_opp_is_opp in H1.
+      lra.
+Qed.
+
+Lemma RSOPM_zero_lt_opp :
+  forall (x : T RSOPM),
+    0 < x = true <-> -x < 0 = true.
+Proof.
+  intros x.
+  split.
+  - intro Hlt.
+    unfold RSlt in *.
+    destruct (RSOPM_le RSOPM 0 x) eqn:H1; try discriminate.
+    destruct (RSOPM_le RSOPM x 0) eqn:H2; try discriminate.
+    apply ax_real_leq_true in H1.
+    apply ax_real_leq_false in H2.
+    destruct (RSOPM_le RSOPM (- x) 0) eqn:H3.
+    + destruct (RSOPM_le RSOPM 0 (- x)) eqn:H4.
+      * apply ax_real_leq_true in H4.
+        rewrite ax_zero_is_zero in *.
+        rewrite ax_opp_is_opp in H4.
+        lra.
+      * reflexivity.
+    + apply ax_real_leq_false in H3.
+      rewrite ax_zero_is_zero in *.
+      rewrite ax_opp_is_opp in H3.
+      lra.
+  - intro Hlt.
+    unfold RSlt in *.
+    destruct (RSOPM_le RSOPM (- x) 0) eqn:H1; try discriminate.
+    destruct (RSOPM_le RSOPM 0 (- x)) eqn:H2; try discriminate.
+    apply ax_real_leq_true in H1.
+    apply ax_real_leq_false in H2.
+    destruct (RSOPM_le RSOPM 0 x) eqn:H3.
+    + destruct (RSOPM_le RSOPM x 0) eqn:H4.
+      * apply ax_real_leq_true in H4.
+        rewrite ax_zero_is_zero in *.
+        rewrite ax_opp_is_opp in H1.
+        apply ax_real_leq_true in H3.
+        rewrite ax_zero_is_zero in H3.
+        assert (INJ_RSOPM RSOPM x = 0)%R as Heq.
+        { apply Rle_antisym. apply H4. apply H3. }
+        rewrite ax_opp_is_opp in H2.
+        rewrite Heq in H2.
+        exfalso; lra.
+      * reflexivity.
+    + apply ax_real_leq_false in H3.
+      rewrite ax_zero_is_zero in *.
+      rewrite ax_opp_is_opp in H1.
+      lra.
+Qed.
+
+
+
+    
+    
 
 (* FOllowing https://kops.uni-konstanz.de/server/api/core/bitstreams/8cc59f27-b0ae-4273-9328-a9a009b08710/content*)
 
@@ -61,7 +212,7 @@ Definition W_robustness_1d (delta :Q_RSOPMD)
     Polyhedron (RSOPM:=Q_RSOPMD) 2 (cons (Constraint 2 [[1], [- (1)]] delta) 
                                    (cons (Constraint 2 [[- (1)], [1]] delta) nil)).
 
-Lemma W_robustness_1d_correct (delta :Q_RSOPMD) (Hdelta: 0 <= delta ):
+Lemma W_robustness_1d_correct (delta :Q_RSOPMD) (Hdelta: 0 <= delta):
     forall x1 x2,
        RSOPM_abs_Q (toRS x1 + -toRS x2) <= delta = true <-> in_convex_polyhedron (colvec_concat x1 x2) (W_robustness_1d delta Hdelta).
 Proof.
@@ -88,8 +239,14 @@ Proof.
       apply (ax_real_leq_true Q_RSOPMD).
       unfold RSOPM_abs_Q in Habs.
       destruct (RSOPM_le Q_RSOPMD (toRS x1 + - toRS x2) 0) eqn:Hsgn.
-      * (*by transiticvity with Hdelta and Hsgn the goal follows*)
-        admit.
+      * apply ax_real_leq_true.
+        apply RSOPM_le_transitive with (y := 0).
+        - exact Hsgn.
+        - change (0 <= delta = true).
+          apply ax_real_leq_true.
+          apply Is_true_eq_true in Hdelta.
+          apply ax_real_leq_true in Hdelta.
+          exact Hdelta.
       * (* goal follows from Habs *)
         apply ax_real_leq_true in Habs.
         apply Habs.
@@ -108,16 +265,17 @@ Proof.
       apply (ax_real_leq_true Q_RSOPMD).
       unfold RSOPM_abs_Q in Habs.
       destruct (RSOPM_le Q_RSOPMD (toRS x1 + - toRS x2) 0) eqn:Hsgn.
-      * (* *)
-        apply ax_real_leq_true in Habs.
-        (*some lemma that opp of bracket is the same as opp of each summand 
-        to rewrite Habs
-        + apply Habs*)
-        admit.
-      * (* since Hsgn the term in the goal is smaller then 0, 
-        so also smaller then delta by transitivity*)
+      * apply ax_real_leq_true in Habs.
+        rewrite RSOPM_opp_bracket in Habs.
+        apply Habs.
+      * (* since x1-x2 >0, and x1-x2 <= delta -->  -x1+x2 <= delta*)
         apply ax_real_leq_true in Habs.
         apply ax_real_leq_false in Hsgn.
+        (*rewrite RSOPM_zero_lt_opp in Hsgn.*)
+        apply ax_real_leq_true.
+        (*want to use Lemma RSOPM_zero_lt_opp :
+  forall (x : T RSOPM),
+    0 < x = true <-> -x < 0 = true.*)
         admit.
   - (* Backward direction: both constraints => |d| <= epsilon *)
     intro Hpoly.
@@ -148,11 +306,10 @@ Proof.
     rewrite (plus_zero_r (G:=Q_RSOPMD)) in Hc2.
     unfold RSOPM_abs_Q.
     destruct (RSOPM_le Q_RSOPMD (toRS x1 + - toRS x2) 0) eqn:Hsgn.
-    + apply ax_real_leq_true.
+    + rewrite RSOPM_opp_bracket.
+      apply ax_real_leq_true.
       apply (ax_real_leq_true Q_RSOPMD) in Hc2.
-      RSOPM_realize.
-      (*lemma for opp and brackts to rewrite goal then apply Hc2*)
-      admit.
+      apply Hc2.
     + apply ax_real_leq_true.
       apply (ax_real_leq_true Q_RSOPMD) in Hc1.
       apply Hc1.
@@ -381,8 +538,7 @@ Definition example_nn2 :=
     (NNOutput (output_dim:=1)))))).
 
 
-(*somehow mixed up epsilon and delta somewhere ...
- but essentially if input has distance up to one, output
+(*if input has distance up to one, output
  distance is bigger then 0*)
 Theorem example4_not_robust :
   ~ is_robust_1d example_nn2 0 1 
@@ -394,7 +550,6 @@ Proof.
   vm_compute in Hcontra.
   discriminate.
 Qed.
-
 (*if input distance is not bigger then one then also 
 the output*)
 Theorem example4_robust :
@@ -406,6 +561,32 @@ Proof.
   vm_compute.
   reflexivity.
 Qed.
+
+
+Theorem example4_robust_test2 :
+  is_robust_1d example_nn2 (toQDEP (0.096)%Q) (toQDEP (0.1)%Q) 
+    (ltac:(vm_compute; reflexivity)) 
+    (ltac:(vm_compute; reflexivity)).
+Proof.
+  apply is_robust_1d_verification.
+  vm_compute.
+  reflexivity.
+Qed.
+
+Theorem example4_robust_test1 :
+  is_robust_1d example_nn2 (toQDEP (0.0959)%Q) (toQDEP (0.1)%Q) 
+    (ltac:(vm_compute; reflexivity)) 
+    (ltac:(vm_compute; reflexivity)).
+Proof.
+  intro Hcontra.
+  admit.
+  (* apply is_robust_1d_verification in Hcontra.
+  vm_compute in Hcontra.
+  discriminate.
+Qed. *)
+Admitted.
+
+
   
 End ViolationExample.
 
