@@ -4,18 +4,26 @@ From Verinncoq Require Import matrix_extensions neuron_functions real_subsets
                               real_subsets_instances piecewise_affine
                               NNDH neural_networks NNDH_to_fme fourier_motzkin fm_q_support.
 
-Open Scope RSOPM_scope.
+Open Scope RSOAM_scope.
 Import RealSubsetNotations.
 
-Section L_infty_metric.
+Definition RSOAM_abs_Q (x: Q_RSOAMD) : Q_RSOAMD :=
+    if RSOAM_le Q_RSOAMD x 0 then - x else x.
 
-Context {RSOPM : RealSubsetOPM}.
-Import RealSubsetNotations.
-Open Scope RSOPM_scope.
+Definition is_robust_1d (nn: TPWANNSequential (RSOAM:=Q_RSOAMD)) (epsilon delta: Q_RSOAMD) 
+  (Hepsilon : 0 <= epsilon)
+  (Hdelta : 0 <= delta): Prop :=
+    forall x1 x2,
+        RSOAM_abs_Q (toRS x1 - toRS x2) <= delta = true -> 
+          RSOAM_abs_Q (toRS (nn_eval nn x1) - toRS (nn_eval nn x2)) <= epsilon = true.
 
-(*missin RSOPM Lemmas: *)
-Lemma RSOPM_le_transitive:
-    forall (x y z: T RSOPM),
+Definition W_robustness_1d (delta :Q_RSOAMD) (Hdelta : 0 <= delta): ConvexPolyhedron 2 :=
+    Polyhedron (RSOAM:=Q_RSOAMD) 2 
+       ((Constraint 2 ([[1], [- (1)]])%RS delta) ::
+       (Constraint 2 [[- (1)], [1]] delta) :: nil).
+
+Lemma RSOAM_le_transitive {RSOAM: RealSubsetOAM}:
+    forall (x y z: T RSOAM),
         x <= y = true ->
         y <= z = true ->
         x <= z = true.
@@ -24,197 +32,23 @@ Proof.
     apply ax_real_leq_true.
     apply ax_real_leq_true in H1.
     apply ax_real_leq_true in H2.
-    apply Rle_trans with (r2 := INJ_RSOPM RSOPM y).
+    apply Rle_trans with (r2 := INJ_RSOAM RSOAM y).
     apply H1.
     apply H2.
 Qed.
 
-Lemma RSOPM_opp_bracket:
-    forall (x y: T RSOPM),
+Lemma RSOAM_opp_bracket {RSOAM: RealSubsetOAM}:
+    forall (x y: T RSOAM),
         - (x + - y) = - x + y.
 Proof.
     intros x y.
-    apply ax_equality.
-    RSOPM_realize.
-    rewrite Ropp_plus_distr.
-    rewrite Ropp_involutive.
-    reflexivity.
+    RSOAM_realize_eq; lra.
 Qed.
 
-Lemma RSOPM_opp_le_zero :
-  forall (x : T RSOPM),
-    x <= 0 = true <-> - x >= 0 = true.
-Proof.
-  intros x.
-  split.
-  - intro Hle.
-    unfold RSge.
-    apply ax_real_leq_true.
-    apply ax_real_leq_true in Hle.
-    RSOPM_realize.
-    rewrite ax_zero_is_zero in *.
-    lra.
-  - intro H.
-    apply ax_real_leq_true.
-    apply ax_real_leq_true in H.
-    rewrite ax_zero_is_zero in *.
-    rewrite ax_opp_is_opp in H.
-    lra.
-Qed.
-
-Lemma RSOPM_opp_lt_zero :
-  forall (x : T RSOPM),
-    x < 0 = true <-> - x > 0 = true.
-Proof.
-  intros x.
-  split.
-  - intro Hlt.
-    unfold RSgt, RSlt.
-    unfold RSlt in Hlt.
-    destruct (RSOPM_le RSOPM x 0) eqn:H1; try discriminate.
-    destruct (RSOPM_le RSOPM 0 x) eqn:H2; try discriminate.
-    apply ax_real_leq_true in H1.
-    apply ax_real_leq_false in H2.
-    destruct (RSOPM_le RSOPM 0 (- x)) eqn:H3.
-    + destruct (RSOPM_le RSOPM (- x) 0) eqn:H4.
-      * apply ax_real_leq_true in H4.
-        rewrite ax_zero_is_zero in *.
-        rewrite ax_opp_is_opp in H4.
-        lra.
-      * reflexivity.
-    + apply ax_real_leq_false in H3.
-      rewrite ax_zero_is_zero in *.
-      rewrite ax_opp_is_opp in H3.
-      lra.
-  - intro Hgt.
-    unfold RSlt.
-    unfold RSgt, RSlt in Hgt.
-    destruct (RSOPM_le RSOPM 0 (- x)) eqn:H1; try discriminate.
-    destruct (RSOPM_le RSOPM (- x) 0) eqn:H2; try discriminate.
-    apply ax_real_leq_true in H1.
-    apply ax_real_leq_false in H2.
-    destruct (RSOPM_le RSOPM x 0) eqn:H3.
-    + destruct (RSOPM_le RSOPM 0 x) eqn:H4.
-      * apply ax_real_leq_true in H4.
-        rewrite ax_zero_is_zero in *.
-        rewrite ax_opp_is_opp in H1.
-        apply ax_real_leq_true in H3.
-        rewrite ax_zero_is_zero in H3.
-        assert (INJ_RSOPM RSOPM x = 0)%R as Heq.
-        { apply Rle_antisym. apply H3. apply H4. }
-        rewrite ax_opp_is_opp in H2.
-        rewrite Heq in H2.
-        exfalso; lra.
-      * reflexivity.
-    + apply ax_real_leq_false in H3.
-      rewrite ax_zero_is_zero in *.
-      rewrite ax_opp_is_opp in H1.
-      lra.
-Qed.
-
-Lemma RSOPM_zero_lt_opp :
-  forall (x : T RSOPM),
-    0 < x = true <-> -x < 0 = true.
-Proof.
-  intros x.
-  split.
-  - intro Hlt.
-    unfold RSlt in *.
-    destruct (RSOPM_le RSOPM 0 x) eqn:H1; try discriminate.
-    destruct (RSOPM_le RSOPM x 0) eqn:H2; try discriminate.
-    apply ax_real_leq_true in H1.
-    apply ax_real_leq_false in H2.
-    destruct (RSOPM_le RSOPM (- x) 0) eqn:H3.
-    + destruct (RSOPM_le RSOPM 0 (- x)) eqn:H4.
-      * apply ax_real_leq_true in H4.
-        rewrite ax_zero_is_zero in *.
-        rewrite ax_opp_is_opp in H4.
-        lra.
-      * reflexivity.
-    + apply ax_real_leq_false in H3.
-      rewrite ax_zero_is_zero in *.
-      rewrite ax_opp_is_opp in H3.
-      lra.
-  - intro Hlt.
-    unfold RSlt in *.
-    destruct (RSOPM_le RSOPM (- x) 0) eqn:H1; try discriminate.
-    destruct (RSOPM_le RSOPM 0 (- x)) eqn:H2; try discriminate.
-    apply ax_real_leq_true in H1.
-    apply ax_real_leq_false in H2.
-    destruct (RSOPM_le RSOPM 0 x) eqn:H3.
-    + destruct (RSOPM_le RSOPM x 0) eqn:H4.
-      * apply ax_real_leq_true in H4.
-        rewrite ax_zero_is_zero in *.
-        rewrite ax_opp_is_opp in H1.
-        apply ax_real_leq_true in H3.
-        rewrite ax_zero_is_zero in H3.
-        assert (INJ_RSOPM RSOPM x = 0)%R as Heq.
-        { apply Rle_antisym. apply H4. apply H3. }
-        rewrite ax_opp_is_opp in H2.
-        rewrite Heq in H2.
-        exfalso; lra.
-      * reflexivity.
-    + apply ax_real_leq_false in H3.
-      rewrite ax_zero_is_zero in *.
-      rewrite ax_opp_is_opp in H1.
-      lra.
-Qed.
-
-
-
-    
-    
-
-(* FOllowing https://kops.uni-konstanz.de/server/api/core/bitstreams/8cc59f27-b0ae-4273-9328-a9a009b08710/content*)
-
-
-Definition colvec_entry_sum {n: nat} (v1 v2: colvec n) (i:nat) : RS :=
-    coeff_colvec (RSOPM:= RSOPM)RSzero v1 i + coeff_colvec (RSOPM:= RSOPM)RSzero v2 i.
-
-Definition colvec_entry_sub {n: nat} (v1 v2: colvec n) (i:nat) : RS :=
-    coeff_colvec (RSOPM:= RSOPM)RSzero v1 i + - coeff_colvec (RSOPM:= RSOPM)RSzero v2 i.
-
-Definition colvec_sub {n: nat} (v1 v2: colvec n) : colvec n :=
-  mk_colvec (RSOPM:=RSOPM) n (fun i => colvec_entry_sub v1 v2 i).
-
-Fixpoint colvec_max {n: nat} (v: colvec n) : RS :=
-  match n as n0 return colvec n0 -> RS with
-  | O => fun _ => RSzero
-  | S n' => fun v =>
-    let head := coeff_colvec (RSOPM:=RSOPM) RSzero v O in
-    let tail := mk_colvec (RSOPM:=RSOPM) n'
-      (fun i => coeff_colvec (RSOPM:=RSOPM) RSzero v (S i)) in
-    let tail_max := colvec_max tail in
-    if RSOPM_le RSOPM head tail_max then tail_max else head
-  end v.
-
-Definition RSOPM_abs (x: T RSOPM) : T RSOPM :=
-    if RSOPM_le RSOPM x 0 then - x else x.
-
-Definition L_infty_metric {n: nat} (v1 v2: colvec n) : RS :=
-  colvec_max (mk_colvec (RSOPM:=RSOPM) n
-    (fun i => RSOPM_abs (colvec_entry_sub v1 v2 i))).
-
-End L_infty_metric.
-
-Definition RSOPM_abs_Q (x: Q_RSOPMD) : Q_RSOPMD :=
-    if RSOPM_le Q_RSOPMD x 0 then - x else x.
-
-
-Definition is_robust_1d (nn: TPWANNSequential (RSOPM:=Q_RSOPMD)) (epsilon delta: Q_RSOPMD) 
-  (Hepsilon : 0<= epsilon)
-  (Hdelta : 0<= delta): Prop :=
+Lemma W_robustness_1d_correct (delta :Q_RSOAMD) (Hdelta: 0 <= delta):
     forall x1 x2,
-        RSOPM_abs_Q (toRS x1 + -toRS x2) <= delta = true -> RSOPM_abs_Q (toRS (nn_eval nn x1) + -toRS (nn_eval nn x2)) <= epsilon= true.
-
-Definition W_robustness_1d (delta :Q_RSOPMD)
-  (Hdelta : 0<= delta): ConvexPolyhedron 2 :=
-    Polyhedron (RSOPM:=Q_RSOPMD) 2 (cons (Constraint 2 [[1], [- (1)]] delta) 
-                                   (cons (Constraint 2 [[- (1)], [1]] delta) nil)).
-
-Lemma W_robustness_1d_correct (delta :Q_RSOPMD) (Hdelta: 0 <= delta):
-    forall x1 x2,
-       RSOPM_abs_Q (toRS x1 + -toRS x2) <= delta = true <-> in_convex_polyhedron (colvec_concat x1 x2) (W_robustness_1d delta Hdelta).
+       RSOAM_abs_Q (toRS x1 + -toRS x2) <= delta = true <-> 
+       in_convex_polyhedron (colvec_concat x1 x2) (W_robustness_1d delta Hdelta).
 Proof.
   intros x1 x2.
   split.
@@ -231,16 +65,16 @@ Proof.
       unfold transpose, colvec_concat, Mplus, extend_colvec_at_bottom, extend_colvec_on_top, mk_colvec.
       repeat (rewrite coeff_mat_bij; try lia); simpl.
       unfold coeff_colvec, coeff_mat, coeff_Tn, fst; simpl.
-      rewrite (mult_one_l (K:=Q_RSOPMD)).
-      rewrite (plus_zero_l (G:=Q_RSOPMD)), (plus_zero_r (G:=Q_RSOPMD)).
-      rewrite (plus_zero_r (G:=Q_RSOPMD)).
-      rewrite <- (opp_mult_m1 (K:=Q_RSOPMD)).
+      rewrite (mult_one_l (K:=Q_RSOAMD)).
+      rewrite (plus_zero_l (G:=Q_RSOAMD)), (plus_zero_r (G:=Q_RSOAMD)).
+      rewrite (plus_zero_r (G:=Q_RSOAMD)).
+      rewrite <- (opp_mult_m1 (K:=Q_RSOAMD)).
       (* goal is d <= epsilon = true *)
-      apply (ax_real_leq_true Q_RSOPMD).
-      unfold RSOPM_abs_Q in Habs.
-      destruct (RSOPM_le Q_RSOPMD (toRS x1 + - toRS x2) 0) eqn:Hsgn.
+      apply (ax_real_leq_true Q_RSOAMD).
+      unfold RSOAM_abs_Q in Habs.
+      destruct (RSOAM_le Q_RSOAMD (toRS x1 + - toRS x2) 0) eqn:Hsgn.
       * apply ax_real_leq_true.
-        apply RSOPM_le_transitive with (y := 0).
+        apply RSOAM_le_transitive with (y := 0).
         - exact Hsgn.
         - change (0 <= delta = true).
           apply ax_real_leq_true.
@@ -257,26 +91,40 @@ Proof.
       unfold sum_n, sum_n_m, Iter.iter_nat; simpl.
       unfold transpose, colvec_concat, Mplus, extend_colvec_at_bottom, extend_colvec_on_top, mk_colvec.
       repeat (rewrite coeff_mat_bij; try lia); simpl.
-      unfold coeff_colvec, coeff_mat, coeff_Tn, fst; simpl.
-      rewrite <- (opp_mult_m1 (K:=Q_RSOPMD)).
-      rewrite (mult_one_l (K:=Q_RSOPMD)).
-      rewrite (plus_zero_l (G:=Q_RSOPMD)), (plus_zero_r (G:=Q_RSOPMD)).
-      rewrite (plus_zero_r (G:=Q_RSOPMD)).
-      apply (ax_real_leq_true Q_RSOPMD).
-      unfold RSOPM_abs_Q in Habs.
-      destruct (RSOPM_le Q_RSOPMD (toRS x1 + - toRS x2) 0) eqn:Hsgn.
+      rewrite <- (opp_mult_m1 (K:=Q_RSOAMD)).
+      rewrite (mult_one_l (K:=Q_RSOAMD)).
+      rewrite (plus_zero_l (G:=Q_RSOAMD)), (plus_zero_r (G:=Q_RSOAMD)).
+      rewrite (plus_zero_r (G:=Q_RSOAMD)).
+      apply (ax_real_leq_true Q_RSOAMD).
+      unfold RSOAM_abs_Q in Habs.
+      destruct (RSOAM_le Q_RSOAMD (toRS x1 + - toRS x2) 0) eqn:Hsgn.
       * apply ax_real_leq_true in Habs.
-        rewrite RSOPM_opp_bracket in Habs.
+        rewrite RSOAM_opp_bracket in Habs.
         apply Habs.
       * (* since x1-x2 >0, and x1-x2 <= delta -->  -x1+x2 <= delta*)
+        unfold toRS in Habs, Hsgn.
         apply ax_real_leq_true in Habs.
-        apply ax_real_leq_false in Hsgn.
-        (*rewrite RSOPM_zero_lt_opp in Hsgn.*)
-        apply ax_real_leq_true.
-        (*want to use Lemma RSOPM_zero_lt_opp :
-  forall (x : T RSOPM),
-    0 < x = true <-> -x < 0 = true.*)
-        admit.
+        apply ax_real_leq_false in Hsgn. 
+        rewrite ax_zero_is_zero, ax_real_plus, ax_opp_is_opp in Hsgn.
+        rewrite ax_real_plus, ax_opp_is_opp in Habs.
+        unfold plus, AbelianMonoid.plus, AbelianMonoid.class, Ring.AbelianMonoid, RSOAM_Ring, RSOAM_Ring_Class,
+          RSOAM_AbelianGroup_Class, RSOAM_AbelianGroup_Mixin, AbelianGroup.base, Ring.base, Ring.class,
+          RSOAM_AbelianMonoid_Mixin.
+        unfold opp, AbelianGroup.opp, RSOAM_Ring_Mixin, AbelianGroup.class, AbelianGroup.mixin,
+          Ring.AbelianGroup, Ring.base, Ring.class.
+        RSOAM_realize.
+        assert (H: RSOAM_zero Q_RSOAMD = QDEP_zero). reflexivity.
+        rewrite <- H; unfold RSzero in Hsgn, Habs.
+        remember (INJ_RSOAM Q_RSOAMD (coeff_colvec (RSOAM_zero Q_RSOAMD) x1 0)) as x1_R.
+        remember (INJ_RSOAM Q_RSOAMD (coeff_colvec (RSOAM_zero Q_RSOAMD) x2 0)) as x2_R.
+        apply (eq_rect x2_R (fun r => 
+                (- INJ_RSOAM Q_RSOAMD (coeff_colvec (RSOAM_zero Q_RSOAMD) x1 0) 
+                + r <= INJ_RSOAM Q_RSOAMD delta)%R)).
+        apply (eq_rect x1_R (fun r => 
+                - r + x2_R <= INJ_RSOAM Q_RSOAMD delta)%R).
+        - lra. 
+        - rewrite Heqx1_R; reflexivity.
+        - rewrite Heqx2_R; reflexivity.
   - (* Backward direction: both constraints => |d| <= epsilon *)
     intro Hpoly.
     unfold in_convex_polyhedron, W_robustness_1d in Hpoly.
@@ -290,34 +138,34 @@ Proof.
     unfold transpose, colvec_concat, Mplus, extend_colvec_at_bottom, extend_colvec_on_top, mk_colvec in Hc1.
     repeat (rewrite coeff_mat_bij in Hc1; try lia); simpl in Hc1.
     unfold coeff_colvec, coeff_mat, coeff_Tn, fst in Hc1; simpl in Hc1.
-    rewrite (mult_one_l (K:=Q_RSOPMD)) in Hc1.
-    rewrite (plus_zero_l (G:=Q_RSOPMD)), (plus_zero_r (G:=Q_RSOPMD)) in Hc1.
-    rewrite (plus_zero_r (G:=Q_RSOPMD)) in Hc1.
-    rewrite <- (opp_mult_m1 (K:=Q_RSOPMD)) in Hc1.
+    rewrite (mult_one_l (K:=Q_RSOAMD)) in Hc1.
+    rewrite (plus_zero_l (G:=Q_RSOAMD)), (plus_zero_r (G:=Q_RSOAMD)) in Hc1.
+    rewrite (plus_zero_r (G:=Q_RSOAMD)) in Hc1.
+    rewrite <- (opp_mult_m1 (K:=Q_RSOAMD)) in Hc1.
     unfold satisfies_lc in Hc2.
     unfold dot, Mmult in Hc2; rewrite coeff_mat_bij in Hc2; try lia.
     unfold sum_n, sum_n_m, Iter.iter_nat in Hc2; simpl in Hc2.
     unfold transpose, colvec_concat, Mplus, extend_colvec_at_bottom, extend_colvec_on_top, mk_colvec in Hc2.
     repeat (rewrite coeff_mat_bij in Hc2; try lia); simpl in Hc2.
     unfold coeff_colvec, coeff_mat, coeff_Tn, fst in Hc2; simpl in Hc2.
-    rewrite <- (opp_mult_m1 (K:=Q_RSOPMD)) in Hc2.
-    rewrite (mult_one_l (K:=Q_RSOPMD)) in Hc2.
-    rewrite (plus_zero_l (G:=Q_RSOPMD)), (plus_zero_r (G:=Q_RSOPMD)) in Hc2.
-    rewrite (plus_zero_r (G:=Q_RSOPMD)) in Hc2.
-    unfold RSOPM_abs_Q.
-    destruct (RSOPM_le Q_RSOPMD (toRS x1 + - toRS x2) 0) eqn:Hsgn.
-    + rewrite RSOPM_opp_bracket.
+    rewrite <- (opp_mult_m1 (K:=Q_RSOAMD)) in Hc2.
+    rewrite (mult_one_l (K:=Q_RSOAMD)) in Hc2.
+    rewrite (plus_zero_l (G:=Q_RSOAMD)), (plus_zero_r (G:=Q_RSOAMD)) in Hc2.
+    rewrite (plus_zero_r (G:=Q_RSOAMD)) in Hc2.
+    unfold RSOAM_abs_Q.
+    destruct (RSOAM_le Q_RSOAMD (toRS x1 + - toRS x2) 0) eqn:Hsgn.
+    + rewrite RSOAM_opp_bracket.
       apply ax_real_leq_true.
-      apply (ax_real_leq_true Q_RSOPMD) in Hc2.
+      apply (ax_real_leq_true Q_RSOAMD) in Hc2.
       apply Hc2.
     + apply ax_real_leq_true.
-      apply (ax_real_leq_true Q_RSOPMD) in Hc1.
+      apply (ax_real_leq_true Q_RSOAMD) in Hc1.
       apply Hc1.
-Admitted.  
+Qed.
 
 Section NetSat.
 
-Variable epsilon : Q_RSOPMD.
+Variable epsilon : Q_RSOAMD.
 Variable Hepsilon : 0 <= epsilon.
 (*NetSat as Piecewise affine function:
 
@@ -327,39 +175,39 @@ f(x,y) = epsilon-(x-y) if x-y >= 0
 *)
 
 (* only depends on inputs 3 and 4*)
-Definition c_x_minus_y : colvec (RSOPM:=Q_RSOPMD) 4 :=
+Definition c_x_minus_y : colvec (RSOAM:=Q_RSOAMD) 4 :=
   [[0], [0], [1], [-(1)]].
 
-Definition c_y_minus_x : colvec (RSOPM:=Q_RSOPMD) 4 :=
+Definition c_y_minus_x : colvec (RSOAM:=Q_RSOAMD) 4 :=
   [[0], [0], [-(1)], [1]].
 
 (* x-y >= 0 *)
-Definition P_xy_eps_nonneg : ConvexPolyhedron (RSOPM:=Q_RSOPMD) 4 :=
+Definition P_xy_eps_nonneg : ConvexPolyhedron (RSOAM:=Q_RSOAMD) 4 :=
   Polyhedron 4 (cons (Constraint 4 c_y_minus_x 0) nil).
 
 (* x-y <= 0*)
-Definition P_yx_eps_nonneg : ConvexPolyhedron (RSOPM:=Q_RSOPMD) 4 :=
+Definition P_yx_eps_nonneg : ConvexPolyhedron (RSOAM:=Q_RSOAMD) 4 :=
   Polyhedron 4 (cons (Constraint 4 c_x_minus_y 0) nil).
 
 (* first function: epsilon-(x-y) *)
-Definition f_xy_eps : AffineFunction (RSOPM:=Q_RSOPMD) 4 1 :=
+Definition f_xy_eps : AffineFunction (RSOAM:=Q_RSOAMD) 4 1 :=
   Affine 4 1 [[0, 0, -(1), 1]] [[epsilon]].
 
 (* second function: epsilon-(y-x)*)
-Definition f_yx_eps : AffineFunction (RSOPM:=Q_RSOPMD) 4 1 :=
+Definition f_yx_eps : AffineFunction (RSOAM:=Q_RSOAMD) 4 1 :=
   Affine 4 1 [[0, 0, 1, -(1)]] [[epsilon]].
 
-Definition seg_xy : AffineSegment (RSOPM:=Q_RSOPMD) 4 1 :=
+Definition seg_xy : AffineSegment (RSOAM:=Q_RSOAMD) 4 1 :=
   Segment 4 1 P_xy_eps_nonneg f_xy_eps.
 
-Definition seg_yx : AffineSegment (RSOPM:=Q_RSOPMD) 4 1 :=
+Definition seg_yx : AffineSegment (RSOAM:=Q_RSOAMD) 4 1 :=
   Segment 4 1 P_yx_eps_nonneg f_yx_eps.
 
-Definition body_4_to_1 : list (AffineSegment (RSOPM:=Q_RSOPMD) 4 1) :=
+Definition body_4_to_1 : list (AffineSegment (RSOAM:=Q_RSOAMD) 4 1) :=
   cons seg_xy (cons seg_yx nil).
 
 Lemma body_4_to_1_univalence :
-  pwaf_univalence (RSOPM:=Q_RSOPMD) body_4_to_1.
+  pwaf_univalence (RSOAM:=Q_RSOAMD) body_4_to_1.
 Proof. 
   unfold pwaf_univalence, body_4_to_1.
   intros S1 S2 HS1 HS2 x Hintersect.
@@ -443,11 +291,11 @@ Proof.
 Admitted.
 
 
-Definition pwaf_4_to_1 : PWAF (RSOPM:=Q_RSOPMD) (in_dim:=4) (out_dim:=1) :=
+Definition pwaf_4_to_1 : PWAF (RSOAM:=Q_RSOAMD) (in_dim:=4) (out_dim:=1) :=
   mkPLF 4 1 body_4_to_1 body_4_to_1_univalence.
 
 Lemma pwaf_4_to_1_total :
-  is_total (RSOPM:=Q_RSOPMD) pwaf_4_to_1.
+  is_total (RSOAM:=Q_RSOAMD) pwaf_4_to_1.
 Proof.
   unfold is_total, pwaf_4_to_1, body_4_to_1.
   intros v.
@@ -455,7 +303,7 @@ Proof.
   (*FAllunterscheidung: ist v[3] <= v[4] or not*)
 Admitted.
 
-Definition tpwaf_4_to_1 : TPWAF (RSOPM:=Q_RSOPMD) (in_dim:=4) (out_dim:=1) :=
+Definition tpwaf_4_to_1 : TPWAF (RSOAM:=Q_RSOAMD) (in_dim:=4) (out_dim:=1) :=
   exist _ pwaf_4_to_1 pwaf_4_to_1_total.
 
 End NetSat.
@@ -463,26 +311,26 @@ End NetSat.
 
 
 
-Definition NNDH_robustness_1d (epsilon delta: Q_RSOPMD) (Hepsilon : 0<= epsilon)
+Definition NNDH_robustness_1d (epsilon delta: Q_RSOAMD) (Hepsilon : 0<= epsilon)
   (Hdelta : 0<= delta): NNHyperproperty :=
     NNDH (nn_in_dim:=1) (nn_out_dim:=1)
         2 2 (W_robustness_1d delta Hdelta) (LinearTPWAF Mone (null_vector 2)) 
         (tpwaf_4_to_1 epsilon Hepsilon).
 
 
-Definition monotonicity_1d_postcondition_helper {RSOPM}:
-    matrix (T:=T RSOPM) (2 + 2 * 1) 1 -> colvec (RSOPM:=RSOPM) 4.
+Definition monotonicity_1d_postcondition_helper {RSOAM}:
+    matrix (T:=T RSOAM) (2 + 2 * 1) 1 -> colvec (RSOAM:=RSOAM) 4.
 Proof.
     intros H.
     unfold colvec; apply H.
 Defined.        
 (**)
-Lemma robustness_1d_postcondition (epsilon: Q_RSOPMD) (Hepsilon : 0<= epsilon):
+Lemma robustness_1d_postcondition (epsilon: Q_RSOAMD) (Hepsilon : 0<= epsilon):
     forall (x1: colvec 1) (x2: colvec 1) (x: colvec 2) (nn: TPWANNSequential (input_dim:=1) (output_dim:=1)),
         x1 = mk_colvec 1 (fun i : nat => coeff_colvec 0 x i) ->
         x2 = mk_colvec 1 (fun i : nat => coeff_colvec 0 x (i + 1)) ->
         x = colvec_concat x1 x2 ->
-         RSOPM_abs_Q (toRS (nn_eval nn x1) + -toRS (nn_eval nn x2)) <= epsilon =
+         RSOAM_abs_Q (toRS (nn_eval nn x1) + -toRS (nn_eval nn x2)) <= epsilon =
         (0 <=
             toRS 
                 (tpwaf_eval (tpwaf_4_to_1 epsilon Hepsilon) 
@@ -499,12 +347,12 @@ Admitted.
 
 
 Lemma robustness_1d_correct:
-    forall (nn: TPWANNSequential (RSOPM:=Q_RSOPMD)) (epsilon delta: Q_RSOPMD) (Hepsilon : 0<= epsilon) (Hdelta : 0<= delta),
+    forall (nn: TPWANNSequential (RSOAM:=Q_RSOAMD)) (epsilon delta: Q_RSOAMD) (Hepsilon : 0<= epsilon) (Hdelta : 0<= delta),
         is_robust_1d nn epsilon delta Hepsilon Hdelta <-> nn_satisfies_nndh nn (NNDH_robustness_1d epsilon delta Hepsilon Hdelta).
 Proof.
 Admitted.
 
-Lemma is_robust_1d_verification (epsilon delta: Q_RSOPMD) 
+Lemma is_robust_1d_verification (epsilon delta: Q_RSOAMD) 
   (Hepsilon : 0<= epsilon)
   (Hdelta : 0<= delta):
   forall nn,
@@ -518,13 +366,13 @@ Qed.
 
 Section ViolationExample.
 
-Definition example2_weights1: matrix (T:=Q_RSOPMD) 3 1 :=
+Definition example2_weights1: matrix (T:=Q_RSOAMD) 3 1 :=
     [[toQDEP (-1)%Q], [toQDEP 1%Q], [toQDEP 0.7%Q]].
 
 Definition example2_biases1: matrix 3 1 :=
     [[toQDEP 0.1%Q], [toQDEP 0.25%Q], [toQDEP 0%Q]].
 
-Definition example2_weights2: matrix (T:=Q_RSOPMD) 1 3 :=
+Definition example2_weights2: matrix (T:=Q_RSOAMD) 1 3 :=
     [[toQDEP 0.66%Q, toQDEP (-0.3)%Q, toQDEP 0.99%Q]].
 
 Definition example2_biases2: matrix 1 1 :=
@@ -585,19 +433,5 @@ Proof.
   discriminate.
 Qed. *)
 Admitted.
-
-
   
 End ViolationExample.
-
-(*multi-dimensional variant? *)
-Definition is_robust {in_dim out_dim : nat}
-  (nn : TPWANNSequential (RSOPM:=Q_RSOPMD)
-         (input_dim:=in_dim) (output_dim:=out_dim))
-  (epsilon delta : Q_RSOPMD) : Prop :=
-  forall (x1 x2 : colvec in_dim),
-    L_infty_metric (RSOPM:=Q_RSOPMD) x1 x2 <= delta = true ->
-    L_infty_metric (RSOPM:=Q_RSOPMD)
-      (nn_eval (RSOPM:=Q_RSOPMD) (in_dim:=in_dim) (out_dim:=out_dim) nn x1)
-      (nn_eval (RSOPM:=Q_RSOPMD) (in_dim:=in_dim) (out_dim:=out_dim) nn x2)
-      <= epsilon = true.

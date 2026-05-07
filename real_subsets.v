@@ -85,6 +85,9 @@ Infix "==" := RSeq (at level 70, no associativity): RSOAM_scope.
 Definition RSplus {RSOAM: RealSubsetOAM} := RSOAM_plus RSOAM.
 Infix "+" := RSplus : RSOAM_scope.
 
+Definition RSminus {RSOAM: RealSubsetOAM} x y := RSOAM_plus RSOAM x (RSopp y).
+Infix "-" := RSminus : RSOAM_scope.
+
 Definition RSmult {RSOAM: RealSubsetOAM} := RSOAM_mult RSOAM.
 Infix "*" := RSmult : RSOAM_scope.
 
