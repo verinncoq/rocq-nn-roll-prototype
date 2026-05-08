@@ -179,7 +179,7 @@ Definition c_x_minus_y : colvec (RSOAM:=Q_RSOAMD) 4 :=
   [[0], [0], [1], [-(1)]].
 
 Definition c_y_minus_x : colvec (RSOAM:=Q_RSOAMD) 4 :=
-  [[0], [0], [-(1)], [1]].
+  scalar_mult (- (1)) c_x_minus_y.
 
 (* x-y >= 0 *)
 Definition P_xy_eps_nonneg : ConvexPolyhedron (RSOAM:=Q_RSOAMD) 4 :=
@@ -191,11 +191,11 @@ Definition P_yx_eps_nonneg : ConvexPolyhedron (RSOAM:=Q_RSOAMD) 4 :=
 
 (* first function: epsilon-(x-y) *)
 Definition f_xy_eps : AffineFunction (RSOAM:=Q_RSOAMD) 4 1 :=
-  Affine 4 1 [[0, 0, -(1), 1]] [[epsilon]].
+  Affine 4 1 (transpose c_y_minus_x) [[epsilon]].
 
 (* second function: epsilon-(y-x)*)
 Definition f_yx_eps : AffineFunction (RSOAM:=Q_RSOAMD) 4 1 :=
-  Affine 4 1 [[0, 0, 1, -(1)]] [[epsilon]].
+  Affine 4 1 (transpose c_x_minus_y) [[epsilon]].
 
 Definition seg_xy : AffineSegment (RSOAM:=Q_RSOAMD) 4 1 :=
   Segment 4 1 P_xy_eps_nonneg f_xy_eps.
@@ -206,6 +206,79 @@ Definition seg_yx : AffineSegment (RSOAM:=Q_RSOAMD) 4 1 :=
 Definition body_4_to_1 : list (AffineSegment (RSOAM:=Q_RSOAMD) 4 1) :=
   cons seg_xy (cons seg_yx nil).
 
+Lemma seg_xy_seg_yx_intersection:
+    forall x, 
+        in_convex_polyhedron x P_xy_eps_nonneg /\ in_convex_polyhedron x P_yx_eps_nonneg ->
+        dot c_x_minus_y x = 0.
+Proof.
+    intros x. 
+    unfold in_convex_polyhedron, P_xy_eps_nonneg, P_yx_eps_nonneg, satisfies_lc. 
+    intros H. destruct H as [H H0].
+    specialize (H (Constraint 4 c_y_minus_x 0)). specialize (H0 (Constraint 4 c_x_minus_y 0)).
+    unfold lincon1 in H. unfold lincon2 in H0.
+    assert (forall dim (c: LinearConstraint (RSOAM:=Q_RSOAMD) dim), 
+                c = c \/ False). {
+        intros dim c. left. reflexivity.
+    }
+    specialize (H1 4%nat (Constraint 4 c_y_minus_x 0)) as H11.
+    specialize (H1 4%nat (Constraint 4 c_x_minus_y 0)) as H12.
+    apply H in H11. apply H0 in H12.
+    unfold c_y_minus_x in H11.
+    rewrite dot_scalar_mult in H11.
+    apply ax_real_leq_true in H11.
+    rewrite ax_real_mult, ax_opp_is_opp, ax_one_is_one, ax_zero_is_zero in H11.
+    apply ax_real_leq_true in H12.
+    rewrite ax_zero_is_zero in H12.
+    RSOAM_realize_eq; lra.
+Qed. (*If Rocq takes too long here, replace with Admitted*)
+
+Lemma transpose_scalar_mult {RSOAM: RealSubsetOAM}:
+  forall n m c (v: matrix (T:=RSOAM) n m),
+    transpose (scalar_mult c v) = scalar_mult c (transpose v).
+Admitted.
+
+Lemma Mmult_scalar_mult {RSOAM: RealSubsetOAM}:
+  forall n m k c (M1: matrix (T:=RSOAM) n m) (M2: matrix (T:=RSOAM) m k),
+    Mmult (T:=RSOAM) (scalar_mult c M1) M2 = scalar_mult c (Mmult M1 M2).
+Admitted.
+
+Lemma coeff_mat_scalar_mult {RSOAM: RealSubsetOAM}:
+  forall n m x0 c (M: matrix (T:=RSOAM) n m) i j,
+    coeff_mat x0 (scalar_mult c M) i j = c * coeff_mat x0 M i j.
+Admitted.
+
+Lemma seg_xy_equal_seg_yx:
+  forall x,
+    in_affine_segment_domain seg_xy x /\ in_affine_segment_domain seg_yx x ->
+    affine_segment_eval seg_xy x = affine_segment_eval seg_yx x.
+Proof.
+  intros x Hintersect.
+  unfold in_affine_segment_domain in Hintersect.
+  unfold seg_xy, seg_yx in Hintersect.
+  pose proof (seg_xy_seg_yx_intersection _ Hintersect) as Hdot.
+  destruct Hintersect as [Hxy Hyx].
+  unfold affine_segment_eval, seg_xy, seg_yx.
+  apply polyhedron_eval_correct in Hxy.
+  apply polyhedron_eval_correct in Hyx.
+  rewrite Hxy, Hyx.
+  unfold affine_f_eval, f_xy_eps, f_yx_eps.
+  assert (Hmain: (Mmult (T:=Q_RSOAMD) (transpose c_y_minus_x) x) = (Mmult (T:=Q_RSOAMD) (transpose c_x_minus_y) x)). {
+      unfold dot in Hdot.
+      rewrite <- (mk_matrix_bij 0 (Mmult (T:=Q_RSOAMD) (transpose c_y_minus_x) x)).
+      rewrite <- (mk_matrix_bij 0 (Mmult (T:=Q_RSOAMD) (transpose c_x_minus_y) x)).
+      apply mk_matrix_ext.
+      intros i j Hi Hj; destruct i; destruct j; try lia.
+      rewrite Hdot.
+      unfold c_y_minus_x.
+      rewrite transpose_scalar_mult.
+      rewrite Mmult_scalar_mult.
+      rewrite coeff_mat_scalar_mult.
+      rewrite Hdot.
+      RSOAM_realize_eq; lra.
+  }
+  rewrite Hmain; reflexivity.
+Qed.
+
 Lemma body_4_to_1_univalence :
   pwaf_univalence (RSOAM:=Q_RSOAMD) body_4_to_1.
 Proof. 
@@ -213,103 +286,59 @@ Proof.
   intros S1 S2 HS1 HS2 x Hintersect.
   simpl in HS1, HS2.
   destruct HS1 as [HS1 | [HS1 | []]];
-  destruct HS2 as [HS2 | [HS2 | []]].
-  - subst S1 S2. reflexivity.
-  - subst S1 S2.
-    destruct Hintersect as [H1 H2].
-    unfold in_affine_segment_domain in H1, H2.
-    unfold seg_xy, seg_yx, P_xy_eps_nonneg, P_yx_eps_nonneg in H1, H2.
-    unfold in_convex_polyhedron in H1, H2.
-    assert (Hc1 : satisfies_lc x (Constraint 4 c_y_minus_x 0)). {
-      apply H1. simpl. left. reflexivity.
-    }
-    assert (Hc2 : satisfies_lc x (Constraint 4 c_x_minus_y 0)). {
-      apply H2. simpl. left. reflexivity.
-    }
-    unfold satisfies_lc in Hc1, Hc2.
-    simpl in Hc1, Hc2.
-    unfold affine_segment_eval, seg_xy, seg_yx.
-    unfold polyhedron_eval, P_xy_eps_nonneg, P_yx_eps_nonneg.
-    apply Qle_bool_imp_le in Hc1.
-    apply Qle_bool_imp_le in Hc2. 
-    unfold affine_f_eval, f_xy_eps, f_yx_eps.
-    rewrite Mplus_comm.
-    (* to show: dot c_x_minus_y x = 0 *)
-    assert (Heq_dot: dot c_x_minus_y x = QDEP_zero).
-    {
-      apply ax_equality.
-      rewrite ax_zero_is_zero.
-      apply Rle_antisym.
-      - (* dot c_x_minus_y x <= 0 *)
-        apply Qreals.Qle_Rle in Hc2. 
-        (*somehow Hc2? 
-        apply Hc2.*) 
-        admit.
-      - 
-        apply Qreals.Qle_Rle in Hc1.
-        assert (Hsc: c_y_minus_x = scalar_mult (-(1)) c_x_minus_y).
-        { unfold c_y_minus_x, c_x_minus_y, scalar_mult. 
-
-          admit.
-        }
-        rewrite Hsc in Hc1.
-        admit.
-    }
-    unfold affine_segment_eval.
-    admit.
-  - (* S1 = seg_yx, S2 = seg_xy: symmetric *)
-    subst S1 S2.
-    destruct Hintersect as [H1 H2].
-    (* symmetric to above case *)
-    unfold in_affine_segment_domain in H1, H2.
-    unfold seg_xy, seg_yx, P_xy_eps_nonneg, P_yx_eps_nonneg in H1, H2.
-    unfold in_convex_polyhedron in H1, H2.
-    assert (Hc1' : satisfies_lc x (Constraint 4 c_x_minus_y 0)). {
-      apply H1. simpl. left. reflexivity.
-    }
-    assert (Hc2' : satisfies_lc x (Constraint 4 c_y_minus_x 0)). {
-      apply H2. simpl. left. reflexivity.
-    }
-    unfold satisfies_lc in Hc1', Hc2'. simpl in Hc1', Hc2'.
-    apply Qle_bool_imp_le in Hc1'.
-    apply Qle_bool_imp_le in Hc2'.
-    assert (Heq_dot': dot c_y_minus_x x = QDEP_zero).
-    {
-      apply ax_equality.
-      rewrite ax_zero_is_zero.
-      apply Rle_antisym.
-      - apply Qreals.Qle_Rle in Hc1'.
-        admit.
-      - apply Qreals.Qle_Rle in Hc2'.
-        assert (Hsc': c_x_minus_y = scalar_mult (-(1)) c_y_minus_x).
-        { unfold c_x_minus_y, c_y_minus_x, scalar_mult; simpl. admit. }
-        admit.
-    }
-    unfold affine_segment_eval.
-    admit.
-  - subst S1 S2. reflexivity.
-Admitted.
-
+  destruct HS2 as [HS2 | [HS2 | []]]; subst S1 S2.
+  1,4: reflexivity.
+  - apply (seg_xy_equal_seg_yx _ Hintersect).
+  - symmetry; apply seg_xy_equal_seg_yx; split; apply Hintersect.
+Qed.
 
 Definition pwaf_4_to_1 : PWAF (RSOAM:=Q_RSOAMD) (in_dim:=4) (out_dim:=1) :=
   mkPLF 4 1 body_4_to_1 body_4_to_1_univalence.
+
+Lemma pwaf_4_to_1_full_split:
+    forall x,
+        in_convex_polyhedron x P_xy_eps_nonneg \/ in_convex_polyhedron x P_yx_eps_nonneg.
+Proof.
+    intros x.
+    unfold in_convex_polyhedron, P_xy_eps_nonneg, P_yx_eps_nonneg, satisfies_lc.
+    destruct (dot c_x_minus_y x <= 0) eqn:Hdot.
+    * right; intros constraint HIn.
+      destruct HIn as [HIn|]; try contradiction.
+      rewrite <- HIn.
+      apply Hdot.
+    * left; intros constraint HIn.
+      destruct HIn as [HIn|]; try contradiction.
+      rewrite <- HIn.
+      unfold c_y_minus_x.
+      rewrite dot_scalar_mult.
+      apply ax_real_leq_true; RSOAM_realize.
+      apply ax_real_leq_false in Hdot.
+      rewrite ax_zero_is_zero in Hdot.
+      lra.
+Qed. (*If Rocq takes too long here, replace with Admitted*)
 
 Lemma pwaf_4_to_1_total :
   is_total (RSOAM:=Q_RSOAMD) pwaf_4_to_1.
 Proof.
   unfold is_total, pwaf_4_to_1, body_4_to_1.
-  intros v.
+  intros x.
   unfold in_pwaf_domain.
-  (*FAllunterscheidung: ist v[3] <= v[4] or not*)
-Admitted.
+  specialize (pwaf_4_to_1_full_split x) as Hsplit.
+  destruct Hsplit as [Hsplit|Hsplit].
+  * exists seg_xy; split.
+    - apply in_eq.
+    - unfold in_affine_segment_domain, seg_xy.
+      apply Hsplit.
+  * exists seg_yx; split.
+    - apply in_cons, in_eq. 
+    - unfold in_affine_segment_domain, seg_yx.
+      apply Hsplit.
+Qed.
 
 Definition tpwaf_4_to_1 : TPWAF (RSOAM:=Q_RSOAMD) (in_dim:=4) (out_dim:=1) :=
   exist _ pwaf_4_to_1 pwaf_4_to_1_total.
 
 End NetSat.
-
-
-
 
 Definition NNDH_robustness_1d (epsilon delta: Q_RSOAMD) (Hepsilon : 0<= epsilon)
   (Hdelta : 0<= delta): NNHyperproperty :=
