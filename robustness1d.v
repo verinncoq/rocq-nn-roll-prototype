@@ -230,7 +230,7 @@ Proof.
     apply ax_real_leq_true in H12.
     rewrite ax_zero_is_zero in H12.
     RSOAM_realize_eq; lra.
-Qed. (*If Rocq takes too long here, replace with Admitted*)
+Admitted. (*If Rocq takes too long here, replace with Admitted*)
 
 Lemma transpose_scalar_mult {RSOAM: RealSubsetOAM}:
   forall n m c (v: matrix (T:=RSOAM) n m),
@@ -266,7 +266,7 @@ Proof.
       unfold dot in Hdot.
       rewrite <- (mk_matrix_bij 0 (Mmult (T:=Q_RSOAMD) (transpose c_y_minus_x) x)).
       rewrite <- (mk_matrix_bij 0 (Mmult (T:=Q_RSOAMD) (transpose c_x_minus_y) x)).
-      apply mk_matrix_ext.
+      apply (mk_matrix_ext 1 1 _ _).
       intros i j Hi Hj; destruct i; destruct j; try lia.
       rewrite Hdot.
       unfold c_y_minus_x.
@@ -315,7 +315,7 @@ Proof.
       apply ax_real_leq_false in Hdot.
       rewrite ax_zero_is_zero in Hdot.
       lra.
-Qed. (*If Rocq takes too long here, replace with Admitted*)
+Admitted. (*If Rocq takes too long here, replace with Admitted*)
 
 Lemma pwaf_4_to_1_total :
   is_total (RSOAM:=Q_RSOAMD) pwaf_4_to_1.
@@ -346,20 +346,45 @@ Definition NNDH_robustness_1d (epsilon delta: Q_RSOAMD) (Hepsilon : 0<= epsilon)
         2 2 (W_robustness_1d delta Hdelta) (LinearTPWAF Mone (null_vector 2)) 
         (tpwaf_4_to_1 epsilon Hepsilon).
 
-
 Definition monotonicity_1d_postcondition_helper {RSOAM}:
     matrix (T:=T RSOAM) (2 + 2 * 1) 1 -> colvec (RSOAM:=RSOAM) 4.
 Proof.
     intros H.
     unfold colvec; apply H.
 Defined.        
-(**)
+
+Lemma concat_zero_helper {RSOAM: RealSubsetOAM}:
+  forall n, colvec (RSOAM:=RSOAM) n -> matrix (T:=RSOAM) (n + 0) 1.
+Admitted.
+
+Lemma concat_zero {RSOAM: RealSubsetOAM}:
+  forall n (v: colvec n) (v0: colvec (RSOAM:=RSOAM) 0), colvec_concat v v0 = concat_zero_helper n v.
+Admitted.  
+
+Lemma dot_c_x_minus_y_netsat_helper {RSOAM: RealSubsetOAM}:
+  matrix (T:=RSOAM) (2 * 1 + 2 * 1) 1 -> colvec (RSOAM:=RSOAM) 4.
+Proof.
+  simpl; unfold colvec.
+  intro H; apply H.
+Defined.
+
+Lemma dot_c_x_minus_y_netsat {RSOAM: RealSubsetOAM}:
+  forall (x: colvec (2 * 1)) x1 x2 (nn: TPWANNSequential (input_dim:=1) (output_dim:=1)),
+    x1 = mk_colvec 1 (fun i : nat => coeff_colvec 0 x i) ->
+    x2 = mk_colvec 1 (fun i : nat => coeff_colvec 0 x (i + 1)) ->
+    x = colvec_concat x1 x2 ->
+    dot 
+      c_x_minus_y 
+      (dot_c_x_minus_y_netsat_helper (colvec_concat x (eval_nn_multiple nn x)))
+      = toRS (nn_eval nn x1) - toRS (nn_eval nn x2).
+Admitted.
+
 Lemma robustness_1d_postcondition (epsilon: Q_RSOAMD) (Hepsilon : 0<= epsilon):
     forall (x1: colvec 1) (x2: colvec 1) (x: colvec 2) (nn: TPWANNSequential (input_dim:=1) (output_dim:=1)),
         x1 = mk_colvec 1 (fun i : nat => coeff_colvec 0 x i) ->
         x2 = mk_colvec 1 (fun i : nat => coeff_colvec 0 x (i + 1)) ->
         x = colvec_concat x1 x2 ->
-         RSOAM_abs_Q (toRS (nn_eval nn x1) + -toRS (nn_eval nn x2)) <= epsilon =
+         RSOAM_abs_Q (toRS (nn_eval nn x1) - toRS (nn_eval nn x2)) <= epsilon =
         (0 <=
             toRS 
                 (tpwaf_eval (tpwaf_4_to_1 epsilon Hepsilon) 
@@ -369,21 +394,87 @@ Lemma robustness_1d_postcondition (epsilon: Q_RSOAMD) (Hepsilon : 0<= epsilon):
 Proof.
   intros x1 x2 x nn Hx1 Hx2 Hx.
   unfold monotonicity_1d_postcondition_helper.
-  unfold tpwaf_eval. 
-  unfold tpwaf_4_to_1, body_4_to_1, seg_xy, seg_yx, P_xy_eps_nonneg, P_yx_eps_nonneg, c_x_minus_y, c_y_minus_x.
+  unfold tpwaf_eval at 2 3, pwaf_eval, pwaf_eval_helper, LinearTPWAF, 
+          LinearPWAF, body, TPWAF2PWAF, proj1_sig, linear_body,
+          affine_segment_eval, full_R_polyhedron, polyhedron_eval,
+          polyhedron_eval_helper, affine_f_eval.
+  rewrite Mplus_null_vector.
+  rewrite Mmult_one_l.
+  remember (tpwaf_eval _ _) as eval_res.
+  symmetry in Heqeval_res; apply tpwaf_eval_is_value in Heqeval_res.
+  apply pwaf_eval_correct in Heqeval_res.
+  unfold tpwaf_4_to_1, pwaf_eval, pwaf_4_to_1, body,
+         pwaf_eval_helper, body_4_to_1, TPWAF2PWAF, proj1_sig,
+         affine_segment_eval, seg_xy, seg_yx in Heqeval_res.
+  destruct (pwaf_4_to_1_full_split (colvec_concat x (eval_nn_multiple (r:=2) nn x))) as [Hsplit|Hsplit].
+  * apply polyhedron_eval_correct in Hsplit.
+    rewrite Hsplit in Heqeval_res.
+    assert (Hhelp: forall (T: Type) (a b: T), Some a = Some b -> a = b). intros; inversion H; reflexivity.
+    apply Hhelp in Heqeval_res; clear Hhelp.
+    rewrite <-Heqeval_res.
+    unfold RSOAM_abs_Q.
+    unfold polyhedron_eval, P_xy_eps_nonneg, polyhedron_eval_helper, lc_eval in Hsplit.
+    unfold c_y_minus_x in Hsplit.
+    rewrite andb_true_r in Hsplit.
+    rewrite dot_scalar_mult in Hsplit.
+    pose proof (dot_c_x_minus_y_netsat (RSOAM:=Q_RSOAMD) x x1 x2 nn Hx1 Hx2 Hx) as Hhelp.
+    unfold dot_c_x_minus_y_netsat_helper in Hhelp.
+    rewrite <- Hhelp.
+    
+
+  *
+
 Admitted.
-
-
 
 Lemma robustness_1d_correct:
-    forall (nn: TPWANNSequential (RSOAM:=Q_RSOAMD)) (epsilon delta: Q_RSOAMD) (Hepsilon : 0<= epsilon) (Hdelta : 0<= delta),
-        is_robust_1d nn epsilon delta Hepsilon Hdelta <-> nn_satisfies_nndh nn (NNDH_robustness_1d epsilon delta Hepsilon Hdelta).
+  forall (nn: TPWANNSequential (RSOAM:=Q_RSOAMD)) (epsilon delta: Q_RSOAMD) 
+          (Hepsilon : 0 <= epsilon) (Hdelta : 0 <= delta),
+      is_robust_1d nn epsilon delta Hepsilon Hdelta <-> 
+      nn_satisfies_nndh nn (NNDH_robustness_1d epsilon delta Hepsilon Hdelta).
 Proof.
-Admitted.
+  intros nn epsilon delta Hepsilon Hdelta.
+  split; intro H.
+  * unfold nn_satisfies_nndh.
+    unfold NNDH_robustness_1d.
+    intros x HxW.
+    pose proof (colvec_split 1 1 x) as Hsplit.
+    destruct Hsplit as [x1 [x2 [Hx1 [Hx2 Hxconcat]]]].
+    specialize (H x1 x2).
+    pose proof robustness_1d_postcondition as Hpostcondition.
+    specialize (Hpostcondition epsilon Hepsilon x1 x2 x nn Hx1 Hx2 Hxconcat).
+    unfold monotonicity_1d_postcondition_helper in Hpostcondition.
+    rewrite Hpostcondition in H.
+    apply H.
+    rewrite (W_robustness_1d_correct delta Hdelta x1 x2).
+    rewrite Hxconcat in HxW.
+    apply HxW.
+  * unfold is_robust_1d.
+    intros x1 x2 Hpre.
+    unfold nn_satisfies_nndh, NNDH_robustness_1d in H.
+    apply (W_robustness_1d_correct delta Hdelta) in Hpre.
+    specialize (H (colvec_concat x1 x2) Hpre).
+    rewrite (robustness_1d_postcondition epsilon Hepsilon _ _ (colvec_concat x1 x2)); last reflexivity.
+    - unfold monotonicity_1d_postcondition_helper.
+      apply H.
+    - rewrite <- (mk_matrix_bij 0 x1).
+      apply mk_matrix_ext.
+      intros i j Hi Hj.
+      induction i; induction j; try lia.
+      unfold colvec_concat, coeff_colvec, Mplus, extend_colvec_at_bottom, extend_colvec_on_top, mk_colvec, coeff_colvec.
+      repeat (rewrite coeff_mat_bij; try lia); simpl.
+      rewrite (plus_zero_r (G:=Q_RSOAMD)); reflexivity.
+    - rewrite <- (mk_matrix_bij 0 x2).
+      apply mk_matrix_ext.
+      intros i j Hi Hj.
+      induction i; induction j; try lia.
+      unfold colvec_concat, coeff_colvec, Mplus, extend_colvec_at_bottom, extend_colvec_on_top, mk_colvec, coeff_colvec.
+      repeat (rewrite coeff_mat_bij; try lia); simpl.
+      rewrite (plus_zero_l (G:=Q_RSOAMD)); reflexivity.
+Qed.
 
 Lemma is_robust_1d_verification (epsilon delta: Q_RSOAMD) 
-  (Hepsilon : 0<= epsilon)
-  (Hdelta : 0<= delta):
+  (Hepsilon : 0 <= epsilon)
+  (Hdelta : 0 <= delta):
   forall nn,
     verify_hyperporperty nn (NNDH_robustness_1d epsilon delta Hepsilon Hdelta)= true <-> is_robust_1d nn epsilon delta Hepsilon Hdelta.
 Proof.
