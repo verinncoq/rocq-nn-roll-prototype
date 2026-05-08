@@ -270,13 +270,6 @@ Proof.
     symmetry; apply RSOAM_mult_assoc.
 Qed.
 
-
-(*changed x0 to 0 since otherwise you get the counterexample:
-n = 0, m = 0, i = 0, j = 0, x0 = 1, c = 0
-coeff_mat 1 (scalar_mult 0 M) 0 0 = 1
-0 * coeff_mat 1 M 0 0 = 0
-*)
-
 Lemma coeff_mat_scalar_mult {RSOAM: RealSubsetOAM}:
   forall n m c (M: matrix (T:=RSOAM) n m) i j,
     coeff_mat 0 (scalar_mult c M) i j = c * coeff_mat 0 M i j.
@@ -287,11 +280,12 @@ Proof.
   - unfold scalar_mult.
     rewrite coeff_mat_bij; try lia.
     reflexivity.
-  - rewrite coeff_mat_default; try lia.
-    rewrite coeff_mat_default; try lia.
-    admit.
-Admitted.
-
+  all: rewrite coeff_mat_default; try lia.
+  all: rewrite coeff_mat_default; try lia.
+  all: unfold RSzero.
+  all: RSOAM_realize_eq.
+  all: rewrite (ax_zero_is_zero RSOAM); lra.
+Qed.
 
 Lemma seg_xy_equal_seg_yx:
   forall x,
@@ -386,11 +380,11 @@ Definition tpwaf_4_to_1 : TPWAF (RSOAM:=Q_RSOAMD) (in_dim:=4) (out_dim:=1) :=
 
 End NetSat.
 
-Definition NNDH_robustness_1d (epsilon delta: Q_RSOAMD) (Hepsilon : 0<= epsilon)
+Definition NNDH_robustness_1d (epsilon delta: Q_RSOAMD) (Hepsilon : 0 <= epsilon)
   (Hdelta : 0<= delta): NNHyperproperty :=
     NNDH (nn_in_dim:=1) (nn_out_dim:=1)
         2 2 (W_robustness_1d delta Hdelta) (LinearTPWAF Mone (null_vector 2)) 
-        (tpwaf_4_to_1 epsilon Hepsilon).
+        (tpwaf_4_to_1 epsilon).
 
 Definition monotonicity_1d_postcondition_helper {RSOAM}:
     matrix (T:=T RSOAM) (2 + 2 * 1) 1 -> colvec (RSOAM:=RSOAM) 4.
@@ -398,14 +392,6 @@ Proof.
     intros H.
     unfold colvec; apply H.
 Defined.        
-
-Lemma concat_zero_helper {RSOAM: RealSubsetOAM}:
-  forall n, colvec (RSOAM:=RSOAM) n -> matrix (T:=RSOAM) (n + 0) 1.
-Admitted.
-
-Lemma concat_zero {RSOAM: RealSubsetOAM}:
-  forall n (v: colvec n) (v0: colvec (RSOAM:=RSOAM) 0), colvec_concat v v0 = concat_zero_helper n v.
-Admitted.  
 
 Lemma dot_c_x_minus_y_netsat_helper {RSOAM: RealSubsetOAM}:
   matrix (T:=RSOAM) (2 * 1 + 2 * 1) 1 -> colvec (RSOAM:=RSOAM) 4.
@@ -423,9 +409,34 @@ Lemma dot_c_x_minus_y_netsat {RSOAM: RealSubsetOAM}:
       c_x_minus_y 
       (dot_c_x_minus_y_netsat_helper (colvec_concat x (eval_nn_multiple nn x)))
       = toRS (nn_eval nn x1) - toRS (nn_eval nn x2).
-Admitted.
+Proof.
+  intros x x1 x2 nn Hx1 Hx2 Hx.
+  rewrite Hx1, Hx2.
+  unfold dot_c_x_minus_y_netsat_helper, toRS,
+         dot, eval_nn_multiple, colvec_concat,
+         Mmult, Mplus, extend_colvec_at_bottom, extend_colvec_on_top, null_vector,
+         mk_colvec, coeff_colvec, transpose, c_x_minus_y, 
+         sum_n, sum_n_m, Iter.iter_nat,
+         mk_matrix, coeff_mat, plus, mult; simpl.
+  repeat rewrite (mult_zero_l (K:=Q_RSOAMD)).
+  repeat rewrite (plus_zero_l (G:=Q_RSOAMD)).
+  repeat rewrite (mult_one_l (K:=Q_RSOAMD)).
+  remember (@fst QDEP unit (@fst (QDEP * unit) unit (@nn_eval QDEP_RSOAM 1 1 nn [[@fst QDEP unit (@fst (QDEP * unit) (QDEP * unit * unit) x)]])))
+              as nn1.
+  remember (@fst QDEP unit (@fst (QDEP * unit) unit
+                 (@nn_eval QDEP_RSOAM 1 1 nn [[@fst QDEP unit (@fst (QDEP * unit) unit (@snd (QDEP * unit) (QDEP * unit * unit) x))]])))
+              as nn2.
+  repeat rewrite (plus_zero_r (G:=Q_RSOAMD)). 
+  reflexivity.
+Qed.
 
-Lemma robustness_1d_postcondition (epsilon: Q_RSOAMD) (Hepsilon : 0<= epsilon):
+Lemma some_removal:
+  forall (T: Type) (a b: T), Some a = Some b -> a = b.
+Proof.
+  intros; inversion H; reflexivity.
+Qed.
+
+Lemma robustness_1d_postcondition (epsilon: Q_RSOAMD) (Hepsilon : 0 <= epsilon):
     forall (x1: colvec 1) (x2: colvec 1) (x: colvec 2) (nn: TPWANNSequential (input_dim:=1) (output_dim:=1)),
         x1 = mk_colvec 1 (fun i : nat => coeff_colvec 0 x i) ->
         x2 = mk_colvec 1 (fun i : nat => coeff_colvec 0 x (i + 1)) ->
@@ -433,7 +444,7 @@ Lemma robustness_1d_postcondition (epsilon: Q_RSOAMD) (Hepsilon : 0<= epsilon):
          RSOAM_abs_Q (toRS (nn_eval nn x1) - toRS (nn_eval nn x2)) <= epsilon =
         (0 <=
             toRS 
-                (tpwaf_eval (tpwaf_4_to_1 epsilon Hepsilon) 
+                (tpwaf_eval (tpwaf_4_to_1 epsilon) 
                     (monotonicity_1d_postcondition_helper
                     (colvec_concat (tpwaf_eval (LinearTPWAF Mone (null_vector 2)) x)
                     (eval_nn_multiple (r:=2) nn (tpwaf_eval (LinearTPWAF Mone (null_vector 2)) x)))))).
@@ -455,9 +466,8 @@ Proof.
   destruct (pwaf_4_to_1_full_split (colvec_concat x (eval_nn_multiple (r:=2) nn x))) as [Hsplit|Hsplit].
   * apply polyhedron_eval_correct in Hsplit.
     rewrite Hsplit in Heqeval_res.
-    assert (Hhelp: forall (T: Type) (a b: T), Some a = Some b -> a = b). intros; inversion H; reflexivity.
-    apply Hhelp in Heqeval_res; clear Hhelp.
-    rewrite <-Heqeval_res.
+    apply some_removal in Heqeval_res.
+    rewrite <- Heqeval_res.
     unfold RSOAM_abs_Q.
     unfold polyhedron_eval, P_xy_eps_nonneg, polyhedron_eval_helper, lc_eval in Hsplit.
     unfold c_y_minus_x in Hsplit.
@@ -466,11 +476,233 @@ Proof.
     pose proof (dot_c_x_minus_y_netsat (RSOAM:=Q_RSOAMD) x x1 x2 nn Hx1 Hx2 Hx) as Hhelp.
     unfold dot_c_x_minus_y_netsat_helper in Hhelp.
     rewrite <- Hhelp.
-    
-
-  *
-
-Admitted.
+    destruct (RSOAM_le Q_RSOAMD (dot (RSOAM:=Q_RSOAMD) _ _) 0) eqn:Hcmp.
+    - apply ax_real_leq_true in Hsplit.
+      apply ax_real_leq_true in Hcmp.
+      rewrite ax_zero_is_zero in Hsplit, Hcmp.
+      rewrite ax_real_mult, ax_opp_is_opp, ax_one_is_one in Hsplit.
+      assert (Hdep: dot (RSOAM:=Q_RSOAMD) c_x_minus_y (colvec_concat x (eval_nn_multiple (r:=2) nn x)) =
+                      @dot Q_RSOAMD 4 c_x_minus_y
+                            (@colvec_concat Q_RSOAMD (2 * 1) (2 * 1) x
+                                  (@eval_nn_multiple Q_RSOAMD 2 1 1 nn x))). reflexivity.
+      assert (Hzero: dot (RSOAM:=Q_RSOAMD) c_x_minus_y (colvec_concat x (eval_nn_multiple (r:=2) nn x)) = 0). {
+        rewrite Hdep in Hsplit.
+        rewrite Hdep.
+        remember (@dot Q_RSOAMD 4 c_x_minus_y
+                            (@colvec_concat Q_RSOAMD (2 * 1) (2 * 1) x
+                                  (@eval_nn_multiple Q_RSOAMD 2 1 1 nn x))) as dot_res.
+        RSOAM_realize_eq.
+        lra.
+      }
+      assert (Hzero2: @dot Q_RSOAMD 4 c_x_minus_y
+                          (@colvec_concat Q_RSOAMD (2 * 1) (2 * 1) x
+                                (@eval_nn_multiple Q_RSOAMD 2 1 1 nn x)) = 0). {
+          rewrite <- Hzero.
+          reflexivity.
+      }
+      rewrite Hzero2.
+      unfold affine_f_eval, f_xy_eps.
+      unfold c_y_minus_x.
+      rewrite transpose_scalar_mult.
+      rewrite Mmult_scalar_mult.
+      unfold dot in Hzero2.
+      unfold scalar_mult, mk_matrix, mk_Tn.
+      unfold dot in Hzero.
+      rewrite Hzero.
+      unfold Mplus, toRS, coeff_colvec.
+      repeat (rewrite coeff_mat_bij; try lia).
+      remember (- 0 <= epsilon) as cmp_res.
+      destruct cmp_res.
+      * symmetry.
+        apply ax_real_leq_true.
+        unfold coeff_mat, coeff_Tn, fst.
+        assert (Hweird: (plus (G:=Q_RSOAMD)) = (RSplus (RSOAM:=Q_RSOAMD))). reflexivity.
+        rewrite Hweird.
+        RSOAM_realize.
+        unfold RSzero.
+        rewrite (ax_zero_is_zero Q_RSOAMD).
+        symmetry in Heqcmp_res.
+        apply ax_real_leq_true in Heqcmp_res.
+        rewrite ax_opp_is_opp in Heqcmp_res.
+        rewrite ax_zero_is_zero in Heqcmp_res.
+        lra.
+      * symmetry.
+        apply ax_real_leq_false.
+        unfold coeff_mat, coeff_Tn, fst.
+        assert (Hweird: (plus (G:=Q_RSOAMD)) = (RSplus (RSOAM:=Q_RSOAMD))). reflexivity.
+        rewrite Hweird.
+        RSOAM_realize.
+        symmetry in Heqcmp_res.
+        apply ax_real_leq_false in Heqcmp_res.
+        rewrite ax_opp_is_opp in Heqcmp_res.
+        rewrite ax_zero_is_zero in Heqcmp_res.
+        lra.
+    - unfold affine_f_eval, f_xy_eps, c_y_minus_x, dot.
+      unfold toRS, Mplus, coeff_colvec.
+      repeat (rewrite coeff_mat_bij; try lia).
+      unfold coeff_mat at 3, coeff_Tn, fst.
+      rewrite transpose_scalar_mult.
+      rewrite Mmult_scalar_mult.
+      unfold dot in Hhelp.
+      rewrite Hhelp.
+      rewrite (coeff_mat_scalar_mult (RSOAM:=Q_RSOAMD)).
+      remember (toRS (nn_eval nn x1) - toRS (nn_eval nn x2) <= epsilon) as b.
+      destruct b.
+      * symmetry in Heqb.
+        apply ax_real_leq_true in Heqb.
+        symmetry; apply ax_real_leq_true.
+        assert (Hweird: (plus (G:=Q_RSOAMD)) = (RSplus (RSOAM:=Q_RSOAMD))). reflexivity.
+        rewrite Hweird.
+        RSOAM_realize.
+        assert (Halg: (forall r1 r2, r1 <= r2 -> 0 <= - (1) * r1 + r2)%R). {
+          intros r1 r2 H.
+          rewrite Ropp_mult_distr_l_reverse.
+          lra.
+        }
+        apply Halg.
+        rewrite <- Hhelp in Heqb.
+        apply Heqb.
+      * symmetry in Heqb.
+        apply ax_real_leq_false in Heqb.
+        symmetry; apply ax_real_leq_false.
+        assert (Hweird: (plus (G:=Q_RSOAMD)) = (RSplus (RSOAM:=Q_RSOAMD))). reflexivity.
+        rewrite Hweird.
+        RSOAM_realize.
+        assert (Halg: (forall r1 r2, r2 < r1 -> - (1) * r1 + r2 < 0 )%R). {
+          intros r1 r2 H.
+          rewrite Ropp_mult_distr_l_reverse.
+          lra.
+        }
+        apply Halg.
+        rewrite <- Hhelp in Heqb.
+        apply Heqb.      
+  * destruct (polyhedron_eval (dim:=4) (colvec_concat x (eval_nn_multiple (r:=2) nn x)) P_xy_eps_nonneg) eqn:Hinxy.
+    - apply polyhedron_eval_correct in Hinxy.
+      pose proof (seg_xy_seg_yx_intersection 
+                    (colvec_concat x (eval_nn_multiple (r:=2) nn x))
+                    (conj Hinxy Hsplit)) as Hintersect.
+      pose proof (dot_c_x_minus_y_netsat (RSOAM:=Q_RSOAMD) x x1 x2 nn Hx1 Hx2 Hx) as Hhelp.
+      unfold dot_c_x_minus_y_netsat_helper in Hhelp.
+      Set Printing Implicit.
+      assert (Hdep: @dot Q_RSOAMD 4 c_x_minus_y (@colvec_concat Q_RSOAMD 2 (2 * 1) x (@eval_nn_multiple Q_RSOAMD 2 1 1 nn x)) =
+                    @dot Q_RSOAMD 4 c_x_minus_y (@colvec_concat Q_RSOAMD (2 * 1) (2 * 1) x (@eval_nn_multiple Q_RSOAMD 2 1 1 nn x))).
+      reflexivity.
+      rewrite Hdep in Hintersect.
+      rewrite Hhelp in Hintersect.
+      rewrite Hintersect.
+      unfold RSOAM_abs_Q.
+      assert (Hle: RSOAM_le Q_RSOAMD 0 0 = true). reflexivity.
+      rewrite Hle.
+      apply some_removal in Heqeval_res.
+      rewrite <- Heqeval_res.
+      remember (- 0 <= epsilon) as cmp_res.
+      destruct cmp_res.
+      * symmetry.
+        apply ax_real_leq_true.
+        unfold affine_f_eval, f_xy_eps, c_y_minus_x.
+        rewrite transpose_scalar_mult.
+        rewrite Mmult_scalar_mult.
+        rewrite <-Hhelp in Hintersect.
+        rewrite <-Hdep in Hintersect.
+        unfold dot in Hintersect.
+        unfold toRS, Mplus, coeff_colvec.
+        repeat (rewrite coeff_mat_bij; try lia).
+        rewrite (coeff_mat_scalar_mult (RSOAM:=Q_RSOAMD)).
+        rewrite Hintersect.
+        unfold coeff_mat, coeff_Tn, fst.
+        assert (Hweird: (plus (G:=Q_RSOAMD)) = (RSplus (RSOAM:=Q_RSOAMD))). reflexivity.
+        rewrite Hweird.
+        RSOAM_realize.
+        unfold RSzero.
+        rewrite (ax_zero_is_zero Q_RSOAMD).
+        symmetry in Heqcmp_res.
+        apply ax_real_leq_true in Heqcmp_res.
+        rewrite ax_opp_is_opp in Heqcmp_res.
+        rewrite ax_zero_is_zero in Heqcmp_res.
+        lra.
+      * symmetry.
+        apply ax_real_leq_false.
+        unfold affine_f_eval, f_xy_eps, c_y_minus_x.
+        rewrite transpose_scalar_mult.
+        rewrite Mmult_scalar_mult.
+        rewrite <-Hhelp in Hintersect.
+        rewrite <-Hdep in Hintersect.
+        unfold dot in Hintersect.
+        unfold toRS, Mplus, coeff_colvec.
+        repeat (rewrite coeff_mat_bij; try lia).
+        rewrite (coeff_mat_scalar_mult (RSOAM:=Q_RSOAMD)).
+        rewrite Hintersect.
+        unfold coeff_mat, coeff_Tn, fst.
+        assert (Hweird: (plus (G:=Q_RSOAMD)) = (RSplus (RSOAM:=Q_RSOAMD))). reflexivity.
+        rewrite Hweird.
+        RSOAM_realize.
+        unfold RSzero.
+        symmetry in Heqcmp_res.
+        apply ax_real_leq_false in Heqcmp_res.
+        rewrite ax_opp_is_opp in Heqcmp_res.
+        rewrite ax_zero_is_zero in Heqcmp_res.
+        lra.
+    - apply polyhedron_eval_correct in Hsplit.
+      rewrite Hsplit in Heqeval_res.
+      apply some_removal in Heqeval_res.
+      rewrite <- Heqeval_res.
+      unfold RSOAM_abs_Q.
+      unfold P_yx_eps_nonneg, polyhedron_eval, polyhedron_eval_helper, lc_eval in Hsplit.
+      rewrite andb_true_r in Hsplit.
+      pose proof (dot_c_x_minus_y_netsat (RSOAM:=Q_RSOAMD) x x1 x2 nn Hx1 Hx2 Hx) as Hhelp.
+      unfold dot_c_x_minus_y_netsat_helper in Hhelp.
+      rewrite <- Hhelp.
+      destruct (RSOAM_le Q_RSOAMD _ 0) eqn:Hcmp.
+      * remember ((- @dot Q_RSOAMD 4 c_x_minus_y (@colvec_concat Q_RSOAMD (2 * 1) (2 * 1) x (@eval_nn_multiple Q_RSOAMD 2 1 1 nn x)) <= epsilon)) as cmp.
+        destruct cmp.
+        - unfold affine_f_eval, f_yx_eps. 
+          symmetry; apply ax_real_leq_true.
+          rewrite ax_zero_is_zero.
+          unfold toRS, Mplus, coeff_colvec.
+          repeat (rewrite coeff_mat_bij; try lia).
+          assert (Hweird: (plus (G:=Q_RSOAMD)) = (RSplus (RSOAM:=Q_RSOAMD))). reflexivity.
+          rewrite Hweird.
+          rewrite ax_real_plus.
+          symmetry in Heqcmp; apply ax_real_leq_true in Heqcmp.
+          unfold dot in Heqcmp.
+          rewrite ax_opp_is_opp in Heqcmp.
+          assert (Hweird2: (zero (G:=Q_RSOAMD)) = 0). reflexivity.
+          rewrite Hweird2 at 1.
+          unfold coeff_mat at 2, coeff_Tn, fst.
+          assert (Halg: (forall r1 r2, - r1 <= r2 -> 0 <= r1 + r2)%R). {
+            intros r1 r2 H.
+            nra.
+          } 
+          apply Halg.
+          apply Heqcmp.
+        - unfold affine_f_eval, f_yx_eps. 
+          symmetry; apply ax_real_leq_false.
+          rewrite ax_zero_is_zero.
+          unfold toRS, Mplus, coeff_colvec.
+          repeat (rewrite coeff_mat_bij; try lia).
+          assert (Hweird: (plus (G:=Q_RSOAMD)) = (RSplus (RSOAM:=Q_RSOAMD))). reflexivity.
+          rewrite Hweird.
+          rewrite ax_real_plus.
+          symmetry in Heqcmp; apply ax_real_leq_false in Heqcmp.
+          unfold dot in Heqcmp.
+          rewrite ax_opp_is_opp in Heqcmp.
+          assert (Hweird2: (zero (G:=Q_RSOAMD)) = 0). reflexivity.
+          rewrite Hweird2 at 1.
+          unfold coeff_mat at 2, coeff_Tn, fst.
+          assert (Halg: (forall r1 r2, r2 < - r1 -> r1 + r2 < 0)%R). {
+            intros r1 r2 H.
+            nra.
+          } 
+          apply Halg.
+          apply Heqcmp.
+      * unfold RSle in Hsplit.
+        exfalso.
+        assert (Hcontra: true = false -> False). discriminate.
+        apply Hcontra.
+        rewrite <- Hsplit.
+        rewrite <- Hcmp.
+        reflexivity.
+Admitted. (*If Rocq takes too long here, replace with Admitted*)
 
 Lemma robustness_1d_correct:
   forall (nn: TPWANNSequential (RSOAM:=Q_RSOAMD)) (epsilon delta: Q_RSOAMD) 
@@ -550,7 +782,6 @@ Definition example_nn2 :=
     (NNLinear example2_weights2 example2_biases2
     (NNReLU
     (NNOutput (output_dim:=1)))))).
-
 
 (*if input has distance up to one, output
  distance is bigger then 0*)
