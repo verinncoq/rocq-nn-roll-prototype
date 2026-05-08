@@ -235,17 +235,63 @@ Qed. (*If Rocq takes too long here, replace with Admitted*)
 Lemma transpose_scalar_mult {RSOAM: RealSubsetOAM}:
   forall n m c (v: matrix (T:=RSOAM) n m),
     transpose (scalar_mult c v) = scalar_mult c (transpose v).
-Admitted.
+Proof.
+  intros n m c v.
+  unfold transpose, scalar_mult.
+  apply mk_matrix_ext.
+  intros i j Hi Hj.
+  repeat (rewrite coeff_mat_bij; try lia).
+  reflexivity.
+Qed.
 
 Lemma Mmult_scalar_mult {RSOAM: RealSubsetOAM}:
   forall n m k c (M1: matrix (T:=RSOAM) n m) (M2: matrix (T:=RSOAM) m k),
     Mmult (T:=RSOAM) (scalar_mult c M1) M2 = scalar_mult c (Mmult M1 M2).
-Admitted.
+Proof.
+  intros n m k c M1 M2.
+  unfold Mmult, scalar_mult.
+  apply mk_matrix_ext.
+  intros i j Hi Hj.
+  rewrite coeff_mat_bij; try lia.
+  assert (Hhelp: RSmult = (mult (K:=RSOAM))). reflexivity.
+  rewrite Hhelp.
+  rewrite <- (sum_n_mult_l (K:=RSOAM) c).
+  apply (sum_n_ext_loc (G:=RSOAM)).
+  intros l Hl.
+  destruct m.
+  - rewrite coeff_mat_default; try lia.
+    rewrite (coeff_mat_default _ _ _ _ M1); try lia.
+    rewrite mult_zero_l.
+    rewrite mult_zero_r.
+    reflexivity.
+  - assert (Hdim: (S m >= 1)%nat). lia.
+    pose proof (nat_pred_le_lt l (S m) Hl Hdim) as Hlm.
+    rewrite coeff_mat_bij; try lia.
+    symmetry; apply RSOAM_mult_assoc.
+Qed.
+
+
+(*changed x0 to 0 since otherwise you get the counterexample:
+n = 0, m = 0, i = 0, j = 0, x0 = 1, c = 0
+coeff_mat 1 (scalar_mult 0 M) 0 0 = 1
+0 * coeff_mat 1 M 0 0 = 0
+*)
 
 Lemma coeff_mat_scalar_mult {RSOAM: RealSubsetOAM}:
-  forall n m x0 c (M: matrix (T:=RSOAM) n m) i j,
-    coeff_mat x0 (scalar_mult c M) i j = c * coeff_mat x0 M i j.
+  forall n m c (M: matrix (T:=RSOAM) n m) i j,
+    coeff_mat 0 (scalar_mult c M) i j = c * coeff_mat 0 M i j.
+Proof.
+  intros n m c M i j.
+  destruct (Compare_dec.lt_dec i n) as [Hi|Hi];
+  destruct (Compare_dec.lt_dec j m) as [Hj|Hj].
+  - unfold scalar_mult.
+    rewrite coeff_mat_bij; try lia.
+    reflexivity.
+  - rewrite coeff_mat_default; try lia.
+    rewrite coeff_mat_default; try lia.
+    admit.
 Admitted.
+
 
 Lemma seg_xy_equal_seg_yx:
   forall x,
@@ -315,7 +361,7 @@ Proof.
       apply ax_real_leq_false in Hdot.
       rewrite ax_zero_is_zero in Hdot.
       lra.
-Qed. (*If Rocq takes too long here, replace with Admitted*)
+Qed.(*If Rocq takes too long here, replace with Admitted*)
 
 Lemma pwaf_4_to_1_total :
   is_total (RSOAM:=Q_RSOAMD) pwaf_4_to_1.
