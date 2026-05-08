@@ -230,7 +230,7 @@ Proof.
     apply ax_real_leq_true in H12.
     rewrite ax_zero_is_zero in H12.
     RSOAM_realize_eq; lra.
-Admitted. (*If Rocq takes too long here, replace with Admitted*)
+Qed. (*If Rocq takes too long here, replace with Admitted*)
 
 Lemma transpose_scalar_mult {RSOAM: RealSubsetOAM}:
   forall n m c (v: matrix (T:=RSOAM) n m),
@@ -355,7 +355,7 @@ Proof.
       apply ax_real_leq_false in Hdot.
       rewrite ax_zero_is_zero in Hdot.
       lra.
-Admitted. (*If Rocq takes too long here, replace with Admitted*)
+Qed. (*If Rocq takes too long here, replace with Admitted*)
 
 Lemma pwaf_4_to_1_total :
   is_total (RSOAM:=Q_RSOAMD) pwaf_4_to_1.
@@ -702,7 +702,7 @@ Proof.
         rewrite <- Hsplit.
         rewrite <- Hcmp.
         reflexivity.
-Admitted. (*If Rocq takes too long here, replace with Admitted*)
+Qed. (*If Rocq takes too long here, replace with Admitted*)
 
 Lemma robustness_1d_correct:
   forall (nn: TPWANNSequential (RSOAM:=Q_RSOAMD)) (epsilon delta: Q_RSOAMD) 
@@ -762,33 +762,31 @@ Proof.
   apply iff_refl.
 Qed.
 
-Section ViolationExample.
+Section RobustnessExample.
 
-Definition example2_weights1: matrix (T:=Q_RSOAMD) 3 1 :=
+Definition example_weights1: matrix (T:=Q_RSOAMD) 3 1 :=
     [[toQDEP (-1)%Q], [toQDEP 1%Q], [toQDEP 0.7%Q]].
 
-Definition example2_biases1: matrix 3 1 :=
+Definition example_biases1: matrix 3 1 :=
     [[toQDEP 0.1%Q], [toQDEP 0.25%Q], [toQDEP 0%Q]].
 
-Definition example2_weights2: matrix (T:=Q_RSOAMD) 1 3 :=
+Definition example_weights2: matrix (T:=Q_RSOAMD) 1 3 :=
     [[toQDEP 0.66%Q, toQDEP (-0.3)%Q, toQDEP 0.99%Q]].
 
-Definition example2_biases2: matrix 1 1 :=
+Definition example_biases2: matrix 1 1 :=
     [[toQDEP 0.1%Q]].
 
-Definition example_nn2 := 
-    (NNLinear example2_weights1 example2_biases1 
+Definition example_nn := 
+    (NNLinear example_weights1 example_biases1 
     (NNReLU
-    (NNLinear example2_weights2 example2_biases2
+    (NNLinear example_weights2 example_biases2
     (NNReLU
     (NNOutput (output_dim:=1)))))).
 
 (*if input has distance up to one, output
  distance is bigger then 0*)
-Theorem example4_not_robust :
-  ~ is_robust_1d example_nn2 0 1 
-    (ltac:(vm_compute; reflexivity)) 
-    (ltac:(vm_compute; reflexivity)).
+Theorem example_not_robust (H1: 0 <= 0) (H2: 0 <= 1):
+  ~ is_robust_1d example_nn 0 1 H1 H2. 
 Proof.
   intro Hcontra.
   apply is_robust_1d_verification in Hcontra.
@@ -797,38 +795,33 @@ Proof.
 Qed.
 (*if input distance is not bigger then one then also 
 the output*)
-Theorem example4_robust :
-  is_robust_1d example_nn2 1 1 
-    (ltac:(vm_compute; reflexivity)) 
-    (ltac:(vm_compute; reflexivity)).
+Theorem example_robust (H1: 0 <= 1) (H2: 0 <= 1):
+  is_robust_1d example_nn 1 1 H1 H2.
 Proof.
   apply is_robust_1d_verification.
   vm_compute.
   reflexivity.
 Qed.
 
-
-Theorem example4_robust_test2 :
-  is_robust_1d example_nn2 (toQDEP (0.096)%Q) (toQDEP (0.1)%Q) 
-    (ltac:(vm_compute; reflexivity)) 
-    (ltac:(vm_compute; reflexivity)).
+Theorem example_robust2 
+  (H1: RSOAM_le Q_RSOAMD 0 (toQDEP (0.096)%Q))
+  (H2: RSOAM_le Q_RSOAMD 0 (toQDEP (0.1)%Q)):
+  is_robust_1d example_nn (toQDEP (0.096)%Q) (toQDEP (0.1)%Q) H1 H2.
 Proof.
   apply is_robust_1d_verification.
   vm_compute.
   reflexivity.
 Qed.
 
-Theorem example4_robust_test1 :
-  is_robust_1d example_nn2 (toQDEP (0.0959)%Q) (toQDEP (0.1)%Q) 
-    (ltac:(vm_compute; reflexivity)) 
-    (ltac:(vm_compute; reflexivity)).
+Theorem example_not_robust2
+  (H1: RSOAM_le Q_RSOAMD 0 (toQDEP (0.0959)%Q))
+  (H2: RSOAM_le Q_RSOAMD 0 (toQDEP (0.1)%Q)):
+  ~ is_robust_1d example_nn (toQDEP (0.0959)%Q) (toQDEP (0.1)%Q) H1 H2.
 Proof.
   intro Hcontra.
-  admit.
-  (* apply is_robust_1d_verification in Hcontra.
+  apply is_robust_1d_verification in Hcontra.
   vm_compute in Hcontra.
   discriminate.
-Qed. *)
-Admitted.
+Qed. 
   
-End ViolationExample.
+End RobustnessExample.
