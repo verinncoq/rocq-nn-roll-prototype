@@ -38,7 +38,8 @@ VERINNCOQ_FILES = [
     (".", "fourier_motzkin", False),
     (".", "NNDH_to_fme", False),
     (".", "fm_q_support", False),
-    (".", "monotonicity1d", False)
+    (".", "monotonicity1d", False),
+    (".", "robustness1d", True) #Takes too long...
 ]
 
 VERINNCOQ_COQ_PROJECT_FILE = "-R " + VERINNCOQ_ROOT.replace(os.sep, "/") + "/target Verinncoq"
