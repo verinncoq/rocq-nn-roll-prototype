@@ -4,7 +4,7 @@
 
 This repository contains a prototype for a tool called "Rocq-NN-Roll", a prover for piecewise affine neural networks developed and verified in Rocq. While scalability is a priority for most theorem provers, Rocq-NN-Roll tries to optimize for soundness and narrowing the gap between the verification envrionment in Rocq and the real world, e.g. by a trustworthy import mechanism of ONNX neural networks. This prototype offers a decision procedure for hyperproperties of real-valued piecewise-affine neural networks together with formal proofs on its soundness and completeness in Rocq, the first verified prover of its kind. The algorithm constructs an exponentially large piecewise affine function based on a neural network and its desired hyperproperty, and then solves a system of linear inequalities for each polyhedron in the constructed piecewise function. With Rocq-NN-Roll, you cannot only verify small neural networks without leaving Rocq, but it also opens a pathway for research on harder soundness issues within Rocq.
 
-More about Rocq-NN-Roll in the paper: [ACCEPTED TO CAV 2026, COMING SOON]
+More about Rocq-NN-Roll in the paper: [The Rocq-NN-Roll Prover: Soundly Verifying Hyperproperties of Neural Networks in Rocq](https://link.springer.com/chapter/10.1007/978-3-032-32526-6_23)
 
 ### Requirements
 
@@ -31,6 +31,7 @@ A good starting point is to consider the file `monotonicity1d.v` that showcases 
 |   real_subsets.v                  <--- Definition of a computational subset of real numbers (real subset)
 |   reals_real_subset.v             <--- Reals are its own subset (do not import, confuses Rocq)
 |   real_subsets_instances.v        <--- Integers and rationals as real subsets
+|   robustness1d.v                  <--- Formalization of one-dimensional l1 robustness
 |   matrix_extensions.v             <--- Extensions of Coquelicot's matrix library
 |   fourier_motzkin.v               <--- Implementation of Fourier-Motzkin Elimination
 |   fm_q_support.v                  <--- Division in real subsets, support for division on rationals
